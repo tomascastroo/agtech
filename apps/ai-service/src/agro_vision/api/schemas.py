@@ -162,3 +162,29 @@ class ObservationsResponse(BaseModel):
     thresholds: dict[str, float]
     model: ModelInfo
     processing_ms: int
+
+
+class DocumentFieldsOut(BaseModel):
+    renspa: list[str]
+    cuit: list[str]
+    holder_names: list[str]
+    issued_at: str | None
+    expires_at: str | None
+    dates: list[str]
+
+
+class DocumentAnalysisResponse(BaseModel):
+    """Análisis de contenido. No certifica la autenticidad legal del documento."""
+
+    method: str
+    text_confidence: float
+    pages: int
+    lines: int
+    text_excerpt: str
+    detected_type: str
+    classification_score: int
+    classification_keywords: list[str]
+    fields: DocumentFieldsOut
+    engine: str
+    version: str
+    processing_ms: int

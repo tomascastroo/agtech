@@ -399,3 +399,66 @@ mismo email y contraseña la nueva solicitud se suma a esa cuenta.
   productor lo ve como tarea, aporta y lo marca respondido (exige un aporte nuevo posterior al
   pedido). Lo aportado es evidencia/documentación nueva con su auditoría: la declaración enviada
   sigue inmutable. Si la solicitud ya estaba enviada, AgroGarantías vuelve a verificar.
+
+## 13. Calidad y trazabilidad de la evidencia
+
+### 13.1 Ubicación de captura de las fotos
+
+`evidence.location` contiene **solo** la ubicación de captura. El origen queda en `metadata.locationSource`:
+
+| Origen | Significado |
+|---|---|
+| `DEVICE_GPS` | GPS del teléfono (`navigator.geolocation`, con permiso explícito) con precisión `locationAccuracyM` |
+| `EXIF` | GPS embebido en la foto (parser propio `common/files/exif-gps.ts`) |
+| `MANUAL` | Coordenadas editadas a mano por el usuario |
+| `DEVICE_INSTALLATION` | Ubicación de la cámara fija |
+| `ASSET_LOCATION` | Solo contexto: **no** se guarda como ubicación de captura (queda en `metadata.contextLocation`) y la UI lo muestra como "Ubicación del establecimiento" |
+| `NONE` | Sin ubicación. Se advierte y se permite continuar |
+
+La geocerca de la verificación usa solo ubicaciones de captura. Ver `evidence/domain/capture-location.ts`.
+
+### 13.2 Conteo único entre fotos
+
+Las detecciones de varias fotos no se suman sin más (`verification/domain/unique-count.ts`). Dos imágenes se consideran de animales **distintos** solo en estos casos:
+
+- son de cámaras fijas distintas;
+- o ambas tienen GPS/EXIF a más de 300 m (más la precisión declarada) y se tomaron con menos de 20 minutos de diferencia.
+
+En cualquier otro caso se agrupan (unión de pares) y de cada grupo se toma el **máximo**. Por ejemplo, 14 + 14 sin ubicación da 14.
+
+La corrida guarda estas métricas: `detections_sum`, `unique_estimated` y `overlap_groups`. Además registra la anomalía `POSSIBLE_EVIDENCE_DUPLICATION` ("Posible duplicación entre evidencias"). `detected_quantity` es la estimación de únicos. El detalle de la solicitud muestra la cantidad por foto, la suma, los únicos estimados y la confianza.
+
+### 13.3 Análisis de documentos
+
+Al cargar un documento, la API lo envía en segundo plano al servicio de visión (`POST /v1/documents/analyze`). El servicio lee la capa de texto del PDF (pdfium); si no hay texto, aplica OCR con RapidOCR (ONNX, CPU). Luego clasifica el tipo y extrae RENSPA, CUIT, titular y fechas.
+
+La API compara esos datos con el establecimiento (`documents/domain/document-analysis.ts`) y guarda el resultado en `document_analyses`:
+
+- `extracted_fields`;
+- `extraction_confidence`;
+- `validation_results`;
+- `status`: `PENDING`, `CONSISTENT`, `REVIEW_REQUIRED` o `FAILED`.
+
+El estado es "Revisión requerida" si se da alguna de estas condiciones:
+
+- la confianza es menor a 0,75;
+- un dato no coincide;
+- falta un campo obligatorio del tipo;
+- el documento está vencido.
+
+El análisis **no certifica la autenticidad** del documento y no reemplaza la revisión humana (`documents:review`).
+
+### 13.4 SENASA, RFID y fuentes cruzadas
+
+- SENASA: puerto `LivestockRegistryProvider` con el adapter mock (simulado) y el placeholder oficial. Ver `docs/integrations/senasa.md`.
+- RFID: `rfid_observations` y el puente del lector. Ver `docs/integrations/rfid.md`.
+- **Fuentes cruzadas** (detalle de la solicitud, solo para la entidad) pone lado a lado lo que informa cada fuente:
+  - declaración;
+  - visión (únicos estimados);
+  - RFID (30 días);
+  - ubicación de las fotos;
+  - lectura de documentos;
+  - SENASA;
+  - historial.
+
+  Es informativo y **no modifica el score**.

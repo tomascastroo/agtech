@@ -2,6 +2,7 @@ import { AlertRuleEntity } from '../modules/alerts/infrastructure/alert-rule.ent
 import { AlertEntity } from '../modules/alerts/infrastructure/alert.entity.js';
 import { AnimalIdentificationEntity } from '../modules/animals/infrastructure/animal-identification.entity.js';
 import { AnimalObservationEntity } from '../modules/animals/infrastructure/animal-observation.entity.js';
+import { RfidObservationEntity } from '../modules/animals/infrastructure/rfid-observation.entity.js';
 import { AnimalEntity } from '../modules/animals/infrastructure/animal.entity.js';
 import { AssetMetadataEntity } from '../modules/assets/infrastructure/asset-metadata.entity.js';
 import { AssetTypeEntity } from '../modules/assets/infrastructure/asset-type.entity.js';
@@ -13,6 +14,7 @@ import { AiModelVersionEntity } from '../modules/computer-vision/infrastructure/
 import { AiModelEntity } from '../modules/computer-vision/infrastructure/ai-model.entity.js';
 import { DeviceInstallationEntity } from '../modules/devices/infrastructure/device-installation.entity.js';
 import { DeviceEntity } from '../modules/devices/infrastructure/device.entity.js';
+import { DocumentAnalysisEntity } from '../modules/documents/infrastructure/document-analysis.entity.js';
 import { DocumentEntity } from '../modules/documents/infrastructure/document.entity.js';
 import { EstablishmentLocationEntity } from '../modules/establishments/infrastructure/establishment-location.entity.js';
 import { EstablishmentEntity } from '../modules/establishments/infrastructure/establishment.entity.js';
@@ -51,6 +53,7 @@ export const ENTITIES = [
   AssetMetadataEntity,
   GuaranteeEntity,
   DocumentEntity,
+  DocumentAnalysisEntity,
   DeviceEntity,
   DeviceInstallationEntity,
   AiModelEntity,
@@ -72,6 +75,7 @@ export const ENTITIES = [
   AnimalEntity,
   AnimalIdentificationEntity,
   AnimalObservationEntity,
+  RfidObservationEntity,
   ExternalDataSnapshotEntity,
   AuditLogEntity,
 ];

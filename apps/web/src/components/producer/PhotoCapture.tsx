@@ -5,7 +5,6 @@ import { Callout } from '@/components/ui/Feedback';
 import { Field, Input } from '@/components/ui/Field';
 import { Icon } from '@/components/ui/Icon';
 import { api, ApiError } from '@/lib/api/client';
-import type { GeoPoint } from '@/lib/api/types';
 import styles from './producer.module.css';
 
 const ACCEPTED = new Set(['image/jpeg', 'image/png', 'image/webp']);
@@ -18,28 +17,40 @@ interface QueuedPhoto {
   error?: string;
 }
 
+interface DevicePosition {
+  latitude: number;
+  longitude: number;
+  accuracyM: number;
+  at: number;
+}
+
+/** Posiciones más viejas que esto se vuelven a pedir antes de enviar. */
+const MAX_POSITION_AGE_MS = 2 * 60_000;
+
 /**
  * Captura de evidencia fotográfica estilo app: cámara del teléfono como acción principal,
  * galería como alternativa, varias fotos sin límite, miniaturas, quitar antes de enviar, fecha
- * de captura del archivo y ubicación del dispositivo (si el productor la permite).
+ * de captura del archivo y ubicación GPS del dispositivo con su precisión (pedida con permiso).
+ * Si no hay GPS, las fotos se envían sin ubicación de captura: nunca se usa la del
+ * establecimiento en su lugar (el servidor puede tomar el GPS EXIF de la imagen si existe).
  */
 export function PhotoCapture({
   endpoint,
   guidance,
-  defaultLocation,
   onUploaded,
 }: {
   endpoint: string;
   guidance?: string | null;
-  defaultLocation: GeoPoint | null;
   onUploaded: () => unknown;
 }) {
   const cameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
   const [queue, setQueue] = useState<QueuedPhoto[]>([]);
   const [description, setDescription] = useState('');
-  const [position, setPosition] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [locationState, setLocationState] = useState<'idle' | 'asking' | 'ok' | 'denied'>('idle');
+  const [position, setPosition] = useState<DevicePosition | null>(null);
+  const [locationState, setLocationState] = useState<
+    'idle' | 'asking' | 'ok' | 'denied' | 'unavailable'
+  >('idle');
   const [uploading, setUploading] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -53,18 +64,36 @@ export function PhotoCapture({
     [],
   );
 
+  /** Pide la ubicación al dispositivo (el navegador muestra el permiso la primera vez). */
+  const requestPosition = () =>
+    new Promise<DevicePosition | null>((resolve) => {
+      if (typeof navigator === 'undefined' || !navigator.geolocation) {
+        setLocationState('unavailable');
+        return resolve(null);
+      }
+      setLocationState('asking');
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const next = {
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+            accuracyM: pos.coords.accuracy,
+            at: Date.now(),
+          };
+          setPosition(next);
+          setLocationState('ok');
+          resolve(next);
+        },
+        (err) => {
+          setLocationState(err.code === err.PERMISSION_DENIED ? 'denied' : 'unavailable');
+          resolve(null);
+        },
+        { enableHighAccuracy: true, timeout: 15_000, maximumAge: 30_000 },
+      );
+    });
+
   const askLocation = () => {
-    if (locationState !== 'idle' || typeof navigator === 'undefined' || !navigator.geolocation)
-      return;
-    setLocationState('asking');
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setPosition({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
-        setLocationState('ok');
-      },
-      () => setLocationState('denied'),
-      { enableHighAccuracy: true, timeout: 10_000, maximumAge: 60_000 },
-    );
+    if (locationState === 'idle') void requestPosition();
   };
 
   const add = (files: FileList | null) => {
@@ -98,11 +127,13 @@ export function PhotoCapture({
     setError(null);
     setNotice(null);
     setUploading(true);
+    // Ubicación vigente del dispositivo (se renueva si quedó vieja); si no hay, sin ubicación.
     const location =
-      position ??
-      (defaultLocation
-        ? { latitude: defaultLocation.coordinates[1], longitude: defaultLocation.coordinates[0] }
-        : null);
+      position && Date.now() - position.at < MAX_POSITION_AGE_MS
+        ? position
+        : locationState === 'denied'
+          ? null
+          : await requestPosition();
     let ok = 0;
     for (const item of queue.filter((p) => p.state !== 'done')) {
       setQueue((q) => q.map((p) => (p.id === item.id ? { ...p, state: 'uploading' } : p)));
@@ -117,6 +148,8 @@ export function PhotoCapture({
         if (location) {
           form.set('latitude', String(location.latitude));
           form.set('longitude', String(location.longitude));
+          form.set('accuracyM', String(Math.round(location.accuracyM * 10) / 10));
+          form.set('locationSource', 'DEVICE_GPS');
         }
         if (description.trim()) form.set('description', description.trim());
         await api(endpoint, { method: 'POST', form });
@@ -222,14 +255,31 @@ export function PhotoCapture({
           </div>
           <span className={styles.chip}>
             <Icon name="pin" size={12} />
-            {locationState === 'ok'
-              ? 'Ubicación del teléfono agregada'
+            {locationState === 'ok' && position
+              ? `Ubicación del teléfono · ±${Math.round(position.accuracyM)} m`
               : locationState === 'asking'
-                ? 'Obteniendo ubicación…'
-                : defaultLocation
-                  ? 'Se usa la ubicación del activo'
-                  : 'Sin ubicación'}
+                ? 'Obteniendo ubicación del teléfono…'
+                : 'Sin ubicación del teléfono'}
           </span>
+          {locationState === 'idle' ? (
+            <button
+              type="button"
+              className={`${styles.bigButton} ${styles.bigButtonSecondary}`}
+              onClick={() => void requestPosition()}
+            >
+              <Icon name="pin" size={20} /> Permitir ubicación
+            </button>
+          ) : null}
+          {locationState === 'denied' || locationState === 'unavailable' ? (
+            <Callout tone="warning">
+              {locationState === 'denied'
+                ? 'No diste permiso de ubicación.'
+                : 'No se pudo obtener la ubicación del teléfono.'}{' '}
+              Podés continuar: las fotos se guardan sin ubicación de captura (si la imagen trae GPS
+              propio, se usa ese). La ubicación del establecimiento no se toma como lugar de la
+              foto.
+            </Callout>
+          ) : null}
           <Field label="Descripción (opcional)" hint="Se agrega a todas las fotos de este envío">
             {(props) => (
               <Input

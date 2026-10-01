@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState, type FormEvent } from 'react';
+import { DocumentAnalysisNote } from '@/components/domain/DocumentAnalysisNote';
 import { DocumentStatusBadge } from '@/components/domain/StatusBadges';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Feedback';
@@ -115,6 +116,7 @@ export function ProducerDocuments({
                   {label(d.type)} · {fmtDate(d.uploadedAt)}
                   {d.expiresAt ? ` · vence ${fmtDate(d.expiresAt)}` : ''}
                 </span>
+                <DocumentAnalysisNote analysis={d.analysis} />
               </span>
               <DocumentStatusBadge status={d.status} />
               <Button

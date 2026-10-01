@@ -5,6 +5,7 @@ import { InitialSchema1790000000000 } from './migrations/1790000000000-initial-s
 import { ProducerPortal1793000000000 } from './migrations/1793000000000-producer-portal.js';
 import { GuaranteeRequests1792000000000 } from './migrations/1792000000000-guarantee-requests.js';
 import { RealVerificationSignals1791000000000 } from './migrations/1791000000000-real-verification-signals.js';
+import { EvidenceQuality1794000000000 } from './migrations/1794000000000-evidence-quality.js';
 import { SnakeNamingStrategy } from './snake-naming.strategy.js';
 
 export const MIGRATIONS = [
@@ -12,6 +13,7 @@ export const MIGRATIONS = [
   RealVerificationSignals1791000000000,
   GuaranteeRequests1792000000000,
   ProducerPortal1793000000000,
+  EvidenceQuality1794000000000,
 ];
 
 export function typeOrmOptions(env: Env): DataSourceOptions {

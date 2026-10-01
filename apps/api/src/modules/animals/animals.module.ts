@@ -4,11 +4,23 @@ import { AnimalIdentificationEntity } from './infrastructure/animal-identificati
 import { AnimalObservationEntity } from './infrastructure/animal-observation.entity.js';
 import { AnimalEntity } from './infrastructure/animal.entity.js';
 import { AnimalsController } from './presentation/animals.controller.js';
+import { RfidController } from './presentation/rfid.controller.js';
+import { RfidService } from './application/rfid.service.js';
+import { RfidObservationEntity } from './infrastructure/rfid-observation.entity.js';
+import { AssetsModule } from '../assets/assets.module.js';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([AnimalEntity, AnimalIdentificationEntity, AnimalObservationEntity]),
+    TypeOrmModule.forFeature([
+      AnimalEntity,
+      AnimalIdentificationEntity,
+      AnimalObservationEntity,
+      RfidObservationEntity,
+    ]),
+    AssetsModule,
   ],
-  controllers: [AnimalsController],
+  controllers: [AnimalsController, RfidController],
+  providers: [RfidService],
+  exports: [RfidService],
 })
 export class AnimalsModule {}

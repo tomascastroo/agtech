@@ -24,12 +24,10 @@ export function EvidenceUpload({
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [capturedAt, setCapturedAt] = useState('');
-  const [latitude, setLatitude] = useState(
-    defaultLocation ? String(defaultLocation.coordinates[1]) : '',
-  );
-  const [longitude, setLongitude] = useState(
-    defaultLocation ? String(defaultLocation.coordinates[0]) : '',
-  );
+  const defaultLatitude = defaultLocation ? String(defaultLocation.coordinates[1]) : '';
+  const defaultLongitude = defaultLocation ? String(defaultLocation.coordinates[0]) : '';
+  const [latitude, setLatitude] = useState(defaultLatitude);
+  const [longitude, setLongitude] = useState(defaultLongitude);
   const [description, setDescription] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -52,6 +50,14 @@ export function EvidenceUpload({
         if (latitude && longitude) {
           form.set('latitude', latitude);
           form.set('longitude', longitude);
+          // Si quedan las coordenadas precargadas del activo, son contexto y no la ubicación de
+          // la foto; si el usuario las cambió, son coordenadas ingresadas manualmente.
+          form.set(
+            'locationSource',
+            latitude === defaultLatitude && longitude === defaultLongitude
+              ? 'ASSET_LOCATION'
+              : 'MANUAL',
+          );
         }
         if (description.trim()) form.set('description', description.trim());
         form.set('file', file);
@@ -97,7 +103,10 @@ export function EvidenceUpload({
         </Field>
       </FormRow>
       <FormRow columns={3}>
-        <Field label="Latitud">
+        <Field
+          label="Latitud"
+          hint="Precargada con la del establecimiento: se registra como contexto, no como lugar de la foto"
+        >
           {(props) => (
             <Input
               {...props}

@@ -1,3 +1,4 @@
+import { DocumentAnalysisService } from '../src/modules/documents/application/document-analysis.service.js';
 import { ObjectStorage } from '../src/modules/storage/object-storage.js';
 import { storageKeys } from '../src/modules/storage/storage-keys.js';
 import {
@@ -157,6 +158,14 @@ describe('Establecimientos, activos, documentos y evidencia', () => {
       .expect(200);
     const fetched = await fetchBytes(download.body.url);
     expect(fetched.equals(PDF)).toBe(true);
+
+    // La lectura automática corre en segundo plano y nunca bloquea la carga; sin servicio de
+    // lectura disponible queda FAILED (revisión manual), sin afirmar nada sobre el contenido.
+    await ctx.app.get(DocumentAnalysisService).drain();
+    const analyzed = await as(ctx, maria).get(`/api/assets/${asset}/documents`).expect(200);
+    const doc = analyzed.body.documents.find((d: { id: string }) => d.id === uploaded.body.id);
+    expect(doc.analysis).toMatchObject({ status: 'FAILED', validationResults: [] });
+    expect(doc.analysis.disclaimer).toMatch(/No certifica la autenticidad/);
   });
 
   it('solicita el kit de dispositivos o registra dispositivos ya instalados', async () => {
@@ -269,6 +278,35 @@ describe('Establecimientos, activos, documentos y evidencia', () => {
       SATELLITE_IMAGERY: true,
       CAMERA_GATEWAY: true,
       LIVESTOCK_REGISTRY: true,
+    });
+  });
+
+  it('ingiere lecturas RFID, las asocia al animal y marca la simulación', async () => {
+    const asset = await assetIdByName(ctx, maria, 'Rodeo de cría La Esperanza');
+    await as(ctx, maria)
+      .post(`/api/assets/${asset}/rfid/observations`)
+      .send({ readings: [{ electronicId: '12345', observedAt: new Date().toISOString() }] })
+      .expect(422);
+    const bridge = await as(ctx, maria)
+      .post(`/api/assets/${asset}/rfid/observations`)
+      .send({
+        readings: [
+          { electronicId: '032 0000 1245 5678', observedAt: new Date().toISOString() },
+          { electronicId: '032000099990000', observedAt: new Date().toISOString() },
+        ],
+      })
+      .expect(201);
+    expect(bridge.body).toMatchObject({ received: 2, identified: 1, unknown: 1 });
+    const simulated = await as(ctx, maria).post(`/api/assets/${asset}/rfid/simulate`).expect(201);
+    expect(simulated.body.received).toBeGreaterThan(1);
+    const list = await as(ctx, maria).get(`/api/assets/${asset}/rfid/observations`).expect(200);
+    expect(list.body.readings[0]).toMatchObject({ electronicId: expect.stringMatching(/^032 /) });
+    expect(list.body.readings.some((r: { source: string }) => r.source === 'SIMULATED')).toBe(true);
+    expect(
+      list.body.readings.find((r: { status: string }) => r.status === 'IDENTIFIED'),
+    ).toMatchObject({
+      establishmentName: expect.any(String),
+      officialTag: expect.any(String),
     });
   });
 

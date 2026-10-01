@@ -32,6 +32,7 @@ import {
 import { RoleEntity } from '../../users/infrastructure/role.entity.js';
 import { UserEntity } from '../../users/infrastructure/user.entity.js';
 import { VerificationRequestService } from '../../verification/application/verification-request.service.js';
+import { crossSources } from './cross-sources.js';
 import { presentDocument } from '../../documents/presentation/documents.controller.js';
 import { presentEvidence } from '../../evidence/presentation/evidence.presenter.js';
 import { GuaranteeRequestEntity } from '../infrastructure/guarantee-request.entity.js';
@@ -379,7 +380,9 @@ export class GuaranteeRequestsService {
       ...view,
       documents: documents
         ? {
-            documents: documents.documents.map(presentDocument),
+            documents: documents.documents.map((d) =>
+              presentDocument(d, documents.analyses.get(d.id)),
+            ),
             requirements: documents.requirements,
           }
         : null,
@@ -718,6 +721,28 @@ export class GuaranteeRequestsService {
           ])
         : Promise.resolve([]),
     ]);
+    const counting =
+      verification?.outcome && !options.forProducer
+        ? await this.countingBreakdown(String(verification.runId))
+        : null;
+    const sources =
+      asset &&
+      request.establishmentId &&
+      !options.forProducer &&
+      type?.verificationStrategy === 'LIVESTOCK_COUNTING'
+        ? await crossSources(this.dataSource, {
+            organizationId: request.organizationId,
+            assetId: String(asset.id),
+            establishmentId: request.establishmentId,
+            declaredQuantity: (asset.declaredQuantity as number | null) ?? null,
+            runId: verification?.outcome ? String(verification.runId) : null,
+            uniqueEstimate:
+              counting?.uniqueEstimate ??
+              (verification?.detectedQuantity as number | null | undefined) ??
+              null,
+            possibleOverlap: counting?.possibleOverlap ?? false,
+          })
+        : undefined;
     const c = (counts[0] ?? { evidence: 0, documents: 0 }) as {
       evidence: number;
       documents: number;
@@ -900,8 +925,53 @@ export class GuaranteeRequestsService {
         ? verification
           ? { status: verification.status, completed: Boolean(verification.outcome) }
           : null
-        : (verification ?? null),
+        : verification
+          ? { ...verification, counting }
+          : null,
       alerts: options.forProducer ? undefined : alerts,
+      crossSources: sources,
+    };
+  }
+
+  /**
+   * Desglose del conteo de una corrida: detecciones por imagen, suma ingenua, animales únicos
+   * estimados y advertencia de posible duplicación (ver verification/domain/unique-count.ts).
+   */
+  private async countingBreakdown(runId: string) {
+    const [photos, metrics, [run]] = await Promise.all([
+      this.dataSource.query(
+        `SELECT ve.evidence_id AS "evidenceId", ve.role, ve.detected_count AS "detectedCount",
+                ve.confidence::float AS confidence, ve.exclusion_reason AS "exclusionReason",
+                e.captured_at AS "capturedAt", e.device_id IS NOT NULL AS "fromCamera",
+                e.metadata->>'originalFileName' AS "fileName"
+           FROM verification_evidence ve JOIN evidence e ON e.id = ve.evidence_id
+          WHERE ve.verification_run_id = $1 ORDER BY e.captured_at`,
+        [runId],
+      ) as Promise<Record<string, unknown>[]>,
+      this.dataSource.query(
+        `SELECT key, value::float AS value FROM verification_metrics
+          WHERE verification_run_id = $1
+            AND key IN ('detections_sum','unique_estimated','overlap_groups','detection_confidence')`,
+        [runId],
+      ) as Promise<{ key: string; value: number }[]>,
+      this.dataSource.query(
+        `SELECT anomalies FROM verification_results WHERE verification_run_id = $1`,
+        [runId],
+      ) as Promise<{ anomalies: { code: string; message: string; details?: unknown }[] }[]>,
+    ]);
+    if (photos.length === 0) return null;
+    const m = Object.fromEntries(metrics.map((x) => [x.key, x.value]));
+    const overlap = (run?.anomalies ?? []).find((a) => a.code === 'POSSIBLE_EVIDENCE_DUPLICATION');
+    return {
+      photos,
+      // Corridas anteriores a la estimación de únicos no tienen estas métricas.
+      detectionsSum: m['detections_sum'] ?? null,
+      uniqueEstimate: m['unique_estimated'] ?? null,
+      overlapGroups: m['overlap_groups'] ?? null,
+      confidence: m['detection_confidence'] ?? null,
+      possibleOverlap: Boolean(overlap),
+      overlapMessage: overlap?.message ?? null,
+      overlapDetails: overlap?.details ?? null,
     };
   }
 }

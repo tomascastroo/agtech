@@ -7,6 +7,7 @@ import { LineChart } from '@/components/charts/LineChart';
 import { AlertsTable } from '@/components/domain/AlertsTable';
 import { DevicesPanel } from '@/components/domain/DevicesPanel';
 import { DocumentsPanel } from '@/components/domain/DocumentsPanel';
+import { RfidReadings } from '@/components/domain/RfidReadings';
 import { EvidenceGallery, fromEvidenceItem } from '@/components/domain/EvidenceGallery';
 import { EvidenceUpload } from '@/components/domain/EvidenceUpload';
 import { orderedProperties } from '@/components/domain/MetadataForm';
@@ -657,7 +658,12 @@ export function AssetDetailView() {
             )}
           </Panel>
         ) : null}
-        {tab === 'animals' ? <Animals asset={a} /> : null}
+        {tab === 'animals' ? (
+          <div className={styles.stack}>
+            <RfidReadings assetId={a.id} />
+            <Animals asset={a} />
+          </div>
+        ) : null}
       </div>
     </>
   );

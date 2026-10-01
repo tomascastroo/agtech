@@ -33,6 +33,8 @@ import {
   DocumentsService,
   type UploadedFile as UploadedFileData,
 } from '../application/documents.service.js';
+import { presentAnalysis } from '../application/document-analysis.service.js';
+import type { DocumentAnalysisEntity } from '../infrastructure/document-analysis.entity.js';
 import type { DocumentEntity } from '../infrastructure/document.entity.js';
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -80,7 +82,7 @@ export const uploadSchema = {
   },
 };
 
-export function presentDocument(doc: DocumentEntity) {
+export function presentDocument(doc: DocumentEntity, analysis?: DocumentAnalysisEntity) {
   return {
     id: doc.id,
     type: doc.type,
@@ -97,6 +99,7 @@ export function presentDocument(doc: DocumentEntity) {
     scope: doc.assetId ? 'ASSET' : 'ESTABLISHMENT',
     uploadedAt: doc.createdAt,
     reviewedAt: doc.reviewedAt,
+    analysis: presentAnalysis(analysis),
   };
 }
 
@@ -114,11 +117,14 @@ export class DocumentsController {
     @CurrentUser() user: AuthenticatedUser,
     @Param('assetId', ParseUUIDPipe) assetId: string,
   ) {
-    const { documents, requirements } = await this.documents.listForAsset(
+    const { documents, requirements, analyses } = await this.documents.listForAsset(
       user.organizationId,
       assetId,
     );
-    return { documents: documents.map(presentDocument), requirements };
+    return {
+      documents: documents.map((d) => presentDocument(d, analyses.get(d.id))),
+      requirements,
+    };
   }
 
   @Post('assets/:assetId/documents')

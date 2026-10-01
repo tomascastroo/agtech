@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import type { Anomaly } from '../../../domain/verification.types.js';
 import type { VerificationEvidenceEntity } from '../../../infrastructure/verification-evidence.entity.js';
+import { inferLocationSource } from '../../../../evidence/domain/capture-location.js';
+import { type CountedImage, estimateUniqueAnimals } from '../../../domain/unique-count.js';
 import { CameraCaptureService } from '../camera-capture.service.js';
 import { ImageAnalysisService } from '../image-analysis.service.js';
 import type {
@@ -15,13 +17,37 @@ import {
   lowQualityAnomaly,
   newestCapture,
   primary,
+  quality,
 } from './evidence-stats.js';
 
+/** Solo GPS del teléfono o EXIF sirven para afirmar que dos fotos son de lugares distintos. */
+const DISTINGUISHING_SOURCES = new Set(['DEVICE_GPS', 'EXIF']);
+
+function countedImage(link: VerificationEvidenceEntity): CountedImage {
+  const ev = link.evidence;
+  const source = ev ? inferLocationSource(ev) : 'NONE';
+  const coords = ev?.location?.coordinates;
+  const accuracy = ev?.metadata?.['locationAccuracyM'];
+  return {
+    evidenceId: link.evidenceId,
+    count: link.detectedCount ?? 0,
+    deviceId: ev?.deviceId ?? null,
+    capturedAt: ev?.capturedAt ?? new Date(0),
+    location:
+      coords && source && DISTINGUISHING_SOURCES.has(source)
+        ? { longitude: coords[0], latitude: coords[1] }
+        : null,
+    accuracyM: typeof accuracy === 'number' ? accuracy : null,
+    dhash: quality(link).dhash ?? null,
+  };
+}
+
 /**
- * Conteo de animales por visión computacional. Las cámaras fijas cubren zonas distintas del
- * establecimiento, por lo que la cantidad detectada es la suma de sus conteos. Las cargas
- * manuales se usan como evidencia de respaldo cuando hay cámaras, o como fuente principal
- * cuando no las hay.
+ * Conteo de animales por visión computacional. Las detecciones por imagen NO se suman sin más:
+ * se estiman animales únicos agrupando las imágenes que podrían mostrar los mismos animales
+ * (ver domain/unique-count.ts). Cámaras fijas distintas cubren zonas distintas y se suman; fotos
+ * sin ubicación de captura que las distinga se agrupan y se toma el máximo del grupo.
+ * Las cargas manuales son respaldo cuando hay cámaras, o fuente principal cuando no las hay.
  */
 @Injectable()
 export class LivestockCountingStrategy implements VerificationStrategy {
@@ -51,10 +77,13 @@ export class LivestockCountingStrategy implements VerificationStrategy {
     const cameraLinks = used.filter((l) => l.evidence?.deviceId);
     const expectedDevices = this.capture.cameraInstallations(ctx).length;
 
-    const detected = used.length ? used.reduce((acc, l) => acc + (l.detectedCount ?? 0), 0) : null;
+    const unique = used.length ? estimateUniqueAnimals(used.map(countedImage)) : null;
+    const detected = unique ? unique.uniqueEstimate : null;
+    const detectionsSum = unique ? unique.detectionsSum : 0;
     const confidence =
-      detected && detected > 0
-        ? used.reduce((acc, l) => acc + (l.confidence ?? 0) * (l.detectedCount ?? 0), 0) / detected
+      detectionsSum > 0
+        ? used.reduce((acc, l) => acc + (l.confidence ?? 0) * (l.detectedCount ?? 0), 0) /
+          detectionsSum
         : used.length
           ? Math.min(...used.map((l) => l.confidence ?? 0))
           : null;
@@ -62,6 +91,19 @@ export class LivestockCountingStrategy implements VerificationStrategy {
     const anomalies: Anomaly[] = [];
     const duplicate = duplicateEvidenceAnomaly(used);
     if (duplicate) anomalies.push(duplicate);
+    if (unique?.possibleOverlap) {
+      const overlapping = unique.groups.filter((g) => g.evidenceIds.length > 1);
+      anomalies.push({
+        code: 'POSSIBLE_EVIDENCE_DUPLICATION',
+        severity: 'WARNING',
+        message:
+          `Posible duplicación entre evidencias: ${unique.detectionsSum} detecciones en ` +
+          `${used.length} imágenes, ${unique.uniqueEstimate} animales únicos estimados. ` +
+          `${overlapping.length} grupo(s) de imágenes podrían mostrar los mismos animales; ` +
+          'se tomó el máximo de cada grupo en lugar de la suma.',
+        details: { groups: overlapping, method: unique.method },
+      });
+    }
     const lowQuality = lowQualityAnomaly(links);
     if (lowQuality) anomalies.push(lowQuality);
     if (expectedDevices > cameraLinks.length) {
@@ -116,6 +158,27 @@ export class LivestockCountingStrategy implements VerificationStrategy {
                     (Math.min(detected, declared) / Math.max(detected, declared)) * 10_000,
                   ) / 100,
                 unit: '%',
+                source: 'computer_vision',
+              },
+            ]
+          : []),
+        ...(unique
+          ? [
+              {
+                key: 'detections_sum',
+                value: unique.detectionsSum,
+                unit: 'HEAD',
+                source: 'computer_vision',
+              },
+              {
+                key: 'unique_estimated',
+                value: unique.uniqueEstimate,
+                unit: 'HEAD',
+                source: 'computer_vision',
+              },
+              {
+                key: 'overlap_groups',
+                value: unique.groups.filter((g) => g.evidenceIds.length > 1).length,
                 source: 'computer_vision',
               },
             ]
