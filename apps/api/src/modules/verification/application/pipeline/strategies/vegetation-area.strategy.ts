@@ -178,7 +178,8 @@ export class VegetationAreaStrategy implements VerificationStrategy {
         }
         const usable = isUsableObservation(result.observation);
         const model = result.observation.metrics.model as
-          { code: string; version: string; simulated: boolean } | undefined;
+          | { code: string; version: string; simulated: boolean }
+          | undefined;
         const details = { ...describeObservation(result.observation, scene), purpose };
         return {
           usable,

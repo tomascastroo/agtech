@@ -932,8 +932,8 @@ export class DemoSeeder {
       const primary = spec.primary
         ? this.seededObservations.get(`${asset.id}:${spec.primary}`)
         : null;
-      const excluded = (spec.excluded ?? []).map((id) =>
-        this.seededObservations.get(`${asset.id}:${id}`)!,
+      const excluded = (spec.excluded ?? []).map(
+        (id) => this.seededObservations.get(`${asset.id}:${id}`)!,
       );
       const seriesStart = completedAt.getTime() - SATELLITE_SERIES_DAYS * DAY_MS;
       const usable = [...this.seededObservations.values()].filter(
