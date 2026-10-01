@@ -1,0 +1,280 @@
+{
+  "cameras": [
+    {
+      "serial": "CAM-LE-01",
+      "label": "Aguada Norte",
+      "file": "cameras/CAM-LE-01.jpg",
+      "ground_truth_animals": 262,
+      "measured_count": 262,
+      "confidence": 0.86,
+      "quality": {
+        "width": 1280,
+        "height": 800,
+        "sharpness": 461.43,
+        "brightness": 100.35,
+        "contrast": 22.71,
+        "dhash": "9a5175e5438d6c1b",
+        "score": 0.87,
+        "issues": []
+      }
+    },
+    {
+      "serial": "CAM-LE-02",
+      "label": "Aguada Sur",
+      "file": "cameras/CAM-LE-02.jpg",
+      "ground_truth_animals": 248,
+      "measured_count": 248,
+      "confidence": 0.86,
+      "quality": {
+        "width": 1280,
+        "height": 800,
+        "sharpness": 428.94,
+        "brightness": 99.74,
+        "contrast": 22.15,
+        "dhash": "13abaa16576523c4",
+        "score": 0.868,
+        "issues": []
+      }
+    },
+    {
+      "serial": "CAM-LE-03",
+      "label": "Potrero 4",
+      "file": "cameras/CAM-LE-03.jpg",
+      "ground_truth_animals": 251,
+      "measured_count": 251,
+      "confidence": 0.86,
+      "quality": {
+        "width": 1280,
+        "height": 800,
+        "sharpness": 437.62,
+        "brightness": 100.67,
+        "contrast": 22.35,
+        "dhash": "114a5b913a4aa296",
+        "score": 0.872,
+        "issues": []
+      }
+    },
+    {
+      "serial": "CAM-LE-04",
+      "label": "Potrero 7",
+      "file": "cameras/CAM-LE-04.jpg",
+      "ground_truth_animals": 239,
+      "measured_count": 239,
+      "confidence": 0.86,
+      "quality": {
+        "width": 1280,
+        "height": 800,
+        "sharpness": 434.24,
+        "brightness": 100.23,
+        "contrast": 22.38,
+        "dhash": "9b852babc564654b",
+        "score": 0.87,
+        "issues": []
+      }
+    },
+    {
+      "serial": "CAM-LE-05",
+      "label": "Manga y corrales",
+      "file": "cameras/CAM-LE-05.jpg",
+      "ground_truth_animals": 245,
+      "measured_count": 245,
+      "confidence": 0.86,
+      "quality": {
+        "width": 1280,
+        "height": 800,
+        "sharpness": 464.01,
+        "brightness": 101.52,
+        "contrast": 22.62,
+        "dhash": "440e292d29498c8b",
+        "score": 0.876,
+        "issues": []
+      }
+    },
+    {
+      "serial": "CAM-LE-06",
+      "label": "Bajo del arroyo",
+      "file": "cameras/CAM-LE-06.jpg",
+      "ground_truth_animals": 237,
+      "measured_count": 237,
+      "confidence": 0.86,
+      "quality": {
+        "width": 1280,
+        "height": 800,
+        "sharpness": 431.2,
+        "brightness": 101.07,
+        "contrast": 22.16,
+        "dhash": "4da894ed3175a546",
+        "score": 0.874,
+        "issues": []
+      }
+    },
+    {
+      "serial": "CAM-ET-01",
+      "label": "Aguada principal",
+      "file": "cameras/CAM-ET-01.jpg",
+      "ground_truth_animals": 205,
+      "measured_count": 205,
+      "confidence": 0.86,
+      "quality": {
+        "width": 1280,
+        "height": 800,
+        "sharpness": 400.77,
+        "brightness": 101.37,
+        "contrast": 22.1,
+        "dhash": "4b551aa653925151",
+        "score": 0.875,
+        "issues": []
+      }
+    },
+    {
+      "serial": "CAM-ET-02",
+      "label": "Potrero La Loma",
+      "file": "cameras/CAM-ET-02.jpg",
+      "ground_truth_animals": 198,
+      "measured_count": 198,
+      "confidence": 0.86,
+      "quality": {
+        "width": 1280,
+        "height": 800,
+        "sharpness": 400.67,
+        "brightness": 100.07,
+        "contrast": 21.78,
+        "dhash": "9c69e966b2363259",
+        "score": 0.869,
+        "issues": []
+      }
+    },
+    {
+      "serial": "CAM-ET-03",
+      "label": "Corrales",
+      "file": "cameras/CAM-ET-03.jpg",
+      "ground_truth_animals": 210,
+      "measured_count": 210,
+      "confidence": 0.86,
+      "quality": {
+        "width": 1280,
+        "height": 800,
+        "sharpness": 403.48,
+        "brightness": 102.1,
+        "contrast": 22.29,
+        "dhash": "aa9a88a1b08875a9",
+        "score": 0.879,
+        "issues": []
+      }
+    },
+    {
+      "serial": "CAM-ET-04",
+      "label": "Bajo del arroyo",
+      "file": "cameras/CAM-ET-04.jpg",
+      "ground_truth_animals": 199,
+      "measured_count": 199,
+      "confidence": 0.86,
+      "quality": {
+        "width": 1280,
+        "height": 800,
+        "sharpness": 395.58,
+        "brightness": 101.38,
+        "contrast": 21.94,
+        "dhash": "92922d28632bdc55",
+        "score": 0.875,
+        "issues": []
+      }
+    }
+  ],
+  "satellite": [
+    {
+      "name": "los-alamos-soja",
+      "file": "satellite/los-alamos-soja.jpg"
+    },
+    {
+      "name": "don-jose-vinedo-anterior",
+      "file": "satellite/don-jose-vinedo-anterior.jpg"
+    },
+    {
+      "name": "don-jose-vinedo-actual",
+      "file": "satellite/don-jose-vinedo-actual.jpg"
+    },
+    {
+      "name": "san-jose-frutales",
+      "file": "satellite/san-jose-frutales.jpg"
+    },
+    {
+      "name": "los-ceibos-maiz",
+      "file": "satellite/los-ceibos-maiz.jpg"
+    },
+    {
+      "name": "las-marias-forestal",
+      "file": "satellite/las-marias-forestal.jpg"
+    }
+  ],
+  "objects": [
+    {
+      "name": "silobolsas-los-alamos",
+      "label": "Silobolsas Lote 3",
+      "file": "objects/silobolsas-los-alamos.jpg",
+      "measured_count": 0,
+      "confidence": 0.0,
+      "quality": {
+        "width": 1280,
+        "height": 800,
+        "sharpness": 662.33,
+        "brightness": 145.22,
+        "contrast": 54.06,
+        "dhash": "1af4d0d0c4d1c86a",
+        "score": 0.919,
+        "issues": []
+      }
+    },
+    {
+      "name": "silos-la-aurora",
+      "label": "Planta de silos",
+      "file": "objects/silos-la-aurora.jpg",
+      "measured_count": 0,
+      "confidence": 0.0,
+      "quality": {
+        "width": 1280,
+        "height": 800,
+        "sharpness": 273.37,
+        "brightness": 131.19,
+        "contrast": 33.63,
+        "dhash": "12eca4a4a4828252",
+        "score": 0.985,
+        "issues": []
+      }
+    },
+    {
+      "name": "cosechadora-don-alberto",
+      "label": "Cosechadora axial",
+      "file": "objects/cosechadora-don-alberto.jpg",
+      "measured_count": 0,
+      "confidence": 0.0,
+      "quality": {
+        "width": 1280,
+        "height": 800,
+        "sharpness": 246.56,
+        "brightness": 132.18,
+        "contrast": 33.28,
+        "dhash": "83f0d4b4b4d4e0a5",
+        "score": 0.967,
+        "issues": []
+      }
+    },
+    {
+      "name": "galpon-la-aurora",
+      "label": "Galpon de acopio",
+      "file": "objects/galpon-la-aurora.jpg",
+      "measured_count": 0,
+      "confidence": 0.0,
+      "quality": {
+        "width": 1280,
+        "height": 800,
+        "sharpness": 255.34,
+        "brightness": 137.82,
+        "contrast": 35.21,
+        "dhash": "1523c8c8c0c88285",
+        "score": 0.954,
+        "issues": []
+      }
+    }
+  ]
+}

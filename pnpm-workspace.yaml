@@ -1,0 +1,10 @@
+packages:
+  - apps/api
+  - apps/web
+
+onlyBuiltDependencies:
+  - argon2
+  - '@nestjs/core'
+  - esbuild
+  - sharp
+  - unrs-resolver
