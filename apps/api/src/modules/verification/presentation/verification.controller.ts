@@ -133,8 +133,11 @@ export class VerificationController {
     summary: 'Detalle: estado, resultado, componentes del score, métricas, cruces e historial',
   })
   async get(@CurrentUser() user: AuthenticatedUser, @Param('id', ParseUUIDPipe) id: string) {
-    const { run, metrics, snapshots, history } = await this.queries.get(user.organizationId, id);
-    return presentRunDetail(run, metrics, snapshots, history);
+    const { run, metrics, snapshots, history, progress } = await this.queries.get(
+      user.organizationId,
+      id,
+    );
+    return { ...presentRunDetail(run, metrics, snapshots, history), progress };
   }
 
   @Get('verifications/:id/evidence')

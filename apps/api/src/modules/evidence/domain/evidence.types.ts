@@ -1,5 +1,11 @@
 export type EvidenceSourceKind =
-  'CAMERA' | 'SATELLITE' | 'MANUAL_UPLOAD' | 'RFID' | 'SENSOR' | 'REGISTRY' | 'DRONE';
+  | 'CAMERA'
+  | 'SATELLITE'
+  | 'MANUAL_UPLOAD'
+  | 'RFID'
+  | 'SENSOR'
+  | 'REGISTRY'
+  | 'DRONE';
 
 export type EvidenceType = 'IMAGE' | 'SATELLITE_SCENE' | 'RFID_READ' | 'SENSOR_READING';
 

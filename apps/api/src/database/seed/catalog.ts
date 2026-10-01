@@ -26,11 +26,20 @@ export interface AssetTypeSeed {
   metadataSchema: Record<string, unknown>;
 }
 
-const schema = (properties: Record<string, unknown>, required: string[] = []) => ({
+/**
+ * JSON Schema de metadata. JSONB no preserva el orden de las claves: el orden de presentación
+ * se fija explícitamente con la anotación x-order.
+ */
+const schema = (properties: Record<string, Record<string, unknown>>, required: string[] = []) => ({
   type: 'object',
   additionalProperties: false,
   required,
-  properties,
+  properties: Object.fromEntries(
+    Object.entries(properties).map(([key, property], index) => [
+      key,
+      { ...property, 'x-order': index + 1 },
+    ]),
+  ),
 });
 
 export const ASSET_TYPES: AssetTypeSeed[] = [

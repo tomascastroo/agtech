@@ -1,0 +1,225 @@
+.barList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.barRow {
+  display: grid;
+  grid-template-columns: minmax(110px, 30%) 1fr auto;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+}
+.barLabel {
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.barTrack {
+  position: relative;
+  height: 10px;
+  background: var(--gray-50);
+  border-radius: 0 4px 4px 0;
+}
+.barFill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--data-1);
+  border-radius: 0 4px 4px 0;
+  min-width: 2px;
+}
+.barValue {
+  min-width: 70px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+}
+.barValue strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+@media (max-width: 640px) {
+  .barRow {
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: 4px;
+  }
+  .barTrack {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}
+
+.meter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.meterHero {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.meterValue {
+  font-size: 56px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--text-primary);
+}
+.meterMax {
+  font-size: var(--text-xl);
+  color: var(--text-muted);
+}
+.meterTrack {
+  position: relative;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--gray-100);
+  overflow: hidden;
+}
+.meterFill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 4px;
+}
+.meterScale {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.components {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.componentHead {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+}
+.componentName {
+  font-weight: 600;
+}
+.componentScore {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.componentMeta {
+  color: var(--text-muted);
+  font-weight: 400;
+  margin-left: 6px;
+}
+.componentTrack {
+  height: 6px;
+  margin: 6px 0;
+  border-radius: 0 3px 3px 0;
+  background: var(--gray-100);
+  position: relative;
+}
+.componentFill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--data-1);
+  border-radius: 0 3px 3px 0;
+}
+.componentExplanation {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.chart {
+  position: relative;
+  width: 100%;
+}
+.chart svg {
+  display: block;
+  width: 100%;
+  overflow: visible;
+}
+.tooltip {
+  position: absolute;
+  pointer-events: none;
+  transform: translate(-50%, calc(-100% - 12px));
+  padding: 6px 10px;
+  background: var(--navy-900);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  box-shadow: var(--shadow-overlay);
+}
+.tooltip strong {
+  display: block;
+  font-size: var(--text-sm);
+}
+.axisLabel {
+  font-size: 11px;
+  fill: var(--text-muted);
+}
+.stack {
+  display: flex;
+  gap: 2px;
+  height: 12px;
+  margin: var(--space-3) 0;
+}
+.stackSegment {
+  min-width: 4px;
+}
+.stackSegment:first-child {
+  border-radius: 4px 0 0 4px;
+}
+.stackSegment:last-child {
+  border-radius: 0 4px 4px 0;
+}
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.legendSwatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.factors {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 6px 0 0;
+  border-top: 1px dashed var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+.factors li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.factors li > span:last-child {
+  text-align: right;
+  color: var(--text-primary);
+}
+.impactNegative {
+  color: var(--critical-fg);
+  font-variant-numeric: tabular-nums;
+}
+.impactPositive {
+  color: var(--success-fg);
+  font-variant-numeric: tabular-nums;
+}

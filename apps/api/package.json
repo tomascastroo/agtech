@@ -19,7 +19,9 @@
     "migration:run": "typeorm migration:run -d dist/database/data-source.js",
     "migration:revert": "typeorm migration:revert -d dist/database/data-source.js",
     "migration:show": "typeorm migration:show -d dist/database/data-source.js",
-    "seed": "node dist/database/seed/run-seed.js"
+    "seed": "node dist/database/seed/run-seed.js",
+    "db:bootstrap": "node dist/database/bootstrap.js",
+    "db:reset": "node dist/database/reset-demo.js --yes"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1144.0",

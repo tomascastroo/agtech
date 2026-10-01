@@ -14,6 +14,7 @@ import { OrganizationsService } from '../../../organizations/application/organiz
 import { ScoringEngine } from '../../../scoring/domain/scoring-engine.js';
 import type { ScoringOutput } from '../../../scoring/domain/scoring.types.js';
 import type { VerificationStrategyCode } from '../../../assets/domain/asset.types.js';
+import type { PipelineStep } from '../../domain/verification.types.js';
 import type { VerificationEvidenceEntity } from '../../infrastructure/verification-evidence.entity.js';
 import { VerificationRepository } from '../../infrastructure/verification.repository.js';
 import { ContextLoader } from './context-loader.js';
@@ -69,11 +70,16 @@ export class VerificationPipeline {
     };
   }
 
-  async execute(runId: string, requestId?: string): Promise<void> {
+  async execute(
+    runId: string,
+    requestId?: string,
+    onStep: (step: PipelineStep) => Promise<void> = async () => undefined,
+  ): Promise<void> {
     const run = await this.repository.findRun(runId);
     if (!run) throw new UnrecoverableError(`Verificación ${runId} inexistente`);
     if (run.status === 'COMPLETED' || run.status === 'FAILED') return;
     await this.repository.markProcessing(runId);
+    await onStep('EVIDENCE');
 
     const ctx = await this.contextLoader.load(run, requestId);
     const strategy = this.strategies[ctx.assetType.verificationStrategy];
@@ -96,8 +102,11 @@ export class VerificationPipeline {
       links = await this.repository.evidenceLinks(runId);
     }
 
+    await onStep('METRICS');
     const outcome = await strategy.analyze(ctx, links);
+    await onStep('CROSS_CHECKS');
     const cross = await this.crossChecks.run(ctx, links);
+    await onStep('SCORING');
     const weights = await this.organizations.scoringWeights(run.organizationId);
     const scoring = this.scoring.score(buildScoringInput(ctx, outcome, cross), weights);
 
@@ -107,6 +116,7 @@ export class VerificationPipeline {
       'Verificación completada',
     );
 
+    await onStep('ALERTS');
     await this.alerts.evaluate(run.organizationId, {
       phase: 'VERIFICATION',
       now: ctx.now,
@@ -139,6 +149,7 @@ export class VerificationPipeline {
       })),
     });
 
+    await onStep('REPORT');
     await this.reportsQueue.add(
       'create-for-run',
       {

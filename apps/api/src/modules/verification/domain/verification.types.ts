@@ -26,3 +26,29 @@ export interface VerificationInputSnapshot {
   maxEvidenceAgeHours: number;
   note?: string;
 }
+
+/** Etapas del pipeline, en orden. Se publican como progreso del job mientras se procesa. */
+export const PIPELINE_STEPS = [
+  'EVIDENCE',
+  'METRICS',
+  'CROSS_CHECKS',
+  'SCORING',
+  'ALERTS',
+  'REPORT',
+] as const;
+export type PipelineStep = (typeof PIPELINE_STEPS)[number];
+
+export interface PipelineProgress {
+  step: PipelineStep;
+  index: number;
+  total: number;
+}
+
+export function isPipelineProgress(value: unknown): value is PipelineProgress {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    PIPELINE_STEPS.includes((value as PipelineProgress).step) &&
+    typeof (value as PipelineProgress).index === 'number'
+  );
+}

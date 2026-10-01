@@ -3,6 +3,7 @@ import { Logger } from '@nestjs/common';
 import { UnrecoverableError, type Job } from 'bullmq';
 import { DomainError } from '../../../common/domain/errors.js';
 import { QUEUES, type VerificationJobData } from '../../../common/queues/queues.js';
+import { PIPELINE_STEPS, type PipelineProgress } from '../domain/verification.types.js';
 import { VerificationPipeline } from '../application/pipeline/verification-pipeline.js';
 
 /** Worker BullMQ de verificaciones: reintentos con backoff exponencial. */
@@ -17,7 +18,14 @@ export class VerificationProcessor extends WorkerHost {
   async process(job: Job<VerificationJobData>): Promise<void> {
     const { runId, requestId } = job.data;
     try {
-      await this.pipeline.execute(runId, requestId);
+      await this.pipeline.execute(runId, requestId, async (step) => {
+        const progress: PipelineProgress = {
+          step,
+          index: PIPELINE_STEPS.indexOf(step),
+          total: PIPELINE_STEPS.length,
+        };
+        await job.updateProgress(progress);
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       const finalAttempt =

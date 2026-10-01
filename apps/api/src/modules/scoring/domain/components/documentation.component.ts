@@ -1,4 +1,7 @@
-import { requirementAlternatives } from '../../../documents/domain/document.types.js';
+import {
+  requirementAlternatives,
+  requirementLabel,
+} from '../../../documents/domain/document.types.js';
 import { round } from '../scoring.math.js';
 import type {
   ComponentEvaluation,
@@ -38,7 +41,7 @@ export class DocumentationComponent implements ScoreComponent {
       const points = best?.points ?? 0;
       total += points;
       factors.push({
-        label: requirement.replace('|', ' o '),
+        label: requirementLabel(requirement),
         value: best ? this.describe(best.doc, now) : 'Faltante',
         impact: points - 100,
       });

@@ -1,7 +1,11 @@
+import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable } from '@nestjs/common';
+import type { Queue } from 'bullmq';
 import { NotFoundError } from '../../../common/domain/errors.js';
+import { QUEUES, type VerificationJobData } from '../../../common/queues/queues.js';
 import { ExternalDataService } from '../../external-data/application/external-data.service.js';
 import { ObjectStorage } from '../../storage/object-storage.js';
+import { isPipelineProgress, type PipelineProgress } from '../domain/verification.types.js';
 import {
   VerificationRepository,
   type VerificationFilters,
@@ -13,6 +17,7 @@ export class VerificationQueryService {
     private readonly repository: VerificationRepository,
     private readonly externalData: ExternalDataService,
     private readonly storage: ObjectStorage,
+    @InjectQueue(QUEUES.VERIFICATION) private readonly queue: Queue<VerificationJobData>,
   ) {}
 
   list(organizationId: string, filters: VerificationFilters) {
@@ -27,7 +32,18 @@ export class VerificationQueryService {
       this.externalData.forRun(organizationId, id),
       this.repository.previousResults(run.assetId, run.completedAt ?? new Date(), 365),
     ]);
-    return { run, metrics, snapshots, history };
+    const progress = run.status === 'PROCESSING' ? await this.progress(id) : null;
+    return { run, metrics, snapshots, history, progress };
+  }
+
+  /** Etapa en curso, publicada por el worker como progreso del job (jobId = id de la corrida). */
+  private async progress(runId: string): Promise<PipelineProgress | null> {
+    try {
+      const job = await this.queue.getJob(runId);
+      return job && isPipelineProgress(job.progress) ? job.progress : null;
+    } catch {
+      return null;
+    }
   }
 
   async evidence(organizationId: string, id: string) {

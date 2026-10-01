@@ -1,0 +1,43 @@
+.row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-4);
+}
+.stat {
+  padding: var(--space-4) var(--space-5);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  min-width: 0;
+}
+.label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+.value {
+  margin-top: 6px;
+  font-size: var(--text-3xl);
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--text-primary);
+}
+.valueSmall {
+  font-size: var(--text-2xl);
+}
+.caption {
+  margin-top: 4px;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+.accent {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
