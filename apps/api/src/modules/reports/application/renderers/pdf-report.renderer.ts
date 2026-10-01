@@ -201,7 +201,7 @@ export class PdfReportRenderer {
       ['Ubicación', [e.locality, e.province].filter(Boolean).join(', ')],
       ['Coordenadas (lat, lon)', coords],
       ['RENSPA', e.renspa ?? '—'],
-      ['Tipo de explotación', e.establishmentType],
+      ['Tipo de explotación', LABELS.establishmentType[e.establishmentType] ?? e.establishmentType],
       ['Tenencia', LABELS.tenure[e.tenure] ?? e.tenure],
       ['Superficie total', e.totalAreaHa ? `${number(e.totalAreaHa, 1)} ha` : '—'],
       ['Activo', `${data.asset.typeName} — ${data.asset.name}`],

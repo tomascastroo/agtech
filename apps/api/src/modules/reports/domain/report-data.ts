@@ -112,6 +112,18 @@ export const LABELS = {
   } as Record<string, string>,
   risk: { LOW: 'Bajo', MEDIUM: 'Moderado', HIGH: 'Alto' } as Record<string, string>,
   tenure: { OWNED: 'Propio', LEASED: 'Arrendado', OTHER: 'Otro' } as Record<string, string>,
+  establishmentType: {
+    CRIA: 'Cría',
+    INVERNADA: 'Invernada',
+    CICLO_COMPLETO: 'Ciclo completo',
+    TAMBO: 'Tambo',
+    FEEDLOT: 'Feedlot',
+    AGRICOLA: 'Agrícola',
+    MIXTO: 'Mixto',
+    VITIVINICOLA: 'Vitivinícola',
+    FRUTICOLA: 'Frutícola',
+    FORESTAL: 'Forestal',
+  } as Record<string, string>,
   documentStatus: {
     VALID: 'Válido',
     PENDING_REVIEW: 'Pendiente de revisión',
