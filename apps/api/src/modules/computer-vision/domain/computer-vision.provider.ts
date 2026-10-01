@@ -46,7 +46,11 @@ export interface AnimalCount {
   count: number;
   confidence: number;
   clusteredComponents: number;
-  detections: (BoundingBox & { estimatedAnimals: number; label: string })[];
+  detections: (BoundingBox & { estimatedAnimals: number; label: string; score?: number | null })[];
+  /** Pasadas de inferencia (1 = imagen completa; más = mosaico). */
+  inferencePasses?: number;
+  /** Umbral de confianza aplicado a las detecciones. */
+  scoreThreshold?: number | null;
   image: ImageAnalysis;
   model: ModelRef;
   processingMs: number;

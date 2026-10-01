@@ -43,11 +43,14 @@ interface RemoteDetection {
   height: number;
   estimated_animals: number;
   label: string;
+  score?: number | null;
 }
 
 interface RemoteCount {
   count: number;
   confidence: number;
+  inference_passes?: number;
+  score_threshold?: number | null;
   clustered_components: number;
   detections: RemoteDetection[];
   image: RemoteAnalysis;
@@ -123,7 +126,10 @@ export class AiServiceComputerVisionProvider extends ComputerVisionProvider {
         height: d.height,
         estimatedAnimals: d.estimated_animals,
         label: d.label,
+        score: d.score ?? null,
       })),
+      inferencePasses: r.inference_passes ?? 1,
+      scoreThreshold: r.score_threshold ?? null,
       image: toAnalysis(r.image),
       model: toModel(r.model),
       processingMs: r.processing_ms,
@@ -133,7 +139,7 @@ export class AiServiceComputerVisionProvider extends ComputerVisionProvider {
   async detectObjects(image: ImageInput, context?: CallContext): Promise<ObjectDetection> {
     const count = await this.countAnimals(image, { species: 'bovine' }, context);
     return {
-      detections: count.detections.map((d) => ({ ...d, score: count.confidence })),
+      detections: count.detections.map((d) => ({ ...d, score: d.score ?? count.confidence })),
       model: count.model,
     };
   }

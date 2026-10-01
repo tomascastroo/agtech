@@ -1,0 +1,121 @@
+{
+  "dataset": "Composiciones sintéticas densas (recortes reales de Open Images V7)",
+  "model": "yolox_s, clases livestock, umbral 0.40 con mosaico 640 (solape 0.2)",
+  "threshold_calibration": "umbral elegido en las escenas CAM-ET (El Trébol); CAM-LE se reporta",
+  "scenes": [
+    {
+      "serial": "CAM-LE-01",
+      "ground_truth": 252,
+      "detected": 262,
+      "abs_error": 10,
+      "precision": 0.9237,
+      "recall": 0.9603,
+      "confidence": 0.8308,
+      "inference_passes": 16,
+      "processing_ms": 1711
+    },
+    {
+      "serial": "CAM-LE-02",
+      "ground_truth": 247,
+      "detected": 247,
+      "abs_error": 0,
+      "precision": 0.9474,
+      "recall": 0.9474,
+      "confidence": 0.8356,
+      "inference_passes": 16,
+      "processing_ms": 1436
+    },
+    {
+      "serial": "CAM-LE-03",
+      "ground_truth": 250,
+      "detected": 257,
+      "abs_error": 7,
+      "precision": 0.93,
+      "recall": 0.956,
+      "confidence": 0.8342,
+      "inference_passes": 16,
+      "processing_ms": 1365
+    },
+    {
+      "serial": "CAM-LE-04",
+      "ground_truth": 244,
+      "detected": 247,
+      "abs_error": 3,
+      "precision": 0.915,
+      "recall": 0.9262,
+      "confidence": 0.8148,
+      "inference_passes": 16,
+      "processing_ms": 1607
+    },
+    {
+      "serial": "CAM-LE-05",
+      "ground_truth": 249,
+      "detected": 249,
+      "abs_error": 0,
+      "precision": 0.9398,
+      "recall": 0.9398,
+      "confidence": 0.8363,
+      "inference_passes": 16,
+      "processing_ms": 1422
+    },
+    {
+      "serial": "CAM-LE-06",
+      "ground_truth": 248,
+      "detected": 248,
+      "abs_error": 0,
+      "precision": 0.9516,
+      "recall": 0.9516,
+      "confidence": 0.8275,
+      "inference_passes": 16,
+      "processing_ms": 1392
+    },
+    {
+      "serial": "CAM-ET-01",
+      "ground_truth": 205,
+      "detected": 204,
+      "abs_error": 1,
+      "precision": 0.9216,
+      "recall": 0.9171,
+      "confidence": 0.8427,
+      "inference_passes": 16,
+      "processing_ms": 1515
+    },
+    {
+      "serial": "CAM-ET-02",
+      "ground_truth": 198,
+      "detected": 203,
+      "abs_error": 5,
+      "precision": 0.9064,
+      "recall": 0.9293,
+      "confidence": 0.8311,
+      "inference_passes": 16,
+      "processing_ms": 1580
+    },
+    {
+      "serial": "CAM-ET-03",
+      "ground_truth": 210,
+      "detected": 208,
+      "abs_error": 2,
+      "precision": 0.9615,
+      "recall": 0.9524,
+      "confidence": 0.8457,
+      "inference_passes": 16,
+      "processing_ms": 1620
+    },
+    {
+      "serial": "CAM-ET-04",
+      "ground_truth": 199,
+      "detected": 195,
+      "abs_error": 4,
+      "precision": 0.9385,
+      "recall": 0.9196,
+      "confidence": 0.8325,
+      "inference_passes": 16,
+      "processing_ms": 1615
+    }
+  ],
+  "total_ground_truth": 2302,
+  "total_detected": 2320,
+  "total_relative_error": 0.0078,
+  "mae": 3.2
+}

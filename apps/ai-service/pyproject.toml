@@ -11,6 +11,8 @@ dependencies = [
   "numpy>=2.5.3,<2.6",
   "pillow>=12.3.0,<13",
   "pydantic-settings>=2.15.0,<3",
+  "onnxruntime>=1.23",
+  "rasterio>=1.4",
 ]
 
 [dependency-groups]

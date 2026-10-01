@@ -29,8 +29,8 @@ LIVESTOCK_COUNTER = ModelDescriptor(
     version="1.0.0",
     task="ANIMAL_COUNTING",
     description=(
-        "Segmentación por índice de exceso de verde (ExG), morfología y componentes conexos "
-        "para conteo de bovinos en tomas cenitales sobre pastura."
+        "Segmentación por índice de exceso de verde (ExG), morfología y componentes conexos. "
+        "Sólo válido para las escenas sintéticas de desarrollo; no usar con fotografías reales."
     ),
     license="Apache-2.0 (OpenCV)",
     base_confidence=0.86,
@@ -55,4 +55,46 @@ CHANGE_DETECTOR = ModelDescriptor(
     base_confidence=0.8,
 )
 
-REGISTRY: tuple[ModelDescriptor, ...] = (LIVESTOCK_COUNTER, IMAGE_QUALITY, CHANGE_DETECTOR)
+NDVI_PROCESSOR = ModelDescriptor(
+    code="sentinel2-ndvi",
+    version="1.0.0",
+    task="VEGETATION_INDEX",
+    description=(
+        "NDVI (B08−B04)/(B08+B04) sobre Sentinel-2 L2A en el polígono declarado, con máscara de "
+        "nubes y píxeles inválidos según la capa SCL; superficie con vegetación activa por umbral."
+    ),
+    license="Datos Copernicus Sentinel (libre y abierto); procesamiento propio",
+    base_confidence=0.95,
+)
+
+
+def yolox_descriptor(
+    variant: str, threshold: float, tiled_threshold: float, class_set: str, tile_size: int
+) -> ModelDescriptor:
+    """Descriptor del detector YOLOX activo (pesos COCO oficiales, ONNX)."""
+    return ModelDescriptor(
+        code=f"{variant.replace('_', '-')}-coco",
+        version="0.1.1rc0-onnx",
+        task="ANIMAL_COUNTING",
+        description=(
+            f"YOLOX ({variant}) preentrenado en COCO, inferencia ONNX Runtime; cuenta las clases "
+            f"{class_set}. Umbral {threshold} en fotos completas y {tiled_threshold} en escenas "
+            f"grandes procesadas por mosaico de {tile_size} px."
+        ),
+        license="Apache-2.0 (YOLOX, Megvii)",
+        base_confidence=tiled_threshold,
+        parameters={
+            "score_threshold": threshold,
+            "tiled_score_threshold": tiled_threshold,
+            "class_set": class_set,
+            "tile_size": tile_size,
+        },
+    )
+
+
+REGISTRY: tuple[ModelDescriptor, ...] = (
+    LIVESTOCK_COUNTER,
+    IMAGE_QUALITY,
+    CHANGE_DETECTOR,
+    NDVI_PROCESSOR,
+)

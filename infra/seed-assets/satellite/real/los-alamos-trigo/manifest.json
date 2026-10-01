@@ -1,0 +1,478 @@
+{
+ "key": "los-alamos-trigo",
+ "asset": "Trigo — Campaña 2026/27 (Los Álamos)",
+ "source": "Copernicus Sentinel-2 L2A (ESA), COG en AWS Open Data (sentinel-cogs)",
+ "processing_version": "agro-ndvi/1.0.0",
+ "ndvi_threshold": 0.4,
+ "generated_at": "2026-10-01T19:24:38+00:00",
+ "polygon": {
+  "type": "Polygon",
+  "coordinates": [
+   [
+    [
+     -61.866048,
+     -34.377759
+    ],
+    [
+     -61.86714,
+     -34.377499
+    ],
+    [
+     -61.874418,
+     -34.378107
+    ],
+    [
+     -61.87387,
+     -34.378462
+    ],
+    [
+     -61.873975,
+     -34.378734
+    ],
+    [
+     -61.874632,
+     -34.378379
+    ],
+    [
+     -61.874956,
+     -34.378563
+    ],
+    [
+     -61.874756,
+     -34.385414
+    ],
+    [
+     -61.870407,
+     -34.385284
+    ],
+    [
+     -61.869979,
+     -34.384739
+    ],
+    [
+     -61.869002,
+     -34.38455
+    ],
+    [
+     -61.86847,
+     -34.383733
+    ],
+    [
+     -61.866411,
+     -34.383173
+    ],
+    [
+     -61.866311,
+     -34.382451
+    ],
+    [
+     -61.865989,
+     -34.382177
+    ],
+    [
+     -61.86654,
+     -34.381641
+    ],
+    [
+     -61.866436,
+     -34.381279
+    ],
+    [
+     -61.865997,
+     -34.381546
+    ],
+    [
+     -61.866048,
+     -34.377759
+    ]
+   ]
+  ]
+ },
+ "segmentation": {
+  "rule": "NDVI ago ≥ 0.55 y NDVI sep ≥ 0.70",
+  "scenes": [
+   "S2A_20HNG_20260820_0_L2A",
+   "S2C_20HNG_20260917_0_L2A"
+  ],
+  "component_area_ha": 65.1,
+  "compactness": 0.881
+ },
+ "observations": [
+  {
+   "scene_id": "S2C_20HPG_20260719_0_L2A",
+   "acquired_at": "2026-07-19T14:12:20.914000+00:00",
+   "polygon_pixels": 6059,
+   "valid_pixels": 0,
+   "cloud_pixels": 6059,
+   "polygon_area_ha": 60.82,
+   "cloud_cover_pct": 100.0,
+   "valid_fraction": 0.0,
+   "ndvi_mean": null,
+   "ndvi_median": null,
+   "ndvi_min": null,
+   "ndvi_max": null,
+   "ndvi_p10": null,
+   "ndvi_p90": null,
+   "ndvi_std": null,
+   "vegetated_pixels": 0,
+   "vegetation_pct": null,
+   "vegetated_area_observed_ha": 0.0,
+   "vegetated_area_estimated_ha": null,
+   "usable": false,
+   "quality": "LOW_CONFIDENCE",
+   "confidence": 0.0,
+   "issues": [
+    "CLOUD_COVER_ABOVE_LIMIT",
+    "INSUFFICIENT_VALID_PIXELS"
+   ],
+   "scene": {
+    "scene_id": "S2C_20HPG_20260719_0_L2A",
+    "platform": "sentinel-2c",
+    "tile": "20HPG",
+    "scene_cloud_cover": 52.96,
+    "processing_baseline": "05.12",
+    "catalog": "aws-inventory"
+   },
+   "previews": [
+    "ndvi",
+    "visual"
+   ]
+  },
+  {
+   "scene_id": "S2C_20HPG_20260808_0_L2A",
+   "acquired_at": "2026-08-08T14:12:19.409000+00:00",
+   "polygon_pixels": 6059,
+   "valid_pixels": 6059,
+   "cloud_pixels": 0,
+   "polygon_area_ha": 60.82,
+   "cloud_cover_pct": 0.0,
+   "valid_fraction": 1.0,
+   "ndvi_mean": 0.5659,
+   "ndvi_median": 0.5658,
+   "ndvi_min": 0.2117,
+   "ndvi_max": 0.7613,
+   "ndvi_p10": 0.5257,
+   "ndvi_p90": 0.6127,
+   "ndvi_std": 0.0407,
+   "vegetated_pixels": 6029,
+   "vegetation_pct": 99.5,
+   "vegetated_area_observed_ha": 60.29,
+   "vegetated_area_estimated_ha": 60.52,
+   "usable": true,
+   "quality": "GOOD",
+   "confidence": 0.95,
+   "issues": [],
+   "scene": {
+    "scene_id": "S2C_20HPG_20260808_0_L2A",
+    "platform": "sentinel-2c",
+    "tile": "20HPG",
+    "scene_cloud_cover": 40.02,
+    "processing_baseline": "05.12",
+    "catalog": "aws-inventory"
+   },
+   "previews": [
+    "ndvi",
+    "visual"
+   ]
+  },
+  {
+   "scene_id": "S2C_20HNG_20260818_0_L2A",
+   "acquired_at": "2026-08-18T14:12:20.482000+00:00",
+   "polygon_pixels": 6059,
+   "valid_pixels": 0,
+   "cloud_pixels": 6059,
+   "polygon_area_ha": 60.82,
+   "cloud_cover_pct": 100.0,
+   "valid_fraction": 0.0,
+   "ndvi_mean": null,
+   "ndvi_median": null,
+   "ndvi_min": null,
+   "ndvi_max": null,
+   "ndvi_p10": null,
+   "ndvi_p90": null,
+   "ndvi_std": null,
+   "vegetated_pixels": 0,
+   "vegetation_pct": null,
+   "vegetated_area_observed_ha": 0.0,
+   "vegetated_area_estimated_ha": null,
+   "usable": false,
+   "quality": "LOW_CONFIDENCE",
+   "confidence": 0.0,
+   "issues": [
+    "CLOUD_COVER_ABOVE_LIMIT",
+    "INSUFFICIENT_VALID_PIXELS"
+   ],
+   "scene": {
+    "scene_id": "S2C_20HNG_20260818_0_L2A",
+    "platform": "sentinel-2c",
+    "tile": "20HNG",
+    "scene_cloud_cover": 17.19,
+    "processing_baseline": "05.12",
+    "catalog": "aws-inventory"
+   },
+   "previews": [
+    "ndvi",
+    "visual"
+   ]
+  },
+  {
+   "scene_id": "S2A_20HPG_20260820_1_L2A",
+   "acquired_at": "2026-08-20T14:12:34.165000+00:00",
+   "polygon_pixels": 6059,
+   "valid_pixels": 6059,
+   "cloud_pixels": 0,
+   "polygon_area_ha": 60.82,
+   "cloud_cover_pct": 0.0,
+   "valid_fraction": 1.0,
+   "ndvi_mean": 0.7674,
+   "ndvi_median": 0.7763,
+   "ndvi_min": 0.2176,
+   "ndvi_max": 0.9041,
+   "ndvi_p10": 0.7285,
+   "ndvi_p90": 0.8064,
+   "ndvi_std": 0.0516,
+   "vegetated_pixels": 6034,
+   "vegetation_pct": 99.59,
+   "vegetated_area_observed_ha": 60.34,
+   "vegetated_area_estimated_ha": 60.57,
+   "usable": true,
+   "quality": "GOOD",
+   "confidence": 0.95,
+   "issues": [],
+   "scene": {
+    "scene_id": "S2A_20HPG_20260820_1_L2A",
+    "platform": "sentinel-2a",
+    "tile": "20HPG",
+    "scene_cloud_cover": 32.91,
+    "processing_baseline": "05.12",
+    "catalog": "aws-inventory"
+   },
+   "previews": [
+    "ndvi",
+    "visual"
+   ]
+  },
+  {
+   "scene_id": "S2B_20HPG_20260823_0_L2A",
+   "acquired_at": "2026-08-23T14:12:16.058000+00:00",
+   "polygon_pixels": 6059,
+   "valid_pixels": 6059,
+   "cloud_pixels": 0,
+   "polygon_area_ha": 60.82,
+   "cloud_cover_pct": 0.0,
+   "valid_fraction": 1.0,
+   "ndvi_mean": 0.778,
+   "ndvi_median": 0.7853,
+   "ndvi_min": 0.0902,
+   "ndvi_max": 0.9034,
+   "ndvi_p10": 0.7418,
+   "ndvi_p90": 0.8164,
+   "ndvi_std": 0.0515,
+   "vegetated_pixels": 6033,
+   "vegetation_pct": 99.57,
+   "vegetated_area_observed_ha": 60.33,
+   "vegetated_area_estimated_ha": 60.56,
+   "usable": true,
+   "quality": "GOOD",
+   "confidence": 0.95,
+   "issues": [],
+   "scene": {
+    "scene_id": "S2B_20HPG_20260823_0_L2A",
+    "platform": "sentinel-2b",
+    "tile": "20HPG",
+    "scene_cloud_cover": 3.14,
+    "processing_baseline": "05.12",
+    "catalog": "aws-inventory"
+   },
+   "previews": [
+    "ndvi",
+    "visual"
+   ]
+  },
+  {
+   "scene_id": "S2C_20HPG_20260828_0_L2A",
+   "acquired_at": "2026-08-28T14:12:17.196000+00:00",
+   "polygon_pixels": 6059,
+   "valid_pixels": 6059,
+   "cloud_pixels": 0,
+   "polygon_area_ha": 60.82,
+   "cloud_cover_pct": 0.0,
+   "valid_fraction": 1.0,
+   "ndvi_mean": 0.8088,
+   "ndvi_median": 0.8161,
+   "ndvi_min": 0.1852,
+   "ndvi_max": 0.9127,
+   "ndvi_p10": 0.7623,
+   "ndvi_p90": 0.8552,
+   "ndvi_std": 0.0535,
+   "vegetated_pixels": 6044,
+   "vegetation_pct": 99.75,
+   "vegetated_area_observed_ha": 60.44,
+   "vegetated_area_estimated_ha": 60.67,
+   "usable": true,
+   "quality": "GOOD",
+   "confidence": 0.95,
+   "issues": [],
+   "scene": {
+    "scene_id": "S2C_20HPG_20260828_0_L2A",
+    "platform": "sentinel-2c",
+    "tile": "20HPG",
+    "scene_cloud_cover": 10.88,
+    "processing_baseline": "05.12",
+    "catalog": "aws-inventory"
+   },
+   "previews": [
+    "ndvi",
+    "visual"
+   ]
+  },
+  {
+   "scene_id": "S2B_20HPG_20260902_0_L2A",
+   "acquired_at": "2026-09-02T14:12:16.791000+00:00",
+   "polygon_pixels": 6059,
+   "valid_pixels": 5883,
+   "cloud_pixels": 176,
+   "polygon_area_ha": 60.82,
+   "cloud_cover_pct": 2.9,
+   "valid_fraction": 0.971,
+   "ndvi_mean": 0.8268,
+   "ndvi_median": 0.8417,
+   "ndvi_min": 0.2348,
+   "ndvi_max": 0.9233,
+   "ndvi_p10": 0.7596,
+   "ndvi_p90": 0.8806,
+   "ndvi_std": 0.064,
+   "vegetated_pixels": 5860,
+   "vegetation_pct": 99.61,
+   "vegetated_area_observed_ha": 58.6,
+   "vegetated_area_estimated_ha": 60.59,
+   "usable": true,
+   "quality": "GOOD",
+   "confidence": 0.9224,
+   "issues": [],
+   "scene": {
+    "scene_id": "S2B_20HPG_20260902_0_L2A",
+    "platform": "sentinel-2b",
+    "tile": "20HPG",
+    "scene_cloud_cover": 45.17,
+    "processing_baseline": "05.12",
+    "catalog": "aws-inventory"
+   },
+   "previews": [
+    "ndvi",
+    "visual"
+   ]
+  },
+  {
+   "scene_id": "S2C_20HPG_20260917_0_L2A",
+   "acquired_at": "2026-09-17T14:12:18.854000+00:00",
+   "polygon_pixels": 6059,
+   "valid_pixels": 6059,
+   "cloud_pixels": 0,
+   "polygon_area_ha": 60.82,
+   "cloud_cover_pct": 0.0,
+   "valid_fraction": 1.0,
+   "ndvi_mean": 0.849,
+   "ndvi_median": 0.8593,
+   "ndvi_min": 0.2491,
+   "ndvi_max": 0.9068,
+   "ndvi_p10": 0.8134,
+   "ndvi_p90": 0.8824,
+   "ndvi_std": 0.0537,
+   "vegetated_pixels": 6034,
+   "vegetation_pct": 99.59,
+   "vegetated_area_observed_ha": 60.34,
+   "vegetated_area_estimated_ha": 60.57,
+   "usable": true,
+   "quality": "GOOD",
+   "confidence": 0.95,
+   "issues": [],
+   "scene": {
+    "scene_id": "S2C_20HPG_20260917_0_L2A",
+    "platform": "sentinel-2c",
+    "tile": "20HPG",
+    "scene_cloud_cover": 0.0,
+    "processing_baseline": "05.12",
+    "catalog": "aws-inventory"
+   },
+   "previews": [
+    "ndvi",
+    "visual"
+   ]
+  },
+  {
+   "scene_id": "S2B_20HPG_20260922_0_L2A",
+   "acquired_at": "2026-09-22T14:12:18.675000+00:00",
+   "polygon_pixels": 6059,
+   "valid_pixels": 6059,
+   "cloud_pixels": 0,
+   "polygon_area_ha": 60.82,
+   "cloud_cover_pct": 0.0,
+   "valid_fraction": 1.0,
+   "ndvi_mean": 0.8979,
+   "ndvi_median": 0.91,
+   "ndvi_min": 0.2437,
+   "ndvi_max": 0.9475,
+   "ndvi_p10": 0.8641,
+   "ndvi_p90": 0.9276,
+   "ndvi_std": 0.056,
+   "vegetated_pixels": 6040,
+   "vegetation_pct": 99.69,
+   "vegetated_area_observed_ha": 60.4,
+   "vegetated_area_estimated_ha": 60.63,
+   "usable": true,
+   "quality": "GOOD",
+   "confidence": 0.95,
+   "issues": [],
+   "scene": {
+    "scene_id": "S2B_20HPG_20260922_0_L2A",
+    "platform": "sentinel-2b",
+    "tile": "20HPG",
+    "scene_cloud_cover": 0.0,
+    "processing_baseline": "05.13",
+    "catalog": "aws-inventory"
+   },
+   "previews": [
+    "ndvi",
+    "visual"
+   ]
+  },
+  {
+   "scene_id": "S2A_20HPG_20260929_1_L2A",
+   "acquired_at": "2026-09-29T14:12:32.976000+00:00",
+   "polygon_pixels": 6059,
+   "valid_pixels": 5136,
+   "cloud_pixels": 923,
+   "polygon_area_ha": 60.82,
+   "cloud_cover_pct": 15.23,
+   "valid_fraction": 0.8477,
+   "ndvi_mean": 0.8979,
+   "ndvi_median": 0.9123,
+   "ndvi_min": 0.2642,
+   "ndvi_max": 0.9395,
+   "ndvi_p10": 0.8701,
+   "ndvi_p90": 0.9227,
+   "ndvi_std": 0.0565,
+   "vegetated_pixels": 5117,
+   "vegetation_pct": 99.63,
+   "vegetated_area_observed_ha": 51.17,
+   "vegetated_area_estimated_ha": 60.6,
+   "usable": true,
+   "quality": "ACCEPTABLE",
+   "confidence": 0.8053,
+   "issues": [],
+   "scene": {
+    "scene_id": "S2A_20HPG_20260929_1_L2A",
+    "platform": "sentinel-2a",
+    "tile": "20HPG",
+    "scene_cloud_cover": 40.14,
+    "processing_baseline": "05.13",
+    "catalog": "aws-inventory"
+   },
+   "previews": [
+    "ndvi",
+    "visual"
+   ]
+  }
+ ]
+}

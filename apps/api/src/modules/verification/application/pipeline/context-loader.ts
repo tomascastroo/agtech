@@ -29,19 +29,23 @@ export class ContextLoader {
       throw new UnrecoverableError('El activo de la verificación no existe o fue dado de baja');
     }
     const now = new Date();
-    const [documents, history, openAlerts, installations, monitoring] = await Promise.all([
-      this.documents.forAsset(asset.organizationId, asset.id, asset.establishmentId),
-      this.verification.previousResults(asset.id, run.queuedAt, HISTORY_DAYS),
-      this.alerts.openForAsset(asset.id),
-      this.devices.activeInstallations(asset.id),
-      this.monitoring.forAsset(asset.id),
-    ]);
+    const [documents, history, openAlerts, installations, monitoring, metadata] = await Promise.all(
+      [
+        this.documents.forAsset(asset.organizationId, asset.id, asset.establishmentId),
+        this.verification.previousResults(asset.id, run.queuedAt, HISTORY_DAYS),
+        this.alerts.openForAsset(asset.id),
+        this.devices.activeInstallations(asset.id),
+        this.monitoring.forAsset(asset.id),
+        this.assets.latestMetadata(asset.id),
+      ],
+    );
     return {
       now,
       run,
       asset,
       assetType: asset.assetType,
       establishment: asset.establishment,
+      metadata: metadata?.data ?? {},
       documents,
       history,
       openAlerts,

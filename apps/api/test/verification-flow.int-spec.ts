@@ -49,13 +49,13 @@ describe('Flujo de verificación (API + worker + BullMQ)', () => {
     }
   });
 
-  it('obtiene 1.482 detectados, 98,8 % de coincidencia y score 82/100 explicable', async () => {
+  it('obtiene 1.490 detectados (verdad de campo de las composiciones; CV simulado en tests), 99,3 % de coincidencia y score 82/100 explicable', async () => {
     const run = await waitCompleted(runId);
     expect(run.status).toBe('COMPLETED');
     expect(run.result).toMatchObject({
       declaredQuantity: 1500,
-      detectedQuantity: 1482,
-      matchPercentage: 98.8,
+      detectedQuantity: 1490,
+      matchPercentage: 99.33,
       finalScore: 82,
       outcome: 'VERIFIED',
       riskLevel: 'MEDIUM',
@@ -76,7 +76,7 @@ describe('Flujo de verificación (API + worker + BullMQ)', () => {
       run.metrics.map((m: { key: string; value: number }) => [m.key, m.value]),
     );
     expect(metrics).toMatchObject({
-      detected_quantity: 1482,
+      detected_quantity: 1490,
       cameras_reporting: 6,
       final_score: 82,
     });
@@ -84,7 +84,7 @@ describe('Flujo de verificación (API + worker + BullMQ)', () => {
     expect(asset.body).toMatchObject({
       status: 'VERIFIED',
       lastScore: 82,
-      lastDetectedQuantity: 1482,
+      lastDetectedQuantity: 1490,
     });
   });
 
@@ -103,7 +103,7 @@ describe('Flujo de verificación (API + worker + BullMQ)', () => {
       (acc: number, i: { detectedCount: number }) => acc + i.detectedCount,
       0,
     );
-    expect(total).toBe(1482);
+    expect(total).toBe(1490);
   });
 
   it('las verificaciones cerradas son inmutables a nivel de base de datos', async () => {
@@ -136,7 +136,7 @@ describe('Flujo de verificación (API + worker + BullMQ)', () => {
     };
     expect(content).toMatchObject({
       verificationId: runId,
-      result: { finalScore: 82, detectedQuantity: 1482 },
+      result: { finalScore: 82, detectedQuantity: 1490 },
     });
     expect(content.simulatedSources.length).toBeGreaterThan(0);
     const pdf = await as(ctx, maria)
@@ -153,7 +153,7 @@ describe('Flujo de verificación (API + worker + BullMQ)', () => {
       .expect(201);
     expect(guarantee.body).toMatchObject({
       status: 'ACTIVE',
-      coveredQuantity: 1482,
+      coveredQuantity: 1490,
       currency: 'USD',
     });
     await as(ctx, maria).post(`/api/verifications/${runId}/guarantee`).send({}).expect(409);

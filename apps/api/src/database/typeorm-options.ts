@@ -2,9 +2,10 @@ import type { DataSourceOptions } from 'typeorm';
 import type { Env } from '../config/env.schema.js';
 import { ENTITIES } from './entities.js';
 import { InitialSchema1790000000000 } from './migrations/1790000000000-initial-schema.js';
+import { RealVerificationSignals1791000000000 } from './migrations/1791000000000-real-verification-signals.js';
 import { SnakeNamingStrategy } from './snake-naming.strategy.js';
 
-export const MIGRATIONS = [InitialSchema1790000000000];
+export const MIGRATIONS = [InitialSchema1790000000000, RealVerificationSignals1791000000000];
 
 export function typeOrmOptions(env: Env): DataSourceOptions {
   return {

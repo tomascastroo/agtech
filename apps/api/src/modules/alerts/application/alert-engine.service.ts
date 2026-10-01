@@ -56,7 +56,18 @@ export class AlertEngineService {
         description: candidate.description,
         context: {
           ...candidate.context,
-          rule: { code: rule.code, parameters: rule.parameters },
+          verificationId: ctx.verification?.runId ?? null,
+          evidenceIds:
+            (candidate.context.evidenceIds as string[] | undefined) ??
+            (typeof candidate.context.evidenceId === 'string'
+              ? [candidate.context.evidenceId]
+              : (ctx.verification?.evidenceIds ?? [])),
+          rule: {
+            code: rule.code,
+            conditionType: rule.conditionType,
+            severity: rule.severity,
+            parameters: rule.parameters,
+          },
           phase: ctx.phase,
         },
       });

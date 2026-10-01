@@ -59,6 +59,13 @@ export interface DemoAsset {
   cameras?: { serial: string; label: string; offset: [number, number] }[];
   objectScene?: string;
   satelliteScene?: string;
+  /**
+   * Serie Sentinel-2 REAL (infra/seed-assets/satellite/real/<clave>): el polígono del activo y
+   * el historial de verificaciones salen de observaciones reales; `history` se ignora.
+   */
+  satelliteFixture?: string;
+  /** Fechas (AAAA-MM-DD) de las observaciones usadas como verificaciones históricas. */
+  fixtureRunDates?: string[];
   /** Historial: días hacia atrás y cantidad detectada en cada verificación. */
   history: { daysAgo: number; detected?: number; ndvi?: number }[];
   guarantee: boolean;
@@ -134,7 +141,7 @@ export const ESTABLISHMENTS: DemoEstablishment[] = [
     type: 'AGRICOLA',
     tenure: 'LEASED',
     province: 'Santa Fe',
-    locality: 'Venado Tuerto',
+    locality: 'General López',
     areaHa: 420,
     center: [-61.912, -33.759],
   },
@@ -199,7 +206,7 @@ export const ESTABLISHMENTS: DemoEstablishment[] = [
     type: 'FORESTAL',
     tenure: 'OWNED',
     province: 'Entre Ríos',
-    locality: 'Concordia',
+    locality: 'Villaguay',
     areaHa: 260,
     center: [-58.048, -31.392],
   },
@@ -354,9 +361,9 @@ export const ASSETS: DemoAsset[] = [
     establishment: 'DJ',
     typeCode: 'VINEDOS',
     name: 'Viñedo Malbec — Finca Don José',
-    declaredQuantity: 120,
-    declaredValueUsd: 2_400_000,
-    areaHa: 120,
+    declaredQuantity: 12.5,
+    declaredValueUsd: 250_000,
+    areaHa: 12.5,
     metadata: {
       varietal_principal: 'Malbec',
       sistema_conduccion: 'Espaldero',
@@ -370,41 +377,36 @@ export const ASSETS: DemoAsset[] = [
       id('Bodega y Viñedos Don José S.R.L.', '30-70981234-9'),
       insurance('Granizo y heladas', '2027-03-01'),
     ],
-    satelliteScene: 'don-jose-vinedo-actual',
-    history: [
-      { daysAgo: 60, detected: 119.6, ndvi: 0.71 },
-      { daysAgo: 30, detected: 119.1, ndvi: 0.7 },
-      { daysAgo: 2, detected: 106.8, ndvi: 0.63 },
-    ],
+    satelliteFixture: 'don-jose-vinedo',
+    // Dos verificaciones con follaje (verano) y dos en reposo invernal.
+    fixtureRunDates: ['2026-02-23', '2026-03-22', '2026-09-01', '2026-09-26'],
+    history: [],
     guarantee: false,
     monitoringIntervalHours: 240,
   },
   {
-    key: 'LA-SOJ',
+    key: 'LA-TRI',
     establishment: 'LA',
     typeCode: 'CULTIVOS',
-    name: 'Soja de primera — Campaña 2026/27',
-    declaredQuantity: 350,
-    declaredValueUsd: 420_000,
-    areaHa: 350,
+    name: 'Trigo — Campaña 2026/27',
+    declaredQuantity: 61,
+    declaredValueUsd: 64_000,
+    areaHa: 61,
     metadata: {
-      cultivo: 'Soja',
+      cultivo: 'Trigo',
       campania: '2026/27',
-      fecha_siembra: '2026-09-20',
-      rinde_esperado_t_ha: 3.4,
+      fecha_siembra: '2026-06-01',
+      rinde_esperado_t_ha: 4.2,
       seguro_agricola: true,
     },
     status: 'VERIFIED',
     documents: [
-      lease('Campo Los Álamos — Venado Tuerto', '2029-04-30'),
+      lease('Campo Los Álamos — General López', '2029-04-30'),
       id('Los Álamos Agro S.A.', '30-71234567-1'),
       insurance('Seguro agrícola multirriesgo', '2027-05-31'),
     ],
-    satelliteScene: 'los-alamos-soja',
-    history: [
-      { daysAgo: 20, detected: 346.5, ndvi: 0.77 },
-      { daysAgo: 5, detected: 347.9, ndvi: 0.78 },
-    ],
+    satelliteFixture: 'los-alamos-trigo',
+    history: [],
     guarantee: true,
     monitoringIntervalHours: 240,
   },
@@ -510,28 +512,27 @@ export const ASSETS: DemoAsset[] = [
     establishment: 'LC',
     typeCode: 'CULTIVOS',
     name: 'Maíz temprano — Campaña 2026/27',
-    declaredQuantity: 510,
-    declaredValueUsd: 663_000,
-    areaHa: 510,
+    declaredQuantity: 54,
+    declaredValueUsd: 70_000,
+    areaHa: 54,
     metadata: {
       cultivo: 'Maíz',
       campania: '2026/27',
-      fecha_siembra: '2026-09-15',
+      fecha_siembra: '2026-09-14',
       rinde_esperado_t_ha: 9.5,
       seguro_agricola: true,
     },
-    status: 'VERIFIED',
+    status: 'OBSERVED',
     documents: [
       deed('Los Ceibos — Pergamino', 560),
       id('Agrícola Los Ceibos S.A.', '30-71111222-3'),
       insurance('Seguro agrícola granizo', '2027-04-30'),
     ],
-    satelliteScene: 'los-ceibos-maiz',
-    history: [
-      { daysAgo: 18, detected: 503.2, ndvi: 0.8 },
-      { daysAgo: 3, detected: 505.1, ndvi: 0.81 },
-    ],
-    guarantee: true,
+    satelliteFixture: 'los-ceibos-maiz',
+    // Cobertura antes del barbecho, caída por barbecho químico y lote en implantación.
+    fixtureRunDates: ['2026-08-08', '2026-08-23', '2026-09-22'],
+    history: [],
+    guarantee: false,
     monitoringIntervalHours: 240,
   },
   {
@@ -565,9 +566,9 @@ export const ASSETS: DemoAsset[] = [
     establishment: 'LM',
     typeCode: 'FORESTAL',
     name: 'Eucalyptus grandis — Lotes 1 a 4',
-    declaredQuantity: 240,
-    declaredValueUsd: 960_000,
-    areaHa: 240,
+    declaredQuantity: 80,
+    declaredValueUsd: 320_000,
+    areaHa: 80,
     metadata: {
       especie: 'Eucalipto',
       anio_plantacion: 2017,
@@ -576,14 +577,11 @@ export const ASSETS: DemoAsset[] = [
     },
     status: 'VERIFIED',
     documents: [
-      deed('Las Marías — Concordia', 260),
+      deed('Las Marías — Villaguay', 260),
       id('Forestal Las Marías S.A.', '20-24567890-9'),
     ],
-    satelliteScene: 'las-marias-forestal',
-    history: [
-      { daysAgo: 40, detected: 238.9, ndvi: 0.83 },
-      { daysAgo: 21, detected: 239.2, ndvi: 0.84 },
-    ],
+    satelliteFixture: 'las-marias-forestal',
+    history: [],
     guarantee: true,
     monitoringIntervalHours: 720,
   },

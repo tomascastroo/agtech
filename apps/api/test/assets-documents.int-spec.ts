@@ -236,8 +236,13 @@ describe('Establecimientos, activos, documentos y evidencia', () => {
     );
     const vineyard = await assetIdByName(ctx, maria, 'Malbec');
     const satellite = await as(ctx, maria).get(`/api/assets/${vineyard}/satellite`).expect(200);
-    expect(satellite.body).toHaveLength(3);
-    expect(satellite.body[2].scene.simulated).toBe(true);
+    // Serie Sentinel-2 real del seed (infra/seed-assets/satellite/real/don-jose-vinedo).
+    expect(satellite.body.length).toBeGreaterThan(10);
+    expect(satellite.body.at(-1).scene).toMatchObject({
+      simulated: false,
+      provider: 'sentinel2-l2a',
+    });
+    expect(satellite.body.some((o: { usable: boolean }) => !o.usable)).toBe(true);
     const portfolio = await as(ctx, maria).get('/api/monitoring/portfolio').expect(200);
     const states = Object.fromEntries(
       portfolio.body.map((r: { establishmentName: string; state: string }) => [
@@ -245,10 +250,11 @@ describe('Establecimientos, activos, documentos y evidencia', () => {
         r.state,
       ]),
     );
-    expect(states['Finca Don José']).toBe('ALERTA');
+    // Reposo invernal: verificación no concluyente por fenología (sin alerta fabricada).
+    expect(states['Finca Don José']).toBe('OBSERVADO');
     expect(states['Campo Los Álamos']).toBe('OK');
     const dashboard = await as(ctx, maria).get('/api/dashboard/summary').expect(200);
-    expect(dashboard.body.kpis).toMatchObject({ verified: 10, withAlerts: 1 });
+    expect(dashboard.body.kpis).toMatchObject({ verified: 9, withAlerts: 2 });
   });
 
   it('expone el estado de las integraciones indicando cuáles son simuladas', async () => {

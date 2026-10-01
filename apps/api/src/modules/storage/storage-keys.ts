@@ -11,8 +11,8 @@ export const storageKeys = {
     `org/${orgId}/assets/${assetId}/evidence/${randomUUID()}.${extension}`,
   report: (orgId: string, reportId: string, version: number, extension: string) =>
     `org/${orgId}/reports/${reportId}/v${version}.${extension}`,
-  satellitePreview: (orgId: string, sceneId: string) =>
-    `org/${orgId}/satellite/${sceneId.replace(/[^A-Za-z0-9_.-]/g, '_')}.jpg`,
+  satellitePreview: (orgId: string, name: string, extension = 'jpg') =>
+    `org/${orgId}/satellite/${name.replace(/[^A-Za-z0-9_.-]/g, '_')}.${extension}`,
   /** Biblioteca de señales simuladas (cámaras y escenas) usada por los adapters de desarrollo. */
   simulatedCameraFeed: (serial: string) => `simulated-feeds/cameras/${serial}.jpg`,
   simulatedSatelliteFeed: (assetId: string) => `simulated-feeds/satellite/${assetId}.jpg`,

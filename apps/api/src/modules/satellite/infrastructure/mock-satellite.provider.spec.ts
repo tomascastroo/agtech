@@ -52,7 +52,7 @@ describe('MockSatelliteProvider', () => {
       declaredAreaHa: 120,
       baseline: { ndviMean: 0.63, vegetatedAreaHa: 106.8 },
     });
-    expect(Math.abs(result.vegetatedAreaHa - 106.8)).toBeLessThan(0.6);
+    expect(Math.abs(result.vegetatedAreaHa! - 106.8)).toBeLessThan(0.6);
     expect(result.model.simulated).toBe(true);
   });
 });

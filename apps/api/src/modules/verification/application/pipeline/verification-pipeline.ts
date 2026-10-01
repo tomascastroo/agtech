@@ -137,6 +137,7 @@ export class VerificationPipeline {
         locationDistanceM: cross.location.distanceM,
         anomalies: [...outcome.anomalies, ...cross.anomalies],
         vegetationChangePct: outcome.vegetationChangePct,
+        evidenceIds: links.filter((l) => l.role === 'PRIMARY').map((l) => l.evidenceId),
       },
       newestEvidenceAt: outcome.newestEvidenceAt,
       maxEvidenceAgeHours: ctx.monitoring?.maxEvidenceAgeHours ?? null,
