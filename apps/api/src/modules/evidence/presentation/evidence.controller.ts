@@ -27,6 +27,7 @@ import {
   type RequestContext,
 } from '../../../common/auth/decorators.js';
 import { PERMISSIONS } from '../../../common/auth/permissions.js';
+import { uploadOptions } from '../../../common/files/file-signature.js';
 import { EvidenceService } from '../application/evidence.service.js';
 import { presentEvidence } from './evidence.presenter.js';
 
@@ -77,7 +78,7 @@ export class EvidenceController {
   @RequirePermissions(PERMISSIONS.EVIDENCE_WRITE)
   @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Carga manual de imagen (JPG, PNG o WEBP, máx. 20 MB)' })
-  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 20 * 1_048_576, files: 1 } }))
+  @UseInterceptors(FileInterceptor('file', uploadOptions(20 * 1_048_576)))
   async upload(
     @CurrentUser() user: AuthenticatedUser,
     @Param('assetId', ParseUUIDPipe) assetId: string,

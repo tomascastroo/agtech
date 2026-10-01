@@ -11,7 +11,7 @@ import {
 } from '../../../common/auth/decorators.js';
 import { COOKIE_NAMES, REFRESH_COOKIE_PATH } from '../../../common/http/cookies.js';
 import { AuthenticationError } from '../../../common/domain/errors.js';
-import { AppConfig } from '../../../config/app-config.js';
+import { AppConfig, loadAppConfig } from '../../../config/app-config.js';
 import { AuthService, type SessionTokens } from '../application/auth.service.js';
 import { CsrfGuard } from './auth.guard.js';
 import { LoginDto, SessionResponseDto, SessionUserDto } from './auth.dto.js';
@@ -42,7 +42,9 @@ export class AuthController {
   @Public()
   @Post('login')
   @HttpCode(200)
-  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Throttle({
+    default: { limit: () => loadAppConfig().env.RATE_LIMIT_LOGIN_PER_MINUTE, ttl: 60_000 },
+  })
   @ApiOperation({ summary: 'Inicio de sesión. Emite cookies httpOnly y un access token.' })
   @ApiOkResponse({ type: SessionResponseDto })
   async login(

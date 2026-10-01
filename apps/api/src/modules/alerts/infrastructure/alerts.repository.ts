@@ -94,8 +94,9 @@ export class AlertsRepository {
         'ASC',
       )
       .addOrderBy('alert.createdAt', 'DESC')
-      .skip(toSkip(filters))
-      .take(filters.pageSize);
+      // Relaciones many-to-one: no multiplican filas, por eso alcanza con OFFSET/LIMIT.
+      .offset(toSkip(filters))
+      .limit(filters.pageSize);
     if (filters.status === 'ACTIVE') qb.andWhere("alert.status <> 'RESOLVED'");
     else if (filters.status) qb.andWhere('alert.status = :status', { status: filters.status });
     if (filters.severity) qb.andWhere('alert.severity = :severity', { severity: filters.severity });

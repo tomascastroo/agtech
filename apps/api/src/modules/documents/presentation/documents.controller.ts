@@ -27,6 +27,7 @@ import {
   type RequestContext,
 } from '../../../common/auth/decorators.js';
 import { PERMISSIONS } from '../../../common/auth/permissions.js';
+import { uploadOptions } from '../../../common/files/file-signature.js';
 import { DOCUMENT_TYPES, type DocumentType } from '../domain/document.types.js';
 import {
   DocumentsService,
@@ -125,7 +126,7 @@ export class DocumentsController {
   @ApiConsumes('multipart/form-data')
   @ApiBody(uploadSchema)
   @ApiOperation({ summary: 'Carga de documentación del activo (PDF, JPG o PNG, máx. 15 MB)' })
-  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: MAX_UPLOAD_BYTES, files: 1 } }))
+  @UseInterceptors(FileInterceptor('file', uploadOptions(MAX_UPLOAD_BYTES)))
   async uploadForAsset(
     @CurrentUser() user: AuthenticatedUser,
     @Param('assetId', ParseUUIDPipe) assetId: string,
@@ -140,7 +141,7 @@ export class DocumentsController {
   @RequirePermissions(PERMISSIONS.DOCUMENTS_WRITE)
   @ApiConsumes('multipart/form-data')
   @ApiBody(uploadSchema)
-  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: MAX_UPLOAD_BYTES, files: 1 } }))
+  @UseInterceptors(FileInterceptor('file', uploadOptions(MAX_UPLOAD_BYTES)))
   async uploadForEstablishment(
     @CurrentUser() user: AuthenticatedUser,
     @Param('establishmentId', ParseUUIDPipe) establishmentId: string,

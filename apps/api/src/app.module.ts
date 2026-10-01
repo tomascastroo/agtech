@@ -3,7 +3,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { LoggingModule } from './common/logging/logging.module.js';
 import { QueuesModule } from './common/queues/queues.module.js';
-import { AppConfigModule } from './config/app-config.js';
+import { AppConfig, AppConfigModule } from './config/app-config.js';
 import { DatabaseModule } from './database/database.module.js';
 import { AlertsModule } from './modules/alerts/alerts.module.js';
 import { AnimalsModule } from './modules/animals/animals.module.js';
@@ -32,7 +32,12 @@ import { VerificationModule } from './modules/verification/verification.module.j
     LoggingModule.forService('agrogarantias-api'),
     DatabaseModule,
     QueuesModule,
-    ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 300 }]),
+    ThrottlerModule.forRootAsync({
+      inject: [AppConfig],
+      useFactory: (config: AppConfig) => [
+        { name: 'default', ttl: 60_000, limit: config.env.RATE_LIMIT_PER_MINUTE },
+      ],
+    }),
     StorageModule,
     AuditModule,
     MonitoringEventsModule,

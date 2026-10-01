@@ -42,6 +42,9 @@ export const envSchema = z
     CAMERA_GATEWAY: z.enum(['simulated']).default('simulated'),
     REGISTRY_PROVIDER: z.enum(['mock']).default('mock'),
 
+    RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(10).max(100_000).default(300),
+    RATE_LIMIT_LOGIN_PER_MINUTE: z.coerce.number().int().min(1).max(10_000).default(10),
+
     MONITORING_TICK_SECONDS: z.coerce.number().int().min(30).max(86400).default(300),
     VERIFICATION_JOB_ATTEMPTS: z.coerce.number().int().min(1).max(10).default(3),
 

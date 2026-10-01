@@ -93,3 +93,11 @@ export const EVIDENCE_UPLOAD_POLICY = new UploadPolicy(
   ['image/png', 'image/jpeg', 'image/webp'],
   20 * 1_048_576,
 );
+
+/** Opciones de multer: un único archivo en memoria y nombres de archivo decodificados como UTF-8. */
+export function uploadOptions(maxBytes: number) {
+  return {
+    limits: { fileSize: maxBytes, files: 1, fields: 12, parts: 14 },
+    defParamCharset: 'utf8',
+  };
+}
