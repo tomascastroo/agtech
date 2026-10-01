@@ -70,7 +70,12 @@ export interface ScoringInput {
   documents: { requirements: string[]; documents: RequiredDocumentInput[] };
   history: { previous: HistoricalRunInput[] };
   location: { verified: boolean | null; distanceM: number | null };
-  registry: { status: RegistryStatus; registeredQuantity: number | null };
+  registry: {
+    status: RegistryStatus;
+    registeredQuantity: number | null;
+    /** Cantidad declarada comparable con el registro (todo el establecimiento). */
+    declaredOnEstablishment: number | null;
+  };
   risk: {
     openAlerts: { severity: 'INFO' | 'WARNING' | 'CRITICAL' }[];
     activeDevices: number;

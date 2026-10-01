@@ -923,7 +923,12 @@ export class DemoSeeder {
       },
       history: { previous: previous.map((p) => p.input) },
       location: { verified: locationVerified, distanceM: null },
-      registry: { status: registryStatus, registeredQuantity: registered },
+      // Cada establecimiento demo tiene un único rodeo: la base es la cantidad del activo.
+      registry: {
+        status: registryStatus,
+        registeredQuantity: registered,
+        declaredOnEstablishment: null,
+      },
       risk: {
         openAlerts: [],
         activeDevices: installations.filter((i) => i.device).length,

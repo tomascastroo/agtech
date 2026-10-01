@@ -161,7 +161,12 @@ services:
       dockerfile: apps/web/Dockerfile
     environment:
       API_INTERNAL_URL: http://api:4000
-      NEXT_PUBLIC_MAP_STYLE_URL: ${NEXT_PUBLIC_MAP_STYLE_URL:-}
+      MAP_STYLE_URL: ${MAP_STYLE_URL:-}
+      MAP_TILE_ORIGINS: ${MAP_TILE_ORIGINS:-https://tile.openstreetmap.org}
+      ASSET_ORIGINS: ${ASSET_ORIGINS:-http://localhost:9000}
+      SHOW_DEMO_CREDENTIALS: ${SHOW_DEMO_CREDENTIALS:-true}
+      DEMO_LOGIN_EMAIL: ${DEMO_LOGIN_EMAIL:-maria.lopez@bancodelcampo.com.ar}
+      SEED_DEMO_PASSWORD: ${SEED_DEMO_PASSWORD:-AgroDemo2026!}
     ports:
       - "${WEB_PORT:-3000}:3000"
     depends_on:

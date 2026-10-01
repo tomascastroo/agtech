@@ -18,7 +18,7 @@ export const viewport: Viewport = { width: 'device-width', initialScale: 1, them
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es-AR">
-      <body>
+      <body data-map-style={process.env.MAP_STYLE_URL || undefined}>
         <Providers>{children}</Providers>
       </body>
     </html>

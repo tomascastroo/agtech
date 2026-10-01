@@ -9,7 +9,12 @@ import { Field, Input } from '@/components/ui/Field';
 import { api, ApiError } from '@/lib/api/client';
 import styles from './login.module.css';
 
-function Form({ showDemo }: { showDemo: boolean }) {
+export interface DemoCredentials {
+  email: string;
+  password: string;
+}
+
+function Form({ demo }: { demo: DemoCredentials | null }) {
   const router = useRouter();
   const params = useSearchParams();
   const queryClient = useQueryClient();
@@ -68,10 +73,10 @@ function Form({ showDemo }: { showDemo: boolean }) {
       <Button type="submit" variant="primary" size="lg" block loading={loading}>
         Ingresar
       </Button>
-      {showDemo ? (
-        <div className={styles.demo}>
-          Entorno de demostración — usuaria <code>maria.lopez@bancodelcampo.com.ar</code>,
-          contraseña <code>AgroDemo2026!</code>
+      {demo ? (
+        <div className={styles.demo} data-testid="demo-credentials">
+          Entorno de demostración — usuario <code>{demo.email}</code>, contraseña{' '}
+          <code>{demo.password}</code>
         </div>
       ) : null}
       <p className={styles.legal}>
@@ -82,10 +87,10 @@ function Form({ showDemo }: { showDemo: boolean }) {
   );
 }
 
-export function LoginForm({ showDemo }: { showDemo: boolean }) {
+export function LoginForm({ demo }: { demo: DemoCredentials | null }) {
   return (
     <Suspense>
-      <Form showDemo={showDemo} />
+      <Form demo={demo} />
     </Suspense>
   );
 }

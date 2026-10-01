@@ -106,6 +106,24 @@ export class EstablishmentsRepository {
     return saved;
   }
 
+  /**
+   * Existencias ganaderas declaradas en el establecimiento (todas sus hacienda vigentes): es la
+   * base comparable con el registro oficial, que informa existencias por RENSPA y no por activo.
+   */
+  async livestockDeclaredTotal(establishmentId: string): Promise<number> {
+    const [row] = (await this.dataSource.query(
+      `SELECT COALESCE(SUM(a.declared_quantity), 0)::float AS total
+         FROM assets a
+         JOIN asset_types t ON t.id = a.asset_type_id
+        WHERE a.establishment_id = $1
+          AND t.category = 'LIVESTOCK'
+          AND a.status <> 'REJECTED'
+          AND a.deleted_at IS NULL`,
+      [establishmentId],
+    )) as { total: number }[];
+    return row?.total ?? 0;
+  }
+
   async isValidGeometry(geoJson: unknown): Promise<boolean> {
     const [row] = await this.dataSource.query(
       `SELECT ST_IsValid(ST_SetSRID(ST_GeomFromGeoJSON($1), 4326)) AS valid`,

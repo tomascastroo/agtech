@@ -195,15 +195,26 @@ function CrossChecks({ run }: { run: VerificationDetail }) {
           : `A ${formatNumber(result.locationDistanceM)} m del límite declarado.`,
   });
   if (registry) {
+    // El RENSPA informa existencias de todo el establecimiento: se compara con la hacienda
+    // declarada en él (misma base y umbral de 10 % que usa el pipeline).
+    const details = run.metrics.find((m) => m.key === 'registry_quantity')?.details;
+    const base =
+      typeof details?.declaredOnEstablishment === 'number'
+        ? details.declaredOnEstablishment
+        : result.declaredQuantity;
     rows.push({
       label: EXTERNAL_SOURCE_LABELS[registry.source] ?? registry.source,
       ok:
         registry.status === 'OK' && registered !== null
-          ? Math.abs(registered - result.declaredQuantity) / result.declaredQuantity <= 0.05
+          ? Math.abs(registered - base) / base <= 0.1
           : false,
       detail:
         registry.status === 'OK' && registered !== null
-          ? `${formatNumber(registered)} cabezas registradas (RENSPA ${registry.subjectRef}).`
+          ? `${formatNumber(registered)} cabezas registradas (RENSPA ${registry.subjectRef})${
+              base !== result.declaredQuantity
+                ? ` frente a ${formatNumber(base)} declaradas en el establecimiento`
+                : ''
+            }.`
           : registry.status === 'NOT_FOUND'
             ? 'Sin registro para el RENSPA informado.'
             : 'Consulta no disponible.',

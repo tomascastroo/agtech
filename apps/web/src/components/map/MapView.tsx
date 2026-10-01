@@ -26,7 +26,8 @@ const WORKER_URL = '/maplibre/maplibre-gl-worker.mjs';
 
 /** Estilo base: OpenStreetMap raster (con atribución) o el estilo configurado por entorno. */
 function baseStyle(): StyleSpecification | string {
-  const custom = process.env.NEXT_PUBLIC_MAP_STYLE_URL;
+  // Configurable en tiempo de ejecución (MAP_STYLE_URL, expuesto por el layout raíz).
+  const custom = typeof document !== 'undefined' ? document.body.dataset.mapStyle : undefined;
   if (custom) return custom;
   return {
     version: 8,

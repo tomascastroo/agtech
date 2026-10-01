@@ -1,5 +1,6 @@
 import {
   as,
+  DEMO_PASSWORD,
   login,
   resetAndSeed,
   startTestApp,
@@ -20,7 +21,7 @@ describe('Autenticación y sesión', () => {
     const response = await ctx
       .http()
       .post('/api/auth/login')
-      .send({ email: USERS.maria, password: 'AgroDemo2026!' })
+      .send({ email: USERS.maria, password: DEMO_PASSWORD })
       .expect(200);
     expect(response.body.user).toMatchObject({
       fullName: 'María López',
@@ -61,7 +62,7 @@ describe('Autenticación y sesión', () => {
     await ctx
       .http()
       .post('/api/auth/login')
-      .send({ email: USERS.maria, password: 'AgroDemo2026!', extra: true })
+      .send({ email: USERS.maria, password: DEMO_PASSWORD, extra: true })
       .expect(400);
   });
 
@@ -76,7 +77,7 @@ describe('Autenticación y sesión', () => {
     const blocked = await ctx
       .http()
       .post('/api/auth/login')
-      .send({ email: USERS.analyst, password: 'AgroDemo2026!' })
+      .send({ email: USERS.analyst, password: DEMO_PASSWORD })
       .expect(401);
     expect(blocked.body.message).toContain('bloqueada');
   });

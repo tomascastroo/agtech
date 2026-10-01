@@ -7,7 +7,14 @@ export const metadata: Metadata = { title: 'Iniciar sesión' };
 export const dynamic = 'force-dynamic';
 
 export default function LoginPage() {
-  const showDemo = process.env.SHOW_DEMO_CREDENTIALS !== 'false';
+  // Credenciales demo: solo se muestran si el entorno lo habilita explícitamente y las provee
+  // (las mismas variables que usa el seed). Nunca se incluyen en el código.
+  const demoEmail = process.env.DEMO_LOGIN_EMAIL;
+  const demoPassword = process.env.SEED_DEMO_PASSWORD;
+  const demo =
+    process.env.SHOW_DEMO_CREDENTIALS === 'true' && demoEmail && demoPassword
+      ? { email: demoEmail, password: demoPassword }
+      : null;
   return (
     <div className={styles.page}>
       <section className={styles.brandPanel} aria-label="AgroGarantías">
@@ -55,7 +62,7 @@ export default function LoginPage() {
         </svg>
       </section>
       <section className={styles.formPanel}>
-        <LoginForm showDemo={showDemo} />
+        <LoginForm demo={demo} />
       </section>
     </div>
   );

@@ -18,6 +18,8 @@ export interface CrossCheckResult {
   registry: {
     status: RegistryStatus;
     registeredQuantity: number | null;
+    /** Hacienda declarada en todo el establecimiento (base comparable con el RENSPA). */
+    declaredOnEstablishment: number | null;
     snapshotId: string | null;
   };
   anomalies: Anomaly[];
@@ -89,11 +91,17 @@ export class CrossChecksService {
     let registry: CrossCheckResult['registry'] = {
       status: 'NOT_APPLICABLE',
       registeredQuantity: null,
+      declaredOnEstablishment: null,
       snapshotId: null,
     };
     if (ctx.assetType.category === 'LIVESTOCK') {
       if (!ctx.establishment.renspa) {
-        registry = { status: 'NOT_FOUND', registeredQuantity: null, snapshotId: null };
+        registry = {
+          status: 'NOT_FOUND',
+          registeredQuantity: null,
+          declaredOnEstablishment: null,
+          snapshotId: null,
+        };
       } else {
         const { lookup, snapshot } = await this.externalData.livestockRegistry({
           organizationId: ctx.asset.organizationId,
@@ -102,26 +110,40 @@ export class CrossChecksService {
           establishmentId: ctx.establishment.id,
           verificationRunId: ctx.run.id,
         });
+        // El RENSPA informa existencias de todo el establecimiento: se comparan con la suma de
+        // la hacienda declarada en él, no con un único rodeo.
+        const declared = Math.max(
+          await this.establishments.livestockDeclaredTotal(ctx.establishment.id),
+          ctx.asset.declaredQuantity,
+        );
         registry = {
           status: lookup.status,
           registeredQuantity: lookup.status === 'OK' ? lookup.record.registeredHeads : null,
+          declaredOnEstablishment: declared,
           snapshotId: snapshot.id,
         };
         if (lookup.status === 'OK') {
-          const declared = ctx.asset.declaredQuantity;
           const diff = Math.abs(lookup.record.registeredHeads - declared) / declared;
           metrics.push({
             key: 'registry_quantity',
             value: lookup.record.registeredHeads,
             unit: 'HEAD',
             source: 'registry',
-            details: { snapshotId: snapshot.id, campaign: lookup.record.lastCampaign },
+            details: {
+              snapshotId: snapshot.id,
+              campaign: lookup.record.lastCampaign,
+              declaredOnEstablishment: declared,
+            },
           });
           if (diff > REGISTRY_DISCREPANCY_THRESHOLD) {
+            const base =
+              declared === ctx.asset.declaredQuantity
+                ? 'lo declarado'
+                : `las ${declared.toLocaleString('es-AR')} cabezas declaradas en el establecimiento`;
             anomalies.push({
               code: 'REGISTRY_DISCREPANCY',
               severity: 'WARNING',
-              message: `El registro oficial informa ${lookup.record.registeredHeads.toLocaleString('es-AR')} cabezas, ${Math.round(diff * 100)} % de diferencia con lo declarado.`,
+              message: `El registro oficial informa ${lookup.record.registeredHeads.toLocaleString('es-AR')} cabezas, ${Math.round(diff * 100)} % de diferencia con ${base}.`,
               details: { registered: lookup.record.registeredHeads, declared },
             });
           }

@@ -21,7 +21,7 @@ const env: Record<string, string> = {
   SATELLITE_PROVIDER: 'mock',
   MONITORING_TICK_SECONDS: '86400',
   VERIFICATION_JOB_ATTEMPTS: '2',
-  SEED_DEMO_PASSWORD: 'AgroDemo2026!',
+  SEED_DEMO_PASSWORD: 'test-only-demo-password-2026',
   RATE_LIMIT_LOGIN_PER_MINUTE: '40',
   RATE_LIMIT_PER_MINUTE: '5000',
 };

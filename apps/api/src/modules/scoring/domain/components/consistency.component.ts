@@ -52,10 +52,13 @@ export class ConsistencyComponent implements ScoreComponent {
       let registryScore = 50;
       let value = 'Sin coincidencia en el registro';
       if (registry.status === 'OK' && registry.registeredQuantity !== null) {
-        const diff =
-          Math.abs(registry.registeredQuantity - asset.declaredQuantity) / asset.declaredQuantity;
+        const declared = registry.declaredOnEstablishment ?? asset.declaredQuantity;
+        const diff = Math.abs(registry.registeredQuantity - declared) / declared;
         registryScore = 100 * clamp(1 - diff * REGISTRY_SENSITIVITY);
-        value = `Diferencia de ${percent(diff)} con el registro`;
+        value =
+          declared === asset.declaredQuantity
+            ? `Diferencia de ${percent(diff)} con el registro`
+            : `Diferencia de ${percent(diff)} con el registro (establecimiento)`;
       } else if (registry.status === 'ERROR') {
         value = 'Registro no disponible';
       }

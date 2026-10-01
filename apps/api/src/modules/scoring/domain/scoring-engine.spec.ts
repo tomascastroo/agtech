@@ -33,7 +33,7 @@ function laEsperanza(overrides: Partial<ScoringInput> = {}): ScoringInput {
       })),
     },
     location: { verified: true, distanceM: null },
-    registry: { status: 'OK', registeredQuantity: 1540 },
+    registry: { status: 'OK', registeredQuantity: 1540, declaredOnEstablishment: 1500 },
     risk: {
       openAlerts: [],
       activeDevices: 6,
@@ -178,6 +178,47 @@ describe('ScoringEngine', () => {
       DEFAULT_SCORING_WEIGHTS,
     );
     expect(component(output, 'documentation').score).toBe(Math.round((0 + 85 + 70) / 3));
+  });
+
+  it('compara el registro oficial con toda la hacienda declarada en el establecimiento', () => {
+    // Segundo rodeo de 300 cabezas en un establecimiento con 1.540 registradas y 1.200 ya declaradas.
+    const asset = {
+      declaredQuantity: 300,
+      unit: 'HEAD' as const,
+      mobility: 'HIGH' as const,
+      tenure: 'LEASED' as const,
+    };
+    const detection = {
+      detectedQuantity: 296,
+      confidence: 0.86,
+      evidenceCount: 2,
+      averageQuality: 0.87,
+    };
+    const perAsset = engine.score(
+      laEsperanza({
+        asset,
+        detection,
+        registry: { status: 'OK', registeredQuantity: 1540, declaredOnEstablishment: null },
+      }),
+      DEFAULT_SCORING_WEIGHTS,
+    );
+    const perEstablishment = engine.score(
+      laEsperanza({
+        asset,
+        detection,
+        registry: { status: 'OK', registeredQuantity: 1540, declaredOnEstablishment: 1500 },
+      }),
+      DEFAULT_SCORING_WEIGHTS,
+    );
+    const registryFactor = (o: typeof perAsset) =>
+      component(o, 'consistency').factors.find((f) => f.label === 'Registro oficial')!.value;
+    expect(registryFactor(perAsset)).toMatch(/Diferencia de 413/);
+    expect(registryFactor(perEstablishment)).toBe(
+      'Diferencia de 2,7 % con el registro (establecimiento)',
+    );
+    expect(component(perEstablishment, 'consistency').score).toBeGreaterThan(
+      component(perAsset, 'consistency').score,
+    );
   });
 
   it('respeta pesos configurables', () => {

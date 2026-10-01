@@ -17,7 +17,8 @@ import { typeOrmOptions } from '../../src/database/typeorm-options.js';
 import { S3ObjectStorage } from '../../src/modules/storage/s3-object-storage.js';
 import { WorkerModule } from '../../src/worker.module.js';
 
-export const DEMO_PASSWORD = 'AgroDemo2026!';
+/** Contraseña de los usuarios del seed en el entorno de pruebas (test/setup-env.ts). */
+export const DEMO_PASSWORD = process.env.SEED_DEMO_PASSWORD ?? '';
 export const USERS = {
   maria: 'maria.lopez@bancodelcampo.com.ar',
   analyst: 'federico.gimenez@bancodelcampo.com.ar',

@@ -1,5 +1,6 @@
 import {
   as,
+  DEMO_PASSWORD,
   assetIdByName,
   login,
   resetAndSeed,
@@ -105,7 +106,7 @@ describe('Aislamiento multi-tenant y RBAC', () => {
     await ctx
       .http()
       .post('/api/auth/login')
-      .send({ email: USERS.viewer, password: 'AgroDemo2026!' })
+      .send({ email: USERS.viewer, password: DEMO_PASSWORD })
       .expect(401);
     await ctx.dataSource.query(`UPDATE users SET status = 'ACTIVE' WHERE email = $1`, [
       USERS.viewer,

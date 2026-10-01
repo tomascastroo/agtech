@@ -192,7 +192,7 @@ function RegisterDeviceForm({
   const [error, setError] = useState<string | null>(null);
   const mutation = useApiMutation(
     (body: object) =>
-      api<DeviceInstallation & { connection: boolean }>(`/assets/${assetId}/devices`, {
+      api<DeviceInstallation & { connection: 'ONLINE' | 'OFFLINE' }>(`/assets/${assetId}/devices`, {
         method: 'POST',
         body,
       }),
@@ -216,7 +216,7 @@ function RegisterDeviceForm({
         latitude,
         longitude,
       });
-      onDone(result.connection);
+      onDone(result.connection === 'ONLINE');
     } catch (e) {
       setError(errorText(e, 'No fue posible registrar el dispositivo.'));
     }

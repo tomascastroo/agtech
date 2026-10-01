@@ -59,6 +59,7 @@ export function buildScoringInput(
     registry: {
       status: cross.registry.status,
       registeredQuantity: cross.registry.registeredQuantity,
+      declaredOnEstablishment: cross.registry.declaredOnEstablishment,
     },
     risk: {
       openAlerts: ctx.openAlerts.map((a) => ({ severity: a.severity })),

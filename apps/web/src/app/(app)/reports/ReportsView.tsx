@@ -71,7 +71,7 @@ export function ReportsView() {
                     }
                     subtitle={
                       r.asset
-                        ? `${r.asset.typeName ?? ''} · ${r.asset.establishmentName ?? ''}`
+                        ? `${r.asset.name} · ${r.asset.establishmentName ?? ''}`
                         : undefined
                     }
                   />
