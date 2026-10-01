@@ -51,7 +51,7 @@ describe('Solicitud de garantía: banco → link → productor → verificación
   it('el productor completa establecimiento, activo y evidencia con el link', async () => {
     const view = await producer().get(`/api/producer/requests/${token}`).expect(200);
     expect(view.body.requester.name).toBe('Banco del Campo');
-    expect(view.body.verification).toBeUndefined();
+    expect(view.body.verification).toBeNull(); // el productor no ve score ni resultado de la entidad
     await producer()
       .post(`/api/producer/requests/${token}/establishment`)
       .send({
@@ -106,6 +106,65 @@ describe('Solicitud de garantía: banco → link → productor → verificación
       .patch(`/api/assets/${detail.asset.id}`)
       .send({ declaredQuantity: 300 })
       .expect(403);
+  });
+
+  it('con la base demo: La Esperanza se reutiliza con el CUIT del seed y se rechaza con otro CUIT', async () => {
+    // Seed: La Esperanza, RENSPA 06.687.0.01542/00, titular CUIT 30-71548963-1 (único con ese RENSPA).
+    const open = async (cuit: string) => {
+      const r = await as(ctx, maria)
+        .post('/api/guarantee-requests')
+        .send({
+          producerName: 'Agropecuaria La Esperanza S.A.',
+          producerTaxId: cuit,
+          assetTypeCode: 'BOVINOS',
+        })
+        .expect(201);
+      return `/api/producer/requests/${String(r.body.invitation.url).split('/solicitud/')[1]}`;
+    };
+    const establishment = (holderTaxId: string) => ({
+      name: 'La Esperanza',
+      holderName: 'Agropecuaria La Esperanza S.A.',
+      holderTaxId,
+      renspa: '06.687.0.01542/00',
+      establishmentType: 'CRIA',
+      tenure: 'LEASED',
+      province: 'Buenos Aires',
+      location: { latitude: -36.7905, longitude: -59.153 },
+    });
+    const seedEstablishment = (await ctx.dataSource.query(
+      `SELECT id FROM establishments WHERE renspa = '06.687.0.01542/00' AND holder_tax_id = '30-71548963-1'`,
+    )) as { id: string }[];
+    expect(seedEstablishment).toHaveLength(1);
+
+    const same = await open('30-71548963-1');
+    const reused = await ctx
+      .http()
+      .post(`${same}/establishment`)
+      .send(establishment('30-71548963-1'))
+      .expect(201);
+    expect(reused.body.establishment.id).toBe(seedEstablishment[0]!.id);
+    const asset = await ctx
+      .http()
+      .post(`${same}/asset`)
+      .send({
+        name: 'Rodeo La Esperanza (solicitud)',
+        declaredQuantity: 1500,
+        metadata: { sistema_productivo: 'Cría', raza_predominante: 'Aberdeen Angus' },
+      })
+      .expect(201);
+    expect(asset.body.missing).toEqual(['evidencia (fotos)']);
+
+    const other = await open('30-71549896-7');
+    const rejected = await ctx
+      .http()
+      .post(`${other}/establishment`)
+      .send(establishment('30-71549896-7'))
+      .expect(409);
+    expect(rejected.body.message).toBe('El RENSPA ya está registrado a nombre de otro titular');
+    const count = (await ctx.dataSource.query(
+      `SELECT count(*)::int AS n FROM establishments WHERE renspa = '06.687.0.01542/00'`,
+    )) as { n: number }[];
+    expect(count[0]!.n).toBe(1);
   });
 
   it('reutiliza el establecimiento con el mismo RENSPA y CUIT aunque haya otro titular con ese RENSPA', async () => {

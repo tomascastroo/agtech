@@ -47,6 +47,7 @@ import {
   UploadDocumentDto,
   uploadSchema,
 } from '../../documents/presentation/documents.controller.js';
+import { DOCUMENT_TYPES } from '../../documents/domain/document.types.js';
 import { CreateEstablishmentDto } from '../../establishments/presentation/establishments.dto.js';
 import { UploadEvidenceDto } from '../../evidence/presentation/evidence.controller.js';
 import { presentEvidence } from '../../evidence/presentation/evidence.presenter.js';
@@ -90,6 +91,40 @@ class CreateGuaranteeRequestDto {
   notes?: string;
 }
 
+class AcceptInvitationDto {
+  @ApiProperty({ example: 'productor@laesperanza.com.ar' })
+  @IsEmail()
+  @MaxLength(254)
+  email: string;
+
+  @ApiProperty({ minLength: 10 })
+  @IsString()
+  @Length(10, 128)
+  password: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @Length(2, 160)
+  fullName?: string;
+}
+
+class InformationRequestDto {
+  @ApiProperty({ enum: ['DOCUMENT', 'EVIDENCE'] })
+  @IsIn(['DOCUMENT', 'EVIDENCE'])
+  kind: 'DOCUMENT' | 'EVIDENCE';
+
+  @ApiPropertyOptional({ enum: DOCUMENT_TYPES })
+  @IsOptional()
+  @IsIn(DOCUMENT_TYPES)
+  documentType?: string;
+
+  @ApiProperty({ example: 'Necesitamos la constancia actualizada de titularidad.' })
+  @IsString()
+  @Length(3, 500)
+  message: string;
+}
+
 class ProducerAssetDto extends OmitType(CreateAssetDto, ['establishmentId', 'assetTypeCode']) {}
 
 /** Entidad financiera: crea solicitudes, genera el link y consulta el resultado. */
@@ -121,6 +156,18 @@ export class GuaranteeRequestsController {
     return this.requests.detail(user.organizationId, id);
   }
 
+  @Post(':id/information-requests')
+  @RequirePermissions(PERMISSIONS.ASSETS_WRITE)
+  @ApiOperation({ summary: 'Pide documentación o evidencia adicional al productor' })
+  requestInformation(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: InformationRequestDto,
+    @ReqContext() context: RequestContext,
+  ) {
+    return this.requests.requestInformation(user, id, dto, context);
+  }
+
   @Post(':id/invitation')
   @RequirePermissions(PERMISSIONS.ASSETS_WRITE)
   @ApiOperation({ summary: 'Genera un nuevo link (invalida el anterior)' })
@@ -146,6 +193,18 @@ export class ProducerRequestsController {
   @Get()
   view(@Param('token') token: string) {
     return this.requests.producerView(token);
+  }
+
+  @Post('accept')
+  @ApiOperation({
+    summary: 'Acepta la invitación y crea el acceso del productor (email y contraseña)',
+  })
+  accept(
+    @Param('token') token: string,
+    @Body() dto: AcceptInvitationDto,
+    @ReqContext() context: RequestContext,
+  ) {
+    return this.requests.acceptInvitation(token, dto, context);
   }
 
   @Post('establishment')
@@ -198,5 +257,96 @@ export class ProducerRequestsController {
   @ApiOperation({ summary: 'Confirma la declaración: queda lista y se ejecuta la verificación' })
   submit(@Param('token') token: string, @ReqContext() context: RequestContext) {
     return this.requests.producerSubmit(token, context);
+  }
+}
+
+/**
+ * Portal del productor (sesión con rol PRODUCER): solicitudes propias, tareas, carga de
+ * evidencia y documentación y respuesta a pedidos de información.
+ */
+@ApiTags('Portal del productor')
+@Controller('producer/me')
+export class ProducerPortalController {
+  constructor(private readonly requests: GuaranteeRequestsService) {}
+
+  @Get()
+  overview(@CurrentUser() user: AuthenticatedUser) {
+    return this.requests.overview(user);
+  }
+
+  @Get('requests/:id')
+  detail(@CurrentUser() user: AuthenticatedUser, @Param('id', ParseUUIDPipe) id: string) {
+    return this.requests.producerDetail(user, id);
+  }
+
+  @Post('requests/:id/establishment')
+  async createEstablishment(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CreateEstablishmentDto,
+    @ReqContext() context: RequestContext,
+  ) {
+    await this.requests.establishmentFor(await this.requests.mine(user, id), dto, context);
+    return this.requests.producerDetail(user, id);
+  }
+
+  @Post('requests/:id/asset')
+  async createAsset(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ProducerAssetDto,
+    @ReqContext() context: RequestContext,
+  ) {
+    await this.requests.assetFor(await this.requests.mine(user, id), dto, context);
+    return this.requests.producerDetail(user, id);
+  }
+
+  @Post('requests/:id/documents')
+  @ApiConsumes('multipart/form-data')
+  @ApiBody(uploadSchema)
+  @UseInterceptors(FileInterceptor('file', uploadOptions(MAX_UPLOAD_BYTES)))
+  async uploadDocument(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @UploadedFile() file: UploadedFileData | undefined,
+    @Body() dto: UploadDocumentDto,
+    @ReqContext() context: RequestContext,
+  ) {
+    const request = await this.requests.mine(user, id);
+    return presentDocument(await this.requests.documentFor(request, file, dto, context));
+  }
+
+  @Post('requests/:id/evidence')
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FileInterceptor('file', uploadOptions(20 * 1_048_576)))
+  async uploadEvidence(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @UploadedFile() file: UploadedFileData | undefined,
+    @Body() dto: UploadEvidenceDto,
+    @ReqContext() context: RequestContext,
+  ) {
+    const request = await this.requests.mine(user, id);
+    return presentEvidence(await this.requests.evidenceFor(request, file, dto, context), null);
+  }
+
+  @Post('requests/:id/submit')
+  async submit(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @ReqContext() context: RequestContext,
+  ) {
+    await this.requests.submitFor(await this.requests.mine(user, id), context);
+    return this.requests.producerDetail(user, id);
+  }
+
+  @Post('requests/:id/information-requests/:infoId/respond')
+  respond(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('infoId', ParseUUIDPipe) infoId: string,
+    @ReqContext() context: RequestContext,
+  ) {
+    return this.requests.respondInformation(user, id, infoId, context);
   }
 }

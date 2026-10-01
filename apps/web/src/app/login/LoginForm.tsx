@@ -28,10 +28,17 @@ function Form({ demo }: { demo: DemoCredentials | null }) {
     setError(null);
     setLoading(true);
     try {
-      await api('/auth/login', { method: 'POST', body: { email, password } });
+      const session = await api<{ user: { role: string } }>('/auth/login', {
+        method: 'POST',
+        body: { email, password },
+      });
       queryClient.clear();
+      // El productor entra a su portal; la entidad, al panel institucional.
+      const home = session.user.role === 'PRODUCER' ? '/productor' : '/dashboard';
       const next = params.get('next');
-      router.replace(next && next.startsWith('/') && !next.startsWith('//') ? next : '/dashboard');
+      const safeNext = next && next.startsWith('/') && !next.startsWith('//') ? next : null;
+      const allowed = safeNext && safeNext.startsWith('/productor') === (home === '/productor');
+      router.replace(allowed ? safeNext : home);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'No fue posible iniciar sesión');
       setLoading(false);

@@ -68,6 +68,10 @@ export class GuaranteeRequestEntity extends TimestampedEntity {
   @Column({ type: 'timestamptz', nullable: true })
   submittedAt: Date | null;
 
+  /** Invitación aceptada: el productor creó su acceso y el link deja de servir como credencial. */
+  @Column({ type: 'timestamptz', nullable: true })
+  acceptedAt: Date | null;
+
   @Column({ type: 'uuid' })
   createdBy: string;
 }

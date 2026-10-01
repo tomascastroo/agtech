@@ -375,3 +375,27 @@ consulta el resultado en `/requests/<id>`.
   un activo declarado por el productor (403).
 - Fuera de alcance de esta versión: emails/notificaciones, app móvil, RFID, cuentas de
   productor con varias solicitudes.
+
+## 12. Portal del productor
+
+El link de invitación es solo el **primer acceso**: el productor acepta la invitación creando
+su acceso (email + contraseña, `POST /producer/requests/:token/accept`) sobre su usuario
+PRODUCER y desde entonces ingresa por `/login` a su portal (`/productor`). Una vez aceptada, el
+link deja de permitir operaciones. Si ya tiene cuenta de productor en la misma entidad, con el
+mismo email y contraseña la nueva solicitud se suma a esa cuenta.
+
+- API de sesión `GET|POST /producer/me…` (rol PRODUCER, solo sus solicitudes): inicio con
+  tareas, detalle de la solicitud (progreso, documentos y evidencia), declaración
+  (establecimiento, activo), fotos, documentos, envío y respuesta a pedidos de información.
+  El rol PRODUCER no tiene permisos sobre la cartera de la entidad (403).
+- Estados para el productor: Invitación pendiente, En preparación, Pendiente de
+  documentación / evidencia, Lista para verificar, En verificación, Verificada, Requiere
+  información, Finalizada. El productor no ve score ni alertas (evaluación de la entidad).
+- Evidencia: cámara del teléfono o galería, varias fotos sin límite, quitar antes de enviar,
+  fecha de captura del archivo, ubicación del teléfono si se permite (si no, la del activo) y
+  descripción opcional. Instrucciones por tipo de activo en `asset_types.evidence_guidance`.
+- Pedidos de información: la entidad pide documentación o evidencia
+  (`POST /guarantee-requests/:id/information-requests`, tabla `information_requests`); el
+  productor lo ve como tarea, aporta y lo marca respondido (exige un aporte nuevo posterior al
+  pedido). Lo aportado es evidencia/documentación nueva con su auditoría: la declaración enviada
+  sigue inmutable. Si la solicitud ya estaba enviada, AgroGarantías vuelve a verificar.

@@ -79,6 +79,7 @@ import { VerificationEvidenceEntity } from '../../modules/verification/infrastru
 import { VerificationMetricEntity } from '../../modules/verification/infrastructure/verification-metric.entity.js';
 import { VerificationResultEntity } from '../../modules/verification/infrastructure/verification-result.entity.js';
 import { VerificationRunEntity } from '../../modules/verification/infrastructure/verification-run.entity.js';
+import { EVIDENCE_GUIDANCE } from '../../modules/assets/domain/evidence-guidance.js';
 import { AI_MODELS, ALERT_RULES, ASSET_TYPES, EVIDENCE_SOURCES } from './catalog.js';
 import { demoDocumentPdf } from './demo-documents.js';
 import {
@@ -365,7 +366,14 @@ export class DemoSeeder {
     for (const [index, type] of ASSET_TYPES.entries()) {
       this.types.set(
         type.code,
-        await m.save(m.create(AssetTypeEntity, { ...type, sortOrder: index, isActive: true })),
+        await m.save(
+          m.create(AssetTypeEntity, {
+            ...type,
+            evidenceGuidance: EVIDENCE_GUIDANCE[type.code] ?? null,
+            sortOrder: index,
+            isActive: true,
+          }),
+        ),
       );
     }
     for (const source of EVIDENCE_SOURCES) {

@@ -34,6 +34,10 @@ export class AssetTypeEntity extends TimestampedEntity {
   @Column({ type: 'text', array: true, default: () => "'{}'" })
   requiredDocuments: string[];
 
+  /** Instrucciones para el productor al capturar evidencia de este tipo de activo. */
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  evidenceGuidance: string | null;
+
   @Column({ type: 'jsonb', default: {} })
   metadataSchema: Record<string, unknown>;
 

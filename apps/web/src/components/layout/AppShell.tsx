@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/Button';
 import { Icon, type IconName } from '@/components/ui/Icon';
@@ -34,6 +34,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const session = useSession();
+  const role = session.data?.role;
+  useEffect(() => {
+    // El productor usa su propio portal.
+    if (role === 'PRODUCER') router.replace('/productor');
+  }, [role, router]);
   const dashboard = useDashboard();
   const [open, setOpen] = useState(false);
   const [leaving, setLeaving] = useState(false);

@@ -1,0 +1,407 @@
+/* Portal del productor: estética de app móvil sobre el design system (tokens de globals.css). */
+.app {
+  min-height: 100dvh;
+  background: var(--bg-page);
+  padding-bottom: calc(76px + env(safe-area-inset-bottom));
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--navy-900);
+  color: #fff;
+}
+
+.brand {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.brand strong {
+  font-size: var(--text-lg);
+}
+
+.brand span {
+  font-size: var(--text-xs);
+  opacity: 0.75;
+}
+
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  color: inherit;
+  cursor: pointer;
+}
+
+.main {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.tabbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border);
+  padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+}
+
+.tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 2px;
+  border-radius: 10px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+
+.tabActive {
+  color: var(--accent);
+  background: var(--green-50);
+  font-weight: 600;
+}
+
+@media (min-width: 900px) {
+  .app {
+    padding-bottom: var(--space-8);
+  }
+  .tabbar {
+    position: sticky;
+    top: 64px;
+    max-width: 760px;
+    margin: var(--space-4) auto 0;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+  }
+}
+
+.hello {
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  margin: 0;
+}
+
+.lead {
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.sectionTitle {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+}
+
+.card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  box-shadow: var(--shadow-sm);
+}
+
+.cardLink {
+  text-decoration: none;
+  color: inherit;
+}
+
+.cardHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+
+.muted {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  margin: 0;
+}
+
+.task {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: 14px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--warning-mark);
+  text-decoration: none;
+  color: inherit;
+}
+
+.taskInfo {
+  border-left-color: var(--data-1);
+}
+
+.taskIcon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--warning-bg);
+  color: var(--warning-fg);
+}
+
+.taskBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.taskBody strong {
+  display: block;
+}
+
+.chevron {
+  color: var(--text-muted);
+  font-size: 20px;
+}
+
+.bigButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 52px;
+  padding: 0 var(--space-4);
+  border-radius: 14px;
+  border: 0;
+  background: var(--accent);
+  color: #fff;
+  font-size: var(--text-lg);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.bigButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.bigButtonSecondary {
+  background: var(--bg-surface);
+  color: var(--accent);
+  border: 2px solid var(--accent);
+}
+
+.buttonRow {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-2);
+}
+
+@media (min-width: 560px) {
+  .buttonRow {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.progress {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.progressStep {
+  flex: 1 0 auto;
+  min-width: 82px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.progressBar {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--gray-200);
+}
+
+.stateDONE .progressBar {
+  background: var(--success-mark);
+}
+
+.statePENDING .progressBar {
+  background: var(--warning-mark);
+}
+
+.stateIN_PROGRESS .progressBar {
+  background: var(--data-1);
+}
+
+.stateDONE,
+.statePENDING,
+.stateIN_PROGRESS {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.thumbs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  gap: var(--space-2);
+}
+
+.thumb {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--gray-100);
+}
+
+.thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.thumbRemove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 0;
+  background: rgba(15, 42, 61, 0.75);
+  color: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.thumbState {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 2px 6px;
+  font-size: 11px;
+  color: #fff;
+  background: rgba(15, 42, 61, 0.7);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--gray-100);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.docRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.docRow:last-child {
+  border-bottom: 0;
+}
+
+.docMark {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.docOk {
+  background: var(--success-bg);
+  color: var(--success-fg);
+}
+
+.docMissing {
+  background: var(--warning-bg);
+  color: var(--warning-fg);
+}
+
+.hiddenInput {
+  display: none;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.details summary {
+  cursor: pointer;
+  color: var(--accent);
+  font-weight: 600;
+  padding: var(--space-2) 0;
+}
+
+.cardLink,
+.cardLink:hover,
+.cardLink *,
+.task,
+.task:hover,
+.task *,
+.tab,
+.tab:hover {
+  text-decoration: none;
+}
+
+.taskContext {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}

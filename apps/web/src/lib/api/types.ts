@@ -535,6 +535,7 @@ export interface GuaranteeRequest {
     unit?: string;
     verificationStrategy?: string;
     metadataSchema?: AssetType['metadataSchema'];
+    evidenceGuidance?: string | null;
   };
   requestedAmount: number | null;
   currency: string;
@@ -576,4 +577,70 @@ export interface GuaranteeRequest {
   } | null;
   alerts?: { id: string; type: string; severity: string; title: string; status: string }[];
   invitation?: { url: string; expiresAt: string };
+  producerStatus: ProducerStatus;
+  progress: { key: string; label: string; state: 'DONE' | 'PENDING' | 'TODO' | 'IN_PROGRESS' }[];
+  tasks: ProducerTask[];
+  acceptedAt: string | null;
+  requiredDocuments: {
+    requirement: string;
+    alternatives: string[];
+    satisfied: boolean;
+    status: string | null;
+  }[];
+  informationRequests: InformationRequest[];
+}
+
+export type ProducerStatus =
+  | 'INVITATION_PENDING'
+  | 'PREPARING'
+  | 'PENDING_DOCUMENTATION'
+  | 'PENDING_EVIDENCE'
+  | 'READY_FOR_VERIFICATION'
+  | 'VERIFYING'
+  | 'VERIFIED'
+  | 'INFO_REQUIRED'
+  | 'FINALIZED';
+
+export interface ProducerTask {
+  kind:
+    | 'ESTABLISHMENT'
+    | 'ASSET'
+    | 'EVIDENCE'
+    | 'DOCUMENTS'
+    | 'SUBMIT'
+    | 'INFO_EVIDENCE'
+    | 'INFO_DOCUMENT';
+  title: string;
+  description: string;
+  informationRequestId?: string;
+  documentType?: string | null;
+  requestId?: string;
+  assetName?: string | null;
+}
+
+export interface InformationRequest {
+  id: string;
+  kind: 'DOCUMENT' | 'EVIDENCE';
+  documentType: string | null;
+  message: string;
+  status: 'OPEN' | 'RESPONDED';
+  createdAt: string;
+  respondedAt: string | null;
+}
+
+/** Detalle de una solicitud para el productor (incluye documentos y evidencia aportada). */
+export interface ProducerRequestDetail extends GuaranteeRequest {
+  documents: { documents: DocumentItem[] } | null;
+  evidence: EvidenceItem[];
+}
+
+export interface ProducerOverview {
+  producer: { name: string; email: string };
+  requests: GuaranteeRequest[];
+  tasks: (ProducerTask & { requestId: string })[];
+  establishments: NonNullable<GuaranteeRequest['establishment']>[];
+  assets: (NonNullable<GuaranteeRequest['asset']> & {
+    requestId: string;
+    guaranteeType: GuaranteeRequest['guaranteeType'];
+  })[];
 }
