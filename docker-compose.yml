@@ -1,5 +1,10 @@
 # AgroGarantías — entorno local completo.
 #
+# Puertos publicados en el host: web (3000), API (4000) y MinIO (9000/9001), configurables con
+# WEB_PORT, API_PORT, MINIO_PORT y MINIO_CONSOLE_PORT. PostgreSQL, Redis y el servicio de visión
+# sólo son accesibles dentro de la red de compose (para desarrollo local sin Docker, ver
+# docker-compose.dev.yml).
+#
 # Los valores por defecto (${VAR:-valor}) son SOLO para desarrollo local. Para cualquier otro
 # entorno, definí las variables en un archivo .env (ver .env.example). La API se niega a
 # iniciar en NODE_ENV=production si detecta secretos de desarrollo.
@@ -12,7 +17,7 @@ x-api-env: &api-env
   DATABASE_URL: postgres://${POSTGRES_USER:-agro}:${POSTGRES_PASSWORD:-agro_dev_password}@postgres:5432/${POSTGRES_DB:-agrogarantias}
   REDIS_URL: redis://redis:6379
   S3_ENDPOINT: http://minio:9000
-  S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-http://localhost:9000}
+  S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-http://localhost:${MINIO_PORT:-9000}}
   S3_REGION: ${S3_REGION:-us-east-1}
   S3_BUCKET: ${S3_BUCKET:-agrogarantias}
   S3_ACCESS_KEY: ${MINIO_ROOT_USER:-agro_minio}
@@ -22,7 +27,7 @@ x-api-env: &api-env
   JWT_ACCESS_TTL_SECONDS: ${JWT_ACCESS_TTL_SECONDS:-900}
   REFRESH_TOKEN_TTL_DAYS: ${REFRESH_TOKEN_TTL_DAYS:-7}
   COOKIE_SECURE: ${COOKIE_SECURE:-false}
-  WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:3000}
+  WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:${WEB_PORT:-3000}}
   AI_SERVICE_URL: http://ai-service:8000
   AI_SERVICE_TOKEN: ${AI_SERVICE_TOKEN:-dev-only-ai-service-token}
   CV_PROVIDER: ${CV_PROVIDER:-ai-service}
@@ -43,8 +48,6 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-agrogarantias}
       POSTGRES_USER: ${POSTGRES_USER:-agro}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-agro_dev_password}
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -56,8 +59,6 @@ services:
   redis:
     image: redis:8-alpine
     command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis-data:/data
     healthcheck:
@@ -96,8 +97,6 @@ services:
       AI_SERVICE_TOKEN: ${AI_SERVICE_TOKEN:-dev-only-ai-service-token}
       AI_SERVICE_ENVIRONMENT: ${NODE_ENV:-development}
       AI_SERVICE_LOG_LEVEL: ${AI_SERVICE_LOG_LEVEL:-INFO}
-    ports:
-      - "${AI_SERVICE_PORT:-8000}:8000"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health/live', timeout=3).status == 200 else 1)"]
       interval: 10s
@@ -166,7 +165,7 @@ services:
       API_INTERNAL_URL: http://api:4000
       MAP_STYLE_URL: ${MAP_STYLE_URL:-}
       MAP_TILE_ORIGINS: ${MAP_TILE_ORIGINS:-https://tile.openstreetmap.org}
-      ASSET_ORIGINS: ${ASSET_ORIGINS:-http://localhost:9000}
+      ASSET_ORIGINS: ${ASSET_ORIGINS:-http://localhost:${MINIO_PORT:-9000}}
       SHOW_DEMO_CREDENTIALS: ${SHOW_DEMO_CREDENTIALS:-true}
       DEMO_LOGIN_EMAIL: ${DEMO_LOGIN_EMAIL:-maria.lopez@bancodelcampo.com.ar}
       SEED_DEMO_PASSWORD: ${SEED_DEMO_PASSWORD:-AgroDemo2026!}

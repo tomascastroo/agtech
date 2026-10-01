@@ -1,0 +1,9 @@
+# Desarrollo local sin contenedores de aplicación (pnpm infra:up): publica PostgreSQL y Redis
+# en el host para que la API, el worker y los tests se conecten desde localhost.
+services:
+  postgres:
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+  redis:
+    ports:
+      - "${REDIS_PORT:-6379}:6379"

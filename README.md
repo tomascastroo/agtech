@@ -49,8 +49,12 @@ carga la cartera demo (servicio `migrate`) y luego inicia API, worker y frontend
 | Aplicación | http://localhost:3000 |
 | API (OpenAPI en desarrollo) | http://localhost:4000/api/docs |
 | Salud de la API | http://localhost:4000/health/ready |
-| Servicio de visión | http://localhost:8000/health/ready |
 | Consola MinIO | http://localhost:9001 |
+
+Sólo se publican en tu máquina los puertos 3000, 4000, 9000 y 9001; PostgreSQL, Redis y el
+servicio de visión quedan dentro de la red de Docker. Si alguno de esos puertos ya está en uso,
+cambialo en `.env` (`WEB_PORT=3001`, `API_PORT=4001`, `MINIO_PORT=9100`,
+`MINIO_CONSOLE_PORT=9101`) y volvé a ejecutar `docker compose up -d`.
 
 Para volver a la cartera demo inicial: `docker compose down -v && docker compose up -d`.
 
@@ -200,7 +204,7 @@ Requisitos: Node.js 22.9+, pnpm 10, Python 3.13 con [uv](https://docs.astral.sh/
 cp .env.example .env
 pnpm install
 uv sync --directory apps/ai-service
-pnpm infra:up                 # PostgreSQL, Redis y MinIO
+pnpm infra:up                 # PostgreSQL (5432), Redis (6379) y MinIO, publicados en localhost
 pnpm db:bootstrap             # compila la API, migra, crea el bucket y carga los datos demo
 pnpm dev                      # API :4000, worker, web :3000, visión :8000
 ```
