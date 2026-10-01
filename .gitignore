@@ -15,3 +15,7 @@ playwright-report/
 test-results/
 .DS_Store
 *.log
+
+# Servicio de visión: pesos de modelos y datos de benchmark descargados
+apps/ai-service/models/*.onnx
+apps/ai-service/.cache/

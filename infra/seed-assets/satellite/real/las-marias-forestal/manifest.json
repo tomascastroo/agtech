@@ -1,0 +1,1036 @@
+{
+ "key": "las-marias-forestal",
+ "asset": "Eucalyptus grandis (Las Marías)",
+ "source": "Copernicus Sentinel-2 L2A (ESA), COG en AWS Open Data (sentinel-cogs)",
+ "processing_version": "agro-ndvi/1.0.0",
+ "ndvi_threshold": 0.5,
+ "generated_at": "2026-10-01T19:33:05+00:00",
+ "polygon": {
+  "type": "Polygon",
+  "coordinates": [
+   [
+    [
+     -59.072459,
+     -31.791823
+    ],
+    [
+     -59.07372,
+     -31.791532
+    ],
+    [
+     -59.076466,
+     -31.791577
+    ],
+    [
+     -59.076789,
+     -31.791843
+    ],
+    [
+     -59.077106,
+     -31.791837
+    ],
+    [
+     -59.077205,
+     -31.791565
+    ],
+    [
+     -59.077422,
+     -31.791832
+    ],
+    [
+     -59.081007,
+     -31.791593
+    ],
+    [
+     -59.081643,
+     -31.791673
+    ],
+    [
+     -59.082073,
+     -31.792027
+    ],
+    [
+     -59.083762,
+     -31.791999
+    ],
+    [
+     -59.083025,
+     -31.792101
+    ],
+    [
+     -59.083693,
+     -31.793624
+    ],
+    [
+     -59.084324,
+     -31.793523
+    ],
+    [
+     -59.084197,
+     -31.792533
+    ],
+    [
+     -59.08472,
+     -31.792344
+    ],
+    [
+     -59.084503,
+     -31.792077
+    ],
+    [
+     -59.08482,
+     -31.792072
+    ],
+    [
+     -59.08484,
+     -31.792974
+    ],
+    [
+     -59.085053,
+     -31.79306
+    ],
+    [
+     -59.084846,
+     -31.793244
+    ],
+    [
+     -59.084868,
+     -31.794236
+    ],
+    [
+     -59.085082,
+     -31.794323
+    ],
+    [
+     -59.084883,
+     -31.794867
+    ],
+    [
+     -59.085205,
+     -31.795132
+    ],
+    [
+     -59.085049,
+     -31.79757
+    ],
+    [
+     -59.085262,
+     -31.797657
+    ],
+    [
+     -59.084515,
+     -31.797308
+    ],
+    [
+     -59.084417,
+     -31.797671
+    ],
+    [
+     -59.083571,
+     -31.797594
+    ],
+    [
+     -59.082942,
+     -31.797785
+    ],
+    [
+     -59.076924,
+     -31.797883
+    ],
+    [
+     -59.076804,
+     -31.797254
+    ],
+    [
+     -59.076486,
+     -31.797169
+    ],
+    [
+     -59.076291,
+     -31.797894
+    ],
+    [
+     -59.071751,
+     -31.797968
+    ],
+    [
+     -59.071585,
+     -31.795265
+    ],
+    [
+     -59.071788,
+     -31.7949
+    ],
+    [
+     -59.07284,
+     -31.794703
+    ],
+    [
+     -59.072834,
+     -31.794432
+    ],
+    [
+     -59.072515,
+     -31.794347
+    ],
+    [
+     -59.072501,
+     -31.793716
+    ],
+    [
+     -59.073019,
+     -31.793257
+    ],
+    [
+     -59.072459,
+     -31.791823
+    ]
+   ]
+  ]
+ },
+ "segmentation": {
+  "rule": "NDVI ≥ 0.75 en invierno y primavera, variación ≤ 0.08",
+  "scenes": [
+   "S2C_21HTE_20260706_0_L2A",
+   "S2A_21HTE_20260916_0_L2A"
+  ],
+  "component_area_ha": 87.2,
+  "compactness": 0.892
+ },
+ "observations": [
+  {
+   "scene_id": "S2A_21HTE_20260701_1_L2A",
+   "acquired_at": "2026-07-01T14:11:45.998000+00:00",
+   "polygon_pixels": 7975,
+   "valid_pixels": 7975,
+   "cloud_pixels": 0,
+   "polygon_area_ha": 79.86,
+   "cloud_cover_pct": 0.0,
+   "valid_fraction": 1.0,
+   "ndvi_mean": 0.8992,
+   "ndvi_median": 0.9064,
+   "ndvi_min": 0.4228,
+   "ndvi_max": 0.9389,
+   "ndvi_p10": 0.8669,
+   "ndvi_p90": 0.9236,
+   "ndvi_std": 0.0297,
+   "vegetated_pixels": 7972,
+   "vegetation_pct": 99.96,
+   "vegetated_area_observed_ha": 79.72,
+   "vegetated_area_estimated_ha": 79.83,
+   "usable": true,
+   "quality": "GOOD",
+   "confidence": 0.95,
+   "issues": [],
+   "scene": {
+    "scene_id": "S2A_21HTE_20260701_1_L2A",
+    "platform": "sentinel-2a",
+    "tile": "21HTE",
+    "scene_cloud_cover": 23.54,
+    "processing_baseline": "05.12",
+    "catalog": "aws-inventory"
+   },
+   "previews": [
+    "ndvi",
+    "visual"
+   ]
+  },
+  {
+   "scene_id": "S2B_21HUE_20260704_0_L2A",
+   "acquired_at": "2026-07-04T14:11:19.069000+00:00",
+   "polygon_pixels": 7975,
+   "valid_pixels": 7975,
+   "cloud_pixels": 0,
+   "polygon_area_ha": 79.86,
+   "cloud_cover_pct": 0.0,
+   "valid_fraction": 1.0,
+   "ndvi_mean": 0.9073,
+   "ndvi_median": 0.9148,
+   "ndvi_min": 0.4136,
+   "ndvi_max": 0.95,
+   "ndvi_p10": 0.8735,
+   "ndvi_p90": 0.9324,
+   "ndvi_std": 0.0304,
+   "vegetated_pixels": 7973,
+   "vegetation_pct": 99.97,
+   "vegetated_area_observed_ha": 79.73,
+   "vegetated_area_estimated_ha": 79.84,
+   "usable": true,
+   "quality": "GOOD",
+   "confidence": 0.95,
+   "issues": [],
+   "scene": {
+    "scene_id": "S2B_21HUE_20260704_0_L2A",
+    "platform": "sentinel-2b",
+    "tile": "21HUE",
+    "scene_cloud_cover": 0.08,
+    "processing_baseline": "05.12",
+    "catalog": "aws-inventory"
+   },
+   "previews": [
+    "ndvi",
+    "visual"
+   ]
+  },
+  {
+   "scene_id": "S2C_21HUE_20260706_0_L2A",
+   "acquired_at": "2026-07-06T14:01:30.515000+00:00",
+   "polygon_pixels": 7975,
+   "valid_pixels": 7975,
+   "cloud_pixels": 0,
+   "polygon_area_ha": 79.86,
+   "cloud_cover_pct": 0.0,
+   "valid_fraction": 1.0,
+   "ndvi_mean": 0.9096,
+   "ndvi_median": 0.9168,
+   "ndvi_min": 0.4164,
+   "ndvi_max": 0.949,
+   "ndvi_p10": 0.8804,
+   "ndvi_p90": 0.9322,
+   "ndvi_std": 0.0286,
+   "vegetated_pixels": 7974,
+   "vegetation_pct": 99.99,
+   "vegetated_area_observed_ha": 79.74,
+   "vegetated_area_estimated_ha": 79.85,
+   "usable": true,
+   "quality": "GOOD",
+   "confidence": 0.95,
+   "issues": [],
+   "scene": {
+    "scene_id": "S2C_21HUE_20260706_0_L2A",
+    "platform": "sentinel-2c",
+    "tile": "21HUE",
+    "scene_cloud_cover": 0.23,
+    "processing_baseline": "05.12",
+    "catalog": "aws-inventory"
+   },
+   "previews": [
+    "ndvi",
+    "visual"
+   ]
+  },
+  {
+   "scene_id": "S2A_21HUE_20260708_0_L2A",
+   "acquired_at": "2026-07-08T14:01:46.003000+00:00",
+   "polygon_pixels": 7975,
+   "valid_pixels": 7975,
+   "cloud_pixels": 0,
+   "polygon_area_ha": 79.86,
+   "cloud_cover_pct": 0.0,
+   "valid_fraction": 1.0,
+   "ndvi_mean": 0.9149,
+   "ndvi_median": 0.9217,
+   "ndvi_min": 0.4227,
+   "ndvi_max": 0.9539,
+   "ndvi_p10": 0.886,
+   "ndvi_p90": 0.9369,
+   "ndvi_std": 0.0284,
+   "vegetated_pixels": 7973,
+   "vegetation_pct": 99.97,
+   "vegetated_area_observed_ha": 79.73,
+   "vegetated_area_estimated_ha": 79.84,
+   "usable": true,
+   "quality": "GOOD",
+   "confidence": 0.95,
+   "issues": [],
+   "scene": {
+    "scene_id": "S2A_21HUE_20260708_0_L2A",
+    "platform": "sentinel-2a",
+    "tile": "21HUE",
+    "scene_cloud_cover": 6.97,
+    "processing_baseline": "05.12",
+    "catalog": "aws-inventory"
+   },
+   "previews": [
+    "ndvi",
+    "visual"
+   ]
+  },
+  {
+   "scene_id": "S2C_21HUE_20260716_0_L2A",
+   "acquired_at": "2026-07-16T14:01:32.105000+00:00",
+   "polygon_pixels": 7975,
+   "valid_pixels": 0,
+   "cloud_pixels": 7975,
+   "polygon_area_ha": 79.86,
+   "cloud_cover_pct": 100.0,
+   "valid_fraction": 0.0,
+   "ndvi_mean": null,
+   "ndvi_median": null,
+   "ndvi_min": null,
+   "ndvi_max": null,
+   "ndvi_p10": null,
+   "ndvi_p90": null,
+   "ndvi_std": null,
+   "vegetated_pixels": 0,
+   "vegetation_pct": null,
+   "vegetated_area_observed_ha": 0.0,
+   "vegetated_area_estimated_ha": null,
+   "usable": false,
+   "quality": "LOW_CONFIDENCE",
+   "confidence": 0.0,
+   "issues": [
+    "CLOUD_COVER_ABOVE_LIMIT",
+    "INSUFFICIENT_VALID_PIXELS"
+   ],
+   "scene": {
+    "scene_id": "S2C_21HUE_20260716_0_L2A",
+    "platform": "sentinel-2c",
+    "tile": "21HUE",
+    "scene_cloud_cover": 37.53,
+    "processing_baseline": "05.12",
+    "catalog": "aws-inventory"
+   },
+   "previews": [
+    "ndvi",
+    "visual"
+   ]
+  },
+  {
+   "scene_id": "S2A_21HUE_20260718_0_L2A",
+   "acquired_at": "2026-07-18T14:01:48.038000+00:00",
+   "polygon_pixels": 7975,
+   "valid_pixels": 1671,
+   "cloud_pixels": 6304,
+   "polygon_area_ha": 79.86,
+   "cloud_cover_pct": 79.05,
+   "valid_fraction": 0.2095,
+   "ndvi_mean": 0.6894,
+   "ndvi_median": 0.7014,
+   "ndvi_min": 0.3301,
+   "ndvi_max": 0.8282,
+   "ndvi_p10": 0.6183,
+   "ndvi_p90": 0.7596,
+   "ndvi_std": 0.0674,
+   "vegetated_pixels": 1629,
+   "vegetation_pct": 97.49,
+   "vegetated_area_observed_ha": 16.29,
+   "vegetated_area_estimated_ha": 77.85,
+   "usable": false,
+   "quality": "LOW_CONFIDENCE",
+   "confidence": 0.1048,
+   "issues": [
+    "CLOUD_COVER_ABOVE_LIMIT",
+    "INSUFFICIENT_VALID_PIXELS"
+   ],
+   "scene": {
+    "scene_id": "S2A_21HUE_20260718_0_L2A",
+    "platform": "sentinel-2a",
+    "tile": "21HUE",
+    "scene_cloud_cover": 27.8,
+    "processing_baseline": "05.12",
+    "catalog": "aws-inventory"
+   },
+   "previews": [
+    "ndvi",
+    "visual"
+   ]
+  },
+  {
+   "scene_id": "S2A_21HUE_20260731_1_L2A",
+   "acquired_at": "2026-07-31T14:11:39.036000+00:00",
+   "polygon_pixels": 7975,
+   "valid_pixels": 7975,
+   "cloud_pixels": 0,
+   "polygon_area_ha": 79.86,
+   "cloud_cover_pct": 0.0,
+   "valid_fraction": 1.0,
+   "ndvi_mean": 0.8802,
+   "ndvi_median": 0.8878,
+   "ndvi_min": 0.402,
+   "ndvi_max": 0.9122,
+   "ndvi_p10": 0.8638,
+   "ndvi_p90": 0.8962,
+   "ndvi_std": 0.0304,
+   "vegetated_pixels": 7972,
+   "vegetation_pct": 99.96,
+   "vegetated_area_observed_ha": 79.72,
+   "vegetated_area_estimated_ha": 79.83,
+   "usable": true,
+   "quality": "GOOD",
+   "confidence": 0.95,
+   "issues": [],
+   "scene": {
+    "scene_id": "S2A_21HUE_20260731_1_L2A",
+    "platform": "sentinel-2a",
+    "tile": "21HUE",
+    "scene_cloud_cover": 29.24,
+    "processing_baseline": "05.12",
+    "catalog": "aws-inventory"
+   },
+   "previews": [
+    "ndvi",
+    "visual"
+   ]
+  },
+  {
+   "scene_id": "S2A_21HUE_20260807_0_L2A",
+   "acquired_at": "2026-08-07T14:01:48.020000+00:00",
+   "polygon_pixels": 7975,
+   "valid_pixels": 7975,
+   "cloud_pixels": 0,
+   "polygon_area_ha": 79.86,
+   "cloud_cover_pct": 0.0,
+   "valid_fraction": 1.0,
+   "ndvi_mean": 0.9661,
+   "ndvi_median": 0.9698,
+   "ndvi_min": 0.4914,
+   "ndvi_max": 0.9863,
+   "ndvi_p10": 0.9605,
+   "ndvi_p90": 0.9755,
+   "ndvi_std": 0.0213,
+   "vegetated_pixels": 7974,
+   "vegetation_pct": 99.99,
+   "vegetated_area_observed_ha": 79.74,
+   "vegetated_area_estimated_ha": 79.85,
+   "usable": true,
+   "quality": "GOOD",
+   "confidence": 0.95,
+   "issues": [],
+   "scene": {
+    "scene_id": "S2A_21HUE_20260807_0_L2A",
+    "platform": "sentinel-2a",
+    "tile": "21HUE",
+    "scene_cloud_cover": 5.72,
+    "processing_baseline": "05.12",
+    "catalog": "aws-inventory"
+   },
+   "previews": [
+    "ndvi",
+    "visual"
+   ]
+  },
+  {
+   "scene_id": "S2C_21HUE_20260808_0_L2A",
+   "acquired_at": "2026-08-08T14:11:21.131000+00:00",
+   "polygon_pixels": 7975,
+   "valid_pixels": 7761,
+   "cloud_pixels": 214,
+   "polygon_area_ha": 79.86,
+   "cloud_cover_pct": 2.68,
+   "valid_fraction": 0.9732,
+   "ndvi_mean": 0.8878,
+   "ndvi_median": 0.9204,
+   "ndvi_min": 0.2786,
+   "ndvi_max": 0.9611,
+   "ndvi_p10": 0.8199,
+   "ndvi_p90": 0.9444,
+   "ndvi_std": 0.1044,
+   "vegetated_pixels": 7571,
+   "vegetation_pct": 97.55,
+   "vegetated_area_observed_ha": 75.71,
+   "vegetated_area_estimated_ha": 77.9,
+   "usable": true,
+   "quality": "GOOD",
+   "confidence": 0.9245,
+   "issues": [],
+   "scene": {
+    "scene_id": "S2C_21HUE_20260808_0_L2A",
+    "platform": "sentinel-2c",
+    "tile": "21HUE",
+    "scene_cloud_cover": 41.71,
+    "processing_baseline": "05.12",
+    "catalog": "aws-inventory"
+   },
+   "previews": [
+    "ndvi",
+    "visual"
+   ]
+  },
+  {
+   "scene_id": "S2B_21HUE_20260823_0_L2A",
+   "acquired_at": "2026-08-23T14:11:18.077000+00:00",
+   "polygon_pixels": 7975,
+   "valid_pixels": 7975,
+   "cloud_pixels": 0,
+   "polygon_area_ha": 79.86,
+   "cloud_cover_pct": 0.0,
+   "valid_fraction": 1.0,
+   "ndvi_mean": 0.9432,
+   "ndvi_median": 0.946,
+   "ndvi_min": 0.523,
+   "ndvi_max": 0.9641,
+   "ndvi_p10": 0.9375,
+   "ndvi_p90": 0.9526,
+   "ndvi_std": 0.0187,
+   "vegetated_pixels": 7975,
+   "vegetation_pct": 100.0,
+   "vegetated_area_observed_ha": 79.75,
+   "vegetated_area_estimated_ha": 79.86,
+   "usable": true,
+   "quality": "GOOD",
+   "confidence": 0.95,
+   "issues": [],
+   "scene": {
+    "scene_id": "S2B_21HUE_20260823_0_L2A",
+    "platform": "sentinel-2b",
+    "tile": "21HUE",
+    "scene_cloud_cover": 0.09,
+    "processing_baseline": "05.12",
+    "catalog": "aws-inventory"
+   },
+   "previews": [
+    "ndvi",
+    "visual"
+   ]
+  },
+  {
+   "scene_id": "S2C_21HTE_20260828_0_L2A",
+   "acquired_at": "2026-08-28T14:11:27.387000+00:00",
+   "polygon_pixels": 7975,
+   "valid_pixels": 0,
+   "cloud_pixels": 7975,
+   "polygon_area_ha": 79.86,
+   "cloud_cover_pct": 100.0,
+   "valid_fraction": 0.0,
+   "ndvi_mean": null,
+   "ndvi_median": null,
+   "ndvi_min": null,
+   "ndvi_max": null,
+   "ndvi_p10": null,
+   "ndvi_p90": null,
+   "ndvi_std": null,
+   "vegetated_pixels": 0,
+   "vegetation_pct": null,
+   "vegetated_area_observed_ha": 0.0,
+   "vegetated_area_estimated_ha": null,
+   "usable": false,
+   "quality": "LOW_CONFIDENCE",
+   "confidence": 0.0,
+   "issues": [
+    "CLOUD_COVER_ABOVE_LIMIT",
+    "INSUFFICIENT_VALID_PIXELS"
+   ],
+   "scene": {
+    "scene_id": "S2C_21HTE_20260828_0_L2A",
+    "platform": "sentinel-2c",
+    "tile": "21HTE",
+    "scene_cloud_cover": 11.01,
+    "processing_baseline": "05.12",
+    "catalog": "aws-inventory"
+   },
+   "previews": [
+    "ndvi",
+    "visual"
+   ]
+  },
+  {
+   "scene_id": "S2B_21HTE_20260830_0_L2A",
+   "acquired_at": "2026-08-30T14:01:31.355000+00:00",
+   "polygon_pixels": 7975,
+   "valid_pixels": 326,
+   "cloud_pixels": 7649,
+   "polygon_area_ha": 79.86,
+   "cloud_cover_pct": 95.91,
+   "valid_fraction": 0.0409,
+   "ndvi_mean": 0.8826,
+   "ndvi_median": 0.8883,
+   "ndvi_min": 0.6727,
+   "ndvi_max": 0.9048,
+   "ndvi_p10": 0.869,
+   "ndvi_p90": 0.8975,
+   "ndvi_std": 0.0241,
+   "vegetated_pixels": 326,
+   "vegetation_pct": 100.0,
+   "vegetated_area_observed_ha": 3.26,
+   "vegetated_area_estimated_ha": 79.86,
+   "usable": false,
+   "quality": "LOW_CONFIDENCE",
+   "confidence": 0.0204,
+   "issues": [
+    "CLOUD_COVER_ABOVE_LIMIT",
+    "INSUFFICIENT_VALID_PIXELS"
+   ],
+   "scene": {
+    "scene_id": "S2B_21HTE_20260830_0_L2A",
+    "platform": "sentinel-2b",
+    "tile": "21HTE",
+    "scene_cloud_cover": 56.7,
+    "processing_baseline": "05.12",
+    "catalog": "aws-inventory"
+   },
+   "previews": [
+    "ndvi",
+    "visual"
+   ]
+  },
+  {
+   "scene_id": "S2B_21HUE_20260902_0_L2A",
+   "acquired_at": "2026-09-02T14:11:18.693000+00:00",
+   "polygon_pixels": 7975,
+   "valid_pixels": 7975,
+   "cloud_pixels": 0,
+   "polygon_area_ha": 79.86,
+   "cloud_cover_pct": 0.0,
+   "valid_fraction": 1.0,
+   "ndvi_mean": 0.9515,
+   "ndvi_median": 0.9544,
+   "ndvi_min": 0.505,
+   "ndvi_max": 0.9702,
+   "ndvi_p10": 0.9468,
+   "ndvi_p90": 0.9607,
+   "ndvi_std": 0.0195,
+   "vegetated_pixels": 7975,
+   "vegetation_pct": 100.0,
+   "vegetated_area_observed_ha": 79.75,
+   "vegetated_area_estimated_ha": 79.86,
+   "usable": true,
+   "quality": "GOOD",
+   "confidence": 0.95,
+   "issues": [],
+   "scene": {
+    "scene_id": "S2B_21HUE_20260902_0_L2A",
+    "platform": "sentinel-2b",
+    "tile": "21HUE",
+    "scene_cloud_cover": 0.07,
+    "processing_baseline": "05.12",
+    "catalog": "aws-inventory"
+   },
+   "previews": [
+    "ndvi",
+    "visual"
+   ]
+  },
+  {
+   "scene_id": "S2C_21HUE_20260904_0_L2A",
+   "acquired_at": "2026-09-04T14:01:28.767000+00:00",
+   "polygon_pixels": 7975,
+   "valid_pixels": 7975,
+   "cloud_pixels": 0,
+   "polygon_area_ha": 79.86,
+   "cloud_cover_pct": 0.0,
+   "valid_fraction": 1.0,
+   "ndvi_mean": 0.9454,
+   "ndvi_median": 0.9498,
+   "ndvi_min": 0.4239,
+   "ndvi_max": 0.9635,
+   "ndvi_p10": 0.9377,
+   "ndvi_p90": 0.9552,
+   "ndvi_std": 0.0221,
+   "vegetated_pixels": 7973,
+   "vegetation_pct": 99.97,
+   "vegetated_area_observed_ha": 79.73,
+   "vegetated_area_estimated_ha": 79.84,
+   "usable": true,
+   "quality": "GOOD",
+   "confidence": 0.95,
+   "issues": [],
+   "scene": {
+    "scene_id": "S2C_21HUE_20260904_0_L2A",
+    "platform": "sentinel-2c",
+    "tile": "21HUE",
+    "scene_cloud_cover": 10.94,
+    "processing_baseline": "05.12",
+    "catalog": "aws-inventory"
+   },
+   "previews": [
+    "ndvi",
+    "visual"
+   ]
+  },
+  {
+   "scene_id": "S2C_21HUE_20260907_0_L2A",
+   "acquired_at": "2026-09-07T14:11:18.912000+00:00",
+   "polygon_pixels": 7975,
+   "valid_pixels": 7975,
+   "cloud_pixels": 0,
+   "polygon_area_ha": 79.86,
+   "cloud_cover_pct": 0.0,
+   "valid_fraction": 1.0,
+   "ndvi_mean": 0.9341,
+   "ndvi_median": 0.9382,
+   "ndvi_min": 0.519,
+   "ndvi_max": 0.9498,
+   "ndvi_p10": 0.9274,
+   "ndvi_p90": 0.9432,
+   "ndvi_std": 0.0209,
+   "vegetated_pixels": 7975,
+   "vegetation_pct": 100.0,
+   "vegetated_area_observed_ha": 79.75,
+   "vegetated_area_estimated_ha": 79.86,
+   "usable": true,
+   "quality": "GOOD",
+   "confidence": 0.95,
+   "issues": [],
+   "scene": {
+    "scene_id": "S2C_21HUE_20260907_0_L2A",
+    "platform": "sentinel-2c",
+    "tile": "21HUE",
+    "scene_cloud_cover": 0.08,
+    "processing_baseline": "05.12",
+    "catalog": "aws-inventory"
+   },
+   "previews": [
+    "ndvi",
+    "visual"
+   ]
+  },
+  {
+   "scene_id": "S2B_21HUE_20260912_0_L2A",
+   "acquired_at": "2026-09-12T14:11:18+00:00",
+   "polygon_pixels": 7975,
+   "valid_pixels": 4067,
+   "cloud_pixels": 3908,
+   "polygon_area_ha": 79.86,
+   "cloud_cover_pct": 49.0,
+   "valid_fraction": 0.51,
+   "ndvi_mean": 0.8354,
+   "ndvi_median": 0.8892,
+   "ndvi_min": 0.1935,
+   "ndvi_max": 0.9321,
+   "ndvi_p10": 0.6299,
+   "ndvi_p90": 0.9164,
+   "ndvi_std": 0.1435,
+   "vegetated_pixels": 3799,
+   "vegetation_pct": 93.41,
+   "vegetated_area_observed_ha": 37.99,
+   "vegetated_area_estimated_ha": 74.59,
+   "usable": false,
+   "quality": "LOW_CONFIDENCE",
+   "confidence": 0.255,
+   "issues": [
+    "CLOUD_COVER_ABOVE_LIMIT",
+    "INSUFFICIENT_VALID_PIXELS"
+   ],
+   "scene": {
+    "scene_id": "S2B_21HUE_20260912_0_L2A",
+    "platform": "sentinel-2b",
+    "tile": "21HUE",
+    "scene_cloud_cover": 0.0,
+    "processing_baseline": null,
+    "catalog": "aws-inventory"
+   },
+   "previews": [
+    "ndvi",
+    "visual"
+   ]
+  },
+  {
+   "scene_id": "S2C_21HTE_20260914_0_L2A",
+   "acquired_at": "2026-09-14T14:01:32.805000+00:00",
+   "polygon_pixels": 7975,
+   "valid_pixels": 7975,
+   "cloud_pixels": 0,
+   "polygon_area_ha": 79.86,
+   "cloud_cover_pct": 0.0,
+   "valid_fraction": 1.0,
+   "ndvi_mean": 0.9189,
+   "ndvi_median": 0.9238,
+   "ndvi_min": 0.4699,
+   "ndvi_max": 0.9445,
+   "ndvi_p10": 0.9048,
+   "ndvi_p90": 0.9343,
+   "ndvi_std": 0.024,
+   "vegetated_pixels": 7974,
+   "vegetation_pct": 99.99,
+   "vegetated_area_observed_ha": 79.74,
+   "vegetated_area_estimated_ha": 79.85,
+   "usable": true,
+   "quality": "GOOD",
+   "confidence": 0.95,
+   "issues": [],
+   "scene": {
+    "scene_id": "S2C_21HTE_20260914_0_L2A",
+    "platform": "sentinel-2c",
+    "tile": "21HTE",
+    "scene_cloud_cover": 24.14,
+    "processing_baseline": "05.12",
+    "catalog": "aws-inventory"
+   },
+   "previews": [
+    "ndvi",
+    "visual"
+   ]
+  },
+  {
+   "scene_id": "S2A_21HUE_20260916_0_L2A",
+   "acquired_at": "2026-09-16T14:01:44.114000+00:00",
+   "polygon_pixels": 7975,
+   "valid_pixels": 7975,
+   "cloud_pixels": 0,
+   "polygon_area_ha": 79.86,
+   "cloud_cover_pct": 0.0,
+   "valid_fraction": 1.0,
+   "ndvi_mean": 0.918,
+   "ndvi_median": 0.9236,
+   "ndvi_min": 0.4686,
+   "ndvi_max": 0.9391,
+   "ndvi_p10": 0.9058,
+   "ndvi_p90": 0.9307,
+   "ndvi_std": 0.0237,
+   "vegetated_pixels": 7974,
+   "vegetation_pct": 99.99,
+   "vegetated_area_observed_ha": 79.74,
+   "vegetated_area_estimated_ha": 79.85,
+   "usable": true,
+   "quality": "GOOD",
+   "confidence": 0.95,
+   "issues": [],
+   "scene": {
+    "scene_id": "S2A_21HUE_20260916_0_L2A",
+    "platform": "sentinel-2a",
+    "tile": "21HUE",
+    "scene_cloud_cover": 1.51,
+    "processing_baseline": "05.12",
+    "catalog": "aws-inventory"
+   },
+   "previews": [
+    "ndvi",
+    "visual"
+   ]
+  },
+  {
+   "scene_id": "S2C_21HUE_20260917_0_L2A",
+   "acquired_at": "2026-09-17T14:11:20.340000+00:00",
+   "polygon_pixels": 7975,
+   "valid_pixels": 4939,
+   "cloud_pixels": 0,
+   "polygon_area_ha": 79.86,
+   "cloud_cover_pct": 0.0,
+   "valid_fraction": 0.6193,
+   "ndvi_mean": 0.9217,
+   "ndvi_median": 0.9255,
+   "ndvi_min": 0.4657,
+   "ndvi_max": 0.937,
+   "ndvi_p10": 0.9164,
+   "ndvi_p90": 0.9301,
+   "ndvi_std": 0.0219,
+   "vegetated_pixels": 4937,
+   "vegetation_pct": 99.96,
+   "vegetated_area_observed_ha": 49.37,
+   "vegetated_area_estimated_ha": 79.82,
+   "usable": true,
+   "quality": "GOOD",
+   "confidence": 0.5883,
+   "issues": [],
+   "scene": {
+    "scene_id": "S2C_21HUE_20260917_0_L2A",
+    "platform": "sentinel-2c",
+    "tile": "21HUE",
+    "scene_cloud_cover": 26.51,
+    "processing_baseline": "05.12",
+    "catalog": "aws-inventory"
+   },
+   "previews": [
+    "ndvi",
+    "visual"
+   ]
+  },
+  {
+   "scene_id": "S2B_21HUE_20260919_0_L2A",
+   "acquired_at": "2026-09-19T14:01:29.722000+00:00",
+   "polygon_pixels": 7975,
+   "valid_pixels": 0,
+   "cloud_pixels": 7975,
+   "polygon_area_ha": 79.86,
+   "cloud_cover_pct": 100.0,
+   "valid_fraction": 0.0,
+   "ndvi_mean": null,
+   "ndvi_median": null,
+   "ndvi_min": null,
+   "ndvi_max": null,
+   "ndvi_p10": null,
+   "ndvi_p90": null,
+   "ndvi_std": null,
+   "vegetated_pixels": 0,
+   "vegetation_pct": null,
+   "vegetated_area_observed_ha": 0.0,
+   "vegetated_area_estimated_ha": null,
+   "usable": false,
+   "quality": "LOW_CONFIDENCE",
+   "confidence": 0.0,
+   "issues": [
+    "CLOUD_COVER_ABOVE_LIMIT",
+    "INSUFFICIENT_VALID_PIXELS"
+   ],
+   "scene": {
+    "scene_id": "S2B_21HUE_20260919_0_L2A",
+    "platform": "sentinel-2b",
+    "tile": "21HUE",
+    "scene_cloud_cover": 51.07,
+    "processing_baseline": "05.12",
+    "catalog": "aws-inventory"
+   },
+   "previews": [
+    "ndvi",
+    "visual"
+   ]
+  },
+  {
+   "scene_id": "S2C_21HTE_20260924_0_L2A",
+   "acquired_at": "2026-09-24T14:01:30.144000+00:00",
+   "polygon_pixels": 7975,
+   "valid_pixels": 7975,
+   "cloud_pixels": 0,
+   "polygon_area_ha": 79.86,
+   "cloud_cover_pct": 0.0,
+   "valid_fraction": 1.0,
+   "ndvi_mean": 0.8599,
+   "ndvi_median": 0.8658,
+   "ndvi_min": 0.445,
+   "ndvi_max": 0.8858,
+   "ndvi_p10": 0.8412,
+   "ndvi_p90": 0.8771,
+   "ndvi_std": 0.0247,
+   "vegetated_pixels": 7973,
+   "vegetation_pct": 99.97,
+   "vegetated_area_observed_ha": 79.73,
+   "vegetated_area_estimated_ha": 79.84,
+   "usable": true,
+   "quality": "GOOD",
+   "confidence": 0.95,
+   "issues": [],
+   "scene": {
+    "scene_id": "S2C_21HTE_20260924_0_L2A",
+    "platform": "sentinel-2c",
+    "tile": "21HTE",
+    "scene_cloud_cover": 46.98,
+    "processing_baseline": "05.13",
+    "catalog": "aws-inventory"
+   },
+   "previews": [
+    "ndvi",
+    "visual"
+   ]
+  },
+  {
+   "scene_id": "S2C_21HUE_20260927_0_L2A",
+   "acquired_at": "2026-09-27T14:11:21.972000+00:00",
+   "polygon_pixels": 7975,
+   "valid_pixels": 2570,
+   "cloud_pixels": 17,
+   "polygon_area_ha": 79.86,
+   "cloud_cover_pct": 0.21,
+   "valid_fraction": 0.3223,
+   "ndvi_mean": 0.8523,
+   "ndvi_median": 0.903,
+   "ndvi_min": 0.3571,
+   "ndvi_max": 0.9357,
+   "ndvi_p10": 0.6855,
+   "ndvi_p90": 0.9255,
+   "ndvi_std": 0.1046,
+   "vegetated_pixels": 2541,
+   "vegetation_pct": 98.87,
+   "vegetated_area_observed_ha": 25.41,
+   "vegetated_area_estimated_ha": 78.96,
+   "usable": false,
+   "quality": "LOW_CONFIDENCE",
+   "confidence": 0.1611,
+   "issues": [
+    "INSUFFICIENT_VALID_PIXELS"
+   ],
+   "scene": {
+    "scene_id": "S2C_21HUE_20260927_0_L2A",
+    "platform": "sentinel-2c",
+    "tile": "21HUE",
+    "scene_cloud_cover": 29.81,
+    "processing_baseline": "05.13",
+    "catalog": "aws-inventory"
+   },
+   "previews": [
+    "ndvi",
+    "visual"
+   ]
+  }
+ ]
+}

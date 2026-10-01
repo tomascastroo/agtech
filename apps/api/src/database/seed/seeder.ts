@@ -3,8 +3,8 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { DataSource, EntityManager } from 'typeorm';
 import { PERMISSION_DESCRIPTIONS, ROLE_DEFINITIONS } from '../../common/auth/permissions.js';
-import { sha256Hex } from '../../common/crypto/hashing.js';
-import type { GeoMultiPolygon, Position } from '../../common/geo/geojson.js';
+import { canonicalJson, sha256Hex } from '../../common/crypto/hashing.js';
+import type { GeoMultiPolygon, GeoPolygon, Position } from '../../common/geo/geojson.js';
 import {
   EVALUATORS,
   type AlertEvaluationContext,
@@ -45,6 +45,12 @@ import {
   MockSatelliteProvider,
   sceneConfidence,
 } from '../../modules/satellite/infrastructure/mock-satellite.provider.js';
+import { vegetationThresholdFor } from '../../modules/satellite/domain/phenology.js';
+import { assessVegetation } from '../../modules/satellite/domain/vegetation-assessment.js';
+import {
+  describeObservation,
+  ISSUE_LABELS,
+} from '../../modules/verification/application/pipeline/strategies/vegetation-area.strategy.js';
 import { SatelliteImageEntity } from '../../modules/satellite/infrastructure/satellite-image.entity.js';
 import { SatelliteObservationEntity } from '../../modules/satellite/infrastructure/satellite-observation.entity.js';
 import { DEFAULT_SCORING_WEIGHTS } from '../../modules/scoring/domain/scoring.config.js';
@@ -67,6 +73,7 @@ import {
 import {
   PIPELINE_VERSION,
   type Anomaly,
+  type EvidenceRole,
 } from '../../modules/verification/domain/verification.types.js';
 import { VerificationEvidenceEntity } from '../../modules/verification/infrastructure/verification-evidence.entity.js';
 import { VerificationMetricEntity } from '../../modules/verification/infrastructure/verification-metric.entity.js';
@@ -103,8 +110,15 @@ interface Manifest {
     serial: string;
     label: string;
     file: string;
+    /** Verdad de campo de la composición sintética (animales pegados). */
+    ground_truth_animals: number;
+    /** Conteo del detector real (YOLOX) sobre la imagen, calculado al generar la escena. */
     measured_count: number;
     confidence: number;
+    model?: string;
+    score_threshold?: number | null;
+    synthetic_composite?: boolean;
+    detections?: [number, number, number, number, number][];
     quality: Quality;
   }[];
   satellite: { name: string; file: string }[];
@@ -115,10 +129,79 @@ interface SeededEstablishment {
   entity: EstablishmentEntity;
   demo: DemoEstablishment;
   boundary: GeoMultiPolygon;
+  center: Position;
+}
+
+/** Observación Sentinel-2 real procesada por scripts/build_satellite_fixtures.py. */
+interface FixtureObservation {
+  scene_id: string;
+  acquired_at: string;
+  polygon_pixels: number;
+  valid_pixels: number;
+  cloud_pixels: number;
+  polygon_area_ha: number;
+  cloud_cover_pct: number;
+  valid_fraction: number;
+  ndvi_mean: number | null;
+  ndvi_median: number | null;
+  ndvi_min: number | null;
+  ndvi_max: number | null;
+  ndvi_p10: number | null;
+  ndvi_p90: number | null;
+  ndvi_std: number | null;
+  vegetation_pct: number | null;
+  vegetated_area_observed_ha: number;
+  vegetated_area_estimated_ha: number | null;
+  usable: boolean;
+  quality: 'GOOD' | 'ACCEPTABLE' | 'LOW_CONFIDENCE';
+  confidence: number;
+  issues: string[];
+  scene: {
+    scene_id: string;
+    platform: string;
+    tile: string;
+    scene_cloud_cover: number;
+    processing_baseline: string | null;
+    catalog: string;
+  };
+  previews: string[];
+}
+
+interface SatelliteFixture {
+  key: string;
+  source: string;
+  processing_version: string;
+  ndvi_threshold: number;
+  generated_at: string;
+  polygon: GeoPolygon;
+  observations: FixtureObservation[];
+}
+
+interface FixtureRun {
+  at: Date;
+  primary: string;
+  excluded: string[];
+}
+
+interface SeededObservation {
+  fixture: FixtureObservation;
+  acquiredAt: Date;
+  evidence: EvidenceEntity;
+  observation: SatelliteObservationEntity;
+}
+
+type HistorySpec = DemoAsset['history'][number] & Partial<FixtureRun>;
+
+function ringCentroid(polygon: GeoPolygon): Position {
+  const ring = polygon.coordinates[0]!.slice(0, -1);
+  const lon = ring.reduce((a, p) => a + p[0]!, 0) / ring.length;
+  const lat = ring.reduce((a, p) => a + p[1]!, 0) / ring.length;
+  return [Math.round(lon * 1e6) / 1e6, Math.round(lat * 1e6) / 1e6];
 }
 
 interface EvidenceLinkSeed {
   evidence: EvidenceEntity;
+  role?: EvidenceRole;
   detectedCount: number | null;
   confidence: number | null;
   analysis: Record<string, unknown>;
@@ -132,7 +215,12 @@ export interface SeedResult {
 
 const DAY_MS = 86_400_000;
 const HOUR_MS = 3_600_000;
-const COUNTER_MODEL = { code: 'classical-livestock-counter', version: '1.0.0', simulated: false };
+const COUNTER_MODEL = { code: 'yolox-s-coco', version: '0.1.1rc0-onnx', simulated: false };
+const NDVI_REAL_MODEL = { code: 'sentinel2-ndvi', version: 'agro-ndvi/1.0.0', simulated: false };
+const SATELLITE_WINDOW_DAYS = 30;
+const SATELLITE_SERIES_DAYS = 120;
+const FIXTURE_RUNS = 4;
+const FIXTURE_RUN_SPACING_DAYS = 10;
 const QUALITY_MODEL = { code: 'image-quality-metrics', version: '1.0.0', simulated: false };
 const NDVI_MODEL = { code: 'simulated-ndvi-analyzer', version: '1.0.0', simulated: true };
 
@@ -151,6 +239,10 @@ export class DemoSeeder {
   private sources = new Map<string, EvidenceSourceEntity>();
   private models = new Map<string, string>();
   private latestRunIds: string[] = [];
+  private fixtures = new Map<string, SatelliteFixture>();
+  private fixturePlans = new Map<string, FixtureRun[]>();
+  private seededObservations = new Map<string, SeededObservation>();
+  private raisedAlerts = new Set<string>();
 
   constructor(
     private readonly dataSource: DataSource,
@@ -172,6 +264,7 @@ export class DemoSeeder {
     this.manifest = JSON.parse(
       await readFile(join(this.options.assetsDir, 'manifest.json'), 'utf8'),
     ) as Manifest;
+    await this.loadSatelliteFixtures();
     await this.uploadSimulatedCameraFeeds();
     await this.dataSource.transaction(async (m) => {
       await this.seedCatalog(m);
@@ -186,6 +279,71 @@ export class DemoSeeder {
       await this.seedSecondOrganization(m);
     });
     return { organizationId: this.organizationId, latestRunIds: this.latestRunIds };
+  }
+
+  /** Series Sentinel-2 reales de los activos con vegetación (ver satellite/real/README). */
+  private async loadSatelliteFixtures() {
+    for (const demo of ASSETS) {
+      if (!demo.satelliteFixture) continue;
+      const fixture = JSON.parse(
+        await readFile(
+          join(this.options.assetsDir, 'satellite', 'real', demo.satelliteFixture, 'manifest.json'),
+          'utf8',
+        ),
+      ) as SatelliteFixture;
+      this.fixtures.set(demo.key, fixture);
+      this.fixturePlans.set(demo.key, this.planFixtureRuns(fixture, demo.fixtureRunDates));
+    }
+  }
+
+  /**
+   * Verificaciones históricas sobre la serie real: una por observación utilizable (las más
+   * recientes, separadas al menos 10 días). Si después de la última hay escenas con nubes, la
+   * última verificación ocurre luego de ellas y las registra como evidencia excluida, igual que
+   * el pipeline.
+   */
+  private planFixtureRuns(fixture: SatelliteFixture, runDates?: string[]): FixtureRun[] {
+    const observations = [...fixture.observations].sort(
+      (a, b) => Date.parse(a.acquired_at) - Date.parse(b.acquired_at),
+    );
+    const selected: FixtureObservation[] = runDates
+      ? runDates.map((d) => observations.find((o) => o.usable && o.acquired_at.startsWith(d))!)
+      : [];
+    if (selected.some((o) => !o))
+      throw new Error(`Fecha de verificación sin observación: ${fixture.key}`);
+    if (runDates) selected.reverse();
+    for (const o of runDates ? [] : observations.filter((x) => x.usable).reverse()) {
+      if (selected.length >= FIXTURE_RUNS) break;
+      const last = selected.at(-1);
+      if (
+        !last ||
+        Date.parse(last.acquired_at) - Date.parse(o.acquired_at) >=
+          FIXTURE_RUN_SPACING_DAYS * DAY_MS
+      )
+        selected.push(o);
+    }
+    selected.reverse();
+    const runAt = (iso: string) => {
+      const date = new Date(Date.parse(iso) + DAY_MS);
+      date.setUTCHours(13, 0, 0, 0);
+      return new Date(Math.min(date.getTime(), this.now.getTime() - HOUR_MS));
+    };
+    const runs = selected.map((o) => ({
+      at: runAt(o.acquired_at),
+      primary: o.scene_id,
+      excluded: [] as string[],
+    }));
+    const lastUsable = selected.at(-1);
+    if (lastUsable) {
+      const later = observations.filter(
+        (o) => Date.parse(o.acquired_at) > Date.parse(lastUsable.acquired_at),
+      );
+      if (later.length) {
+        runs.at(-1)!.at = runAt(later.at(-1)!.acquired_at);
+        runs.at(-1)!.excluded = later.map((o) => o.scene_id);
+      }
+    }
+    return runs;
   }
 
   // ------------------------------------------------------------------ catálogo
@@ -269,7 +427,14 @@ export class DemoSeeder {
     m: EntityManager,
     demo: DemoEstablishment,
   ): Promise<SeededEstablishment> {
-    const created = this.at(60, 12);
+    // Con serie satelital real el establecimiento se ubica donde está el lote observado.
+    const fixtureAsset = ASSETS.find((a) => a.establishment === demo.key && a.satelliteFixture);
+    const fixture = fixtureAsset ? this.fixtures.get(fixtureAsset.key) : undefined;
+    const center = fixture ? ringCentroid(fixture.polygon) : demo.center;
+    const firstRun = fixtureAsset ? this.fixturePlans.get(fixtureAsset.key)?.[0]?.at : undefined;
+    const created = new Date(
+      Math.min(this.at(60, 12).getTime(), (firstRun?.getTime() ?? Infinity) - 12 * DAY_MS),
+    );
     const entity = await m.save(
       m.create(EstablishmentEntity, {
         organizationId: this.organizationId,
@@ -287,21 +452,21 @@ export class DemoSeeder {
         updatedAt: created,
       }),
     );
-    const boundary = parcel(demo.center, demo.areaHa);
+    const boundary = parcel(center, demo.areaHa);
     await m.save(
       m.create(EstablishmentLocationEntity, {
         organizationId: this.organizationId,
         establishmentId: entity.id,
         kind: 'MAIN',
         name: 'Casco principal',
-        point: toPoint(demo.center),
+        point: toPoint(center),
         boundary,
       }),
     );
     await this.audit(m, 'ESTABLISHMENT_CREATED', 'establishment', entity.id, created, {
       name: demo.name,
     });
-    return { entity, demo, boundary };
+    return { entity, demo, boundary, center };
   }
 
   // ------------------------------------------------------------------ activos
@@ -312,9 +477,25 @@ export class DemoSeeder {
     establishmentDocs: Set<string>,
   ) {
     const type = this.types.get(demo.typeCode)!;
-    const createdAt = this.at(Math.max(...demo.history.map((h) => h.daysAgo), 10) + 5, 12);
-    const center = establishment.demo.center;
-    const assetCenter = demo.areaHa ? offsetPoint(center, 150, 120) : center;
+    const fixture = this.fixtures.get(demo.key);
+    const plan = this.fixturePlans.get(demo.key) ?? [];
+    const specs: HistorySpec[] = fixture
+      ? plan.map((run) => ({ daysAgo: (this.now.getTime() - run.at.getTime()) / DAY_MS, ...run }))
+      : demo.history;
+    const createdAt = fixture
+      ? new Date(plan[0]!.at.getTime() - 5 * DAY_MS)
+      : this.at(Math.max(...demo.history.map((h) => h.daysAgo), 10) + 5, 12);
+    const center = establishment.center;
+    const assetCenter = fixture
+      ? ringCentroid(fixture.polygon)
+      : demo.areaHa
+        ? offsetPoint(center, 150, 120)
+        : center;
+    const area: GeoMultiPolygon | null = fixture
+      ? { type: 'MultiPolygon', coordinates: [fixture.polygon.coordinates] }
+      : demo.areaHa
+        ? parcel(assetCenter, demo.areaHa, 1.25, 0.04)
+        : null;
     const asset = await m.save(
       m.create(AssetEntity, {
         organizationId: this.organizationId,
@@ -327,7 +508,7 @@ export class DemoSeeder {
         declaredValue: demo.declaredValueUsd,
         currency: 'USD',
         location: toPoint(assetCenter),
-        area: demo.areaHa ? parcel(assetCenter, demo.areaHa, 1.25, 0.04) : null,
+        area,
         createdBy: this.maria,
         createdAt,
         updatedAt: createdAt,
@@ -371,7 +552,8 @@ export class DemoSeeder {
       detected: number | null;
       at: Date;
     }[] = [];
-    for (const [index, spec] of demo.history.entries()) {
+    if (fixture) await this.seedFixtureObservations(m, demo, asset, establishment, fixture, plan);
+    for (const [index, spec] of specs.entries()) {
       const run = await this.seedVerification(
         m,
         demo,
@@ -383,6 +565,7 @@ export class DemoSeeder {
         spec,
         index,
         history,
+        specs.length,
       );
       history.push(run);
     }
@@ -570,7 +753,7 @@ export class DemoSeeder {
     for (const [index, camera] of (demo.cameras ?? []).entries()) {
       const groundTruth = this.manifest.cameras.find(
         (c) => c.serial === camera.serial,
-      )?.measured_count;
+      )?.ground_truth_animals;
       const device = await m.save(
         m.create(DeviceEntity, {
           organizationId: this.organizationId,
@@ -599,7 +782,7 @@ export class DemoSeeder {
             status: 'ACTIVE',
             label: camera.label,
             location: toPoint(
-              offsetPoint(establishment.demo.center, camera.offset[0], camera.offset[1]),
+              offsetPoint(establishment.center, camera.offset[0], camera.offset[1]),
             ),
             kitSpec:
               demo.key === 'LE-BOV'
@@ -624,15 +807,16 @@ export class DemoSeeder {
     establishment: SeededEstablishment,
     documents: DocumentEntity[],
     installations: DeviceInstallationEntity[],
-    spec: DemoAsset['history'][number],
+    spec: HistorySpec,
     index: number,
     previous: { input: HistoricalRunInput; runId: string; detected: number | null; at: Date }[],
+    total: number,
   ) {
-    const completedAt = this.at(spec.daysAgo);
+    const completedAt = spec.at ?? this.at(spec.daysAgo);
     const queuedAt = new Date(completedAt.getTime() - 4 * 60_000);
     const capturedAt = new Date(completedAt.getTime() - 3 * 60_000);
     const runId = randomUUID();
-    const isLast = index === demo.history.length - 1;
+    const isLast = index === total - 1;
 
     await m.save(
       m.create(VerificationRunEntity, {
@@ -674,6 +858,9 @@ export class DemoSeeder {
     let locationVerified: boolean | null = null;
     const anomalies: Anomaly[] = [];
     let vegetationChange: number | null = null;
+    let evidenceCount: number | null = null;
+    let newestEvidenceAt: Date | null | undefined;
+    const extraMetrics: { key: string; value: number; unit: string | null; source: string }[] = [];
 
     if (type.verificationStrategy === 'LIVESTOCK_COUNTING') {
       for (const installation of installations) {
@@ -694,22 +881,38 @@ export class DemoSeeder {
             synthetic: true,
             deviceSerial: scene.serial,
             installationLabel: installation.label,
-            syntheticGroundTruth: scene.measured_count,
+            syntheticComposite: scene.synthetic_composite ?? false,
+            syntheticGroundTruth: scene.ground_truth_animals,
           },
         );
+        const detections = (scene.detections ?? []).map(([x1, y1, x2, y2, score]) => ({
+          x: x1,
+          y: y1,
+          width: x2 - x1,
+          height: y2 - y1,
+          estimatedAnimals: 1,
+          label: 'livestock',
+          score,
+        }));
         links.push({
           evidence,
           detectedCount: scene.measured_count,
           confidence: scene.confidence,
-          modelVersionId: this.models.get('classical-livestock-counter@1.0.0')!,
+          modelVersionId: this.models.get(`${COUNTER_MODEL.code}@${COUNTER_MODEL.version}`)!,
           analysis: {
             analyzedAt: completedAt.toISOString(),
             count: scene.measured_count,
             confidence: scene.confidence,
             clusteredComponents: 0,
+            detectionsTotal: detections.length,
+            detectionsSample: detections.slice(0, 500),
+            imageSize: { width: scene.quality.width, height: scene.quality.height },
+            scoreThreshold: scene.score_threshold ?? null,
             quality: { ...scene.quality, exifCapturedAt: null },
             model: COUNTER_MODEL,
             provider: 'ai-service',
+            // Conteo del detector real sobre esta misma imagen, calculado al generar el seed.
+            computedAt: 'seed-generation',
           },
         });
       }
@@ -725,6 +928,110 @@ export class DemoSeeder {
             1000,
         ) / 1000;
       locationVerified = true;
+    } else if (type.verificationStrategy === 'VEGETATION_AREA' && this.fixtures.has(demo.key)) {
+      const primary = spec.primary
+        ? this.seededObservations.get(`${asset.id}:${spec.primary}`)
+        : null;
+      const excluded = (spec.excluded ?? []).map((id) =>
+        this.seededObservations.get(`${asset.id}:${id}`)!,
+      );
+      const seriesStart = completedAt.getTime() - SATELLITE_SERIES_DAYS * DAY_MS;
+      const usable = [...this.seededObservations.values()].filter(
+        (o) =>
+          o.observation.assetId === asset.id &&
+          o.fixture.usable &&
+          o.fixture.ndvi_mean !== null &&
+          o.acquiredAt.getTime() >= seriesStart &&
+          o.acquiredAt.getTime() <= completedAt.getTime(),
+      );
+      const o = primary?.fixture;
+      const assessment = assessVegetation({
+        verificationId: runId,
+        now: completedAt,
+        assetTypeCode: type.code,
+        metadata: demo.metadata,
+        declaredHa: demo.declaredQuantity,
+        current:
+          primary && o && o.ndvi_mean !== null
+            ? {
+                evidenceId: primary.evidence.id,
+                observationId: primary.observation.id,
+                sceneId: o.scene_id,
+                acquiredAt: primary.acquiredAt,
+                ndviMean: o.ndvi_mean,
+                ndviMedian: o.ndvi_median,
+                ndviMin: o.ndvi_min,
+                ndviMax: o.ndvi_max,
+                ndviStd: o.ndvi_std,
+                vegetationPct: o.vegetation_pct,
+                vegetatedAreaHa: o.vegetated_area_estimated_ha,
+                analyzedAreaHa: o.polygon_area_ha,
+                cloudCoverPct: o.cloud_cover_pct,
+                validFraction: o.valid_fraction,
+                quality: o.quality,
+              }
+            : null,
+        excluded: excluded.map((e) => ({
+          evidenceId: e.evidence.id,
+          sceneId: e.fixture.scene_id,
+          cloudCoverPct: e.fixture.cloud_cover_pct,
+          reason: e.fixture.issues.map((i) => ISSUE_LABELS[i] ?? i).join('; '),
+        })),
+        history: usable
+          .filter((u) => primary && u.acquiredAt.getTime() < primary.acquiredAt.getTime())
+          .map((u) => ({
+            observedAt: u.acquiredAt,
+            ndviMean: u.fixture.ndvi_mean!,
+            observationId: u.observation.id,
+            evidenceId: u.evidence.id,
+            quality: u.fixture.quality,
+          })),
+        newestUsableAt: usable.at(-1)?.acquiredAt ?? null,
+        windowDays: SATELLITE_WINDOW_DAYS,
+      });
+      detected = assessment.detectedQuantity;
+      confidence = primary ? primary.fixture.confidence : null;
+      locationVerified = true;
+      vegetationChange = assessment.vegetationChangePct;
+      evidenceCount = assessment.primaryEvidenceCount;
+      newestEvidenceAt = assessment.newestEvidenceAt;
+      anomalies.push(...assessment.anomalies);
+      extraMetrics.push(...assessment.metrics.map((x) => ({ ...x, source: 'satellite' })));
+      const modelVersionId = this.models.get(`${NDVI_REAL_MODEL.code}@${NDVI_REAL_MODEL.version}`)!;
+      const describe = (seeded: SeededObservation) =>
+        describeObservation(
+          seeded.observation,
+          {
+            sceneId: seeded.fixture.scene_id,
+            provider: 'sentinel2-l2a',
+            simulated: false,
+            acquiredAt: seeded.acquiredAt,
+          },
+          completedAt,
+        );
+      for (const e of excluded) {
+        links.push({
+          evidence: e.evidence,
+          role: 'EXCLUDED',
+          detectedCount: null,
+          confidence: e.fixture.confidence,
+          modelVersionId,
+          analysis: {
+            ...describe(e),
+            excludedReason: e.fixture.issues.map((i) => ISSUE_LABELS[i] ?? i).join('; '),
+          },
+        });
+      }
+      if (primary) {
+        links.push({
+          evidence: primary.evidence,
+          role: 'PRIMARY',
+          detectedCount: null,
+          confidence,
+          modelVersionId,
+          analysis: describe(primary),
+        });
+      }
     } else if (type.verificationStrategy === 'VEGETATION_AREA') {
       const provider = new MockSatelliteProvider(this.storage);
       const [scene] = await provider.searchImages({
@@ -904,13 +1211,16 @@ export class DemoSeeder {
       detection: {
         detectedQuantity: detected,
         confidence,
-        evidenceCount: links.length,
+        evidenceCount: evidenceCount ?? links.length,
         averageQuality,
       },
       freshness: {
-        newestEvidenceAt: links.length
-          ? links.map((l) => l.evidence.capturedAt).sort((a, b) => +b - +a)[0]!
-          : null,
+        newestEvidenceAt:
+          newestEvidenceAt !== undefined
+            ? newestEvidenceAt
+            : links.length
+              ? links.map((l) => l.evidence.capturedAt).sort((a, b) => +b - +a)[0]!
+              : null,
         maxEvidenceAgeHours: defaultMaxEvidenceAgeHours(type.verificationStrategy),
       },
       documents: {
@@ -948,7 +1258,7 @@ export class DemoSeeder {
           verificationRunId: runId,
           evidenceId: link.evidence.id,
           organizationId: this.organizationId,
-          role: 'PRIMARY',
+          role: link.role ?? 'PRIMARY',
           detectedCount: link.detectedCount,
           confidence: link.confidence,
           analysis: link.analysis,
@@ -988,7 +1298,7 @@ export class DemoSeeder {
           declared: demo.declaredQuantity,
           detected,
           unit: asset.unit,
-          evidenceCount: links.length,
+          evidenceCount: evidenceCount ?? links.length,
           evidenceLabel,
           scoring,
         }),
@@ -999,7 +1309,7 @@ export class DemoSeeder {
     const metrics: [string, number, string | null, string][] = [
       ['declared_quantity', demo.declaredQuantity, asset.unit, 'asset'],
       ['final_score', scoring.finalScore, null, 'scoring'],
-      ['evidence_primary_count', links.length, null, 'pipeline'],
+      ['evidence_primary_count', evidenceCount ?? links.length, null, 'pipeline'],
       ...scoring.components.map(
         (c) => [`${c.key}_score`, c.score, null, 'scoring'] as [string, number, null, string],
       ),
@@ -1034,6 +1344,36 @@ export class DemoSeeder {
           ]
         : []),
     ];
+    if (detected !== null && type.verificationStrategy === 'LIVESTOCK_COUNTING') {
+      metrics.push(
+        [
+          'absolute_difference',
+          Math.abs(detected - demo.declaredQuantity),
+          'HEAD',
+          'computer_vision',
+        ],
+        [
+          'relative_error',
+          Math.round(((detected - demo.declaredQuantity) / demo.declaredQuantity) * 10_000) /
+            10_000,
+          null,
+          'computer_vision',
+        ],
+        [
+          'match_percentage',
+          Math.round(
+            (Math.min(detected, demo.declaredQuantity) /
+              Math.max(detected, demo.declaredQuantity)) *
+              10_000,
+          ) / 100,
+          '%',
+          'computer_vision',
+        ],
+      );
+    }
+    for (const x of extraMetrics) {
+      if (!metrics.some(([key]) => key === x.key)) metrics.push([x.key, x.value, x.unit, x.source]);
+    }
     for (const [key, value, unit, source] of metrics) {
       await m.save(
         m.create(VerificationMetricEntity, {
@@ -1076,6 +1416,17 @@ export class DemoSeeder {
       completedAt,
       scoring.outcome === 'VERIFIED' ? 'INFO' : 'WARNING',
     );
+    if (this.fixtures.has(demo.key)) {
+      await this.raiseVerificationAlerts(m, demo, asset, type, establishment, {
+        runId,
+        at: completedAt,
+        detected,
+        finalScore: scoring.finalScore,
+        anomalies,
+        vegetationChange,
+        evidenceIds: links.filter((l) => l.role === 'PRIMARY').map((l) => l.evidence.id),
+      });
+    }
 
     return {
       runId,
@@ -1127,6 +1478,288 @@ export class DemoSeeder {
         createdAt: new Date(capturedAt.getTime() + 20_000),
       }),
     );
+  }
+
+  /** Registra la serie real como escenas, observaciones y evidencias (vista NDVI con hash). */
+  private async seedFixtureObservations(
+    m: EntityManager,
+    demo: DemoAsset,
+    asset: AssetEntity,
+    establishment: SeededEstablishment,
+    fixture: SatelliteFixture,
+    plan: FixtureRun[],
+  ) {
+    const dir = join(this.options.assetsDir, 'satellite', 'real', fixture.key);
+    const threshold = vegetationThresholdFor(demo.typeCode);
+    const firstRunAt = plan[0]!.at.getTime();
+    const location = toPoint(ringCentroid(fixture.polygon));
+    const source = this.sources.get('SATELLITE_SENTINEL2_STAC')!;
+    let previous: SatelliteObservationEntity | null = null;
+    const ordered = [...fixture.observations].sort(
+      (a, b) => Date.parse(a.acquired_at) - Date.parse(b.acquired_at),
+    );
+    for (const o of ordered) {
+      const acquiredAt = new Date(o.acquired_at);
+      // Recibida cuando la procesó la primera verificación que la usó (o al día siguiente).
+      const receivedAt = new Date(
+        Math.min(
+          Math.max(acquiredAt.getTime() + DAY_MS, firstRunAt - HOUR_MS),
+          this.now.getTime() - HOUR_MS,
+        ),
+      );
+      const image = await m.save(
+        m.create(SatelliteImageEntity, {
+          organizationId: this.organizationId,
+          provider: 'sentinel2-l2a',
+          collection: 'sentinel-2-l2a',
+          sceneId: o.scene_id,
+          acquiredAt,
+          cloudCoverPct: o.scene.scene_cloud_cover,
+          resolutionM: 10,
+          footprint: null,
+          bands: ['B04', 'B08', 'SCL', 'TCI'],
+          previewStorageKey: null,
+          isSimulated: false,
+          metadata: {
+            platform: o.scene.platform,
+            tile: o.scene.tile,
+            catalog: o.scene.catalog,
+            processingBaseline: o.scene.processing_baseline,
+          },
+          createdAt: receivedAt,
+        }),
+      );
+      const ndviPng = await readFile(join(dir, `${o.scene_id}_ndvi.png`));
+      const ndviKey = storageKeys.evidence(this.organizationId, asset.id, 'png');
+      const sha256 = sha256Hex(ndviPng);
+      await this.storage.putObject({
+        key: ndviKey,
+        body: ndviPng,
+        contentType: 'image/png',
+        metadata: { sha256, source: source.code },
+      });
+      const visualKey = storageKeys.satellitePreview(
+        this.organizationId,
+        `${o.scene_id}_${asset.id}_visual`,
+        'png',
+      );
+      await this.storage.putObject({
+        key: visualKey,
+        body: await readFile(join(dir, `${o.scene_id}_visual.png`)),
+        contentType: 'image/png',
+      });
+      const stats = {
+        ndviMean: o.ndvi_mean,
+        ndviMedian: o.ndvi_median,
+        ndviMin: o.ndvi_min,
+        ndviMax: o.ndvi_max,
+        ndviP10: o.ndvi_p10,
+        ndviP90: o.ndvi_p90,
+        ndviStd: o.ndvi_std,
+        vegetationPct: o.vegetation_pct,
+        vegetatedAreaHa: o.vegetated_area_estimated_ha,
+        vegetatedAreaObservedHa: o.vegetated_area_observed_ha,
+        analyzedAreaHa: o.polygon_area_ha,
+        cloudCoverPct: o.cloud_cover_pct,
+        sceneCloudCoverPct: o.scene.scene_cloud_cover,
+        validFraction: o.valid_fraction,
+        usable: o.usable,
+        quality: o.quality,
+        issues: o.issues,
+        vegetationThreshold: threshold,
+        confidence: o.confidence,
+      };
+      const evidence = await m.save(
+        m.create(EvidenceEntity, {
+          organizationId: this.organizationId,
+          assetId: asset.id,
+          establishmentId: establishment.entity.id,
+          sourceId: source.id,
+          satelliteImageId: image.id,
+          type: 'SATELLITE_SCENE',
+          storageKey: ndviKey,
+          mimeType: 'image/png',
+          sizeBytes: ndviPng.length,
+          sha256,
+          capturedAt: acquiredAt,
+          receivedAt,
+          location,
+          metadata: {
+            provider: 'sentinel2-l2a',
+            satellite: o.scene.platform,
+            sceneId: o.scene_id,
+            tile: o.scene.tile,
+            catalog: o.scene.catalog,
+            collection: 'sentinel-2-l2a',
+            acquisitionDate: acquiredAt.toISOString(),
+            resolutionM: 10,
+            bands: ['B04', 'B08', 'SCL'],
+            processingVersion: fixture.processing_version,
+            model: NDVI_REAL_MODEL.code,
+            modelVersion: NDVI_REAL_MODEL.version,
+            visualPreviewKey: visualKey,
+            resultSha256: sha256Hex(canonicalJson({ sceneId: o.scene_id, ...stats })),
+            processedAt: fixture.generated_at,
+            dataSource: fixture.source,
+            ...stats,
+            simulatedSource: false,
+          },
+          createdAt: receivedAt,
+        }),
+      );
+      const vegetated = o.vegetated_area_estimated_ha;
+      const change =
+        vegetated !== null && previous?.vegetatedAreaHa
+          ? ((vegetated - previous.vegetatedAreaHa) / previous.vegetatedAreaHa) * 100
+          : null;
+      const ndviChange =
+        o.ndvi_mean !== null && previous?.ndviMean
+          ? ((o.ndvi_mean - previous.ndviMean) / Math.abs(previous.ndviMean)) * 100
+          : null;
+      const observation: SatelliteObservationEntity = await m.save(
+        m.create(SatelliteObservationEntity, {
+          organizationId: this.organizationId,
+          assetId: asset.id,
+          satelliteImageId: image.id,
+          evidenceId: evidence.id,
+          observedAt: acquiredAt,
+          ndviMean: o.ndvi_mean,
+          ndviStd: o.ndvi_std,
+          vegetatedAreaHa: vegetated,
+          declaredAreaHa: demo.declaredQuantity,
+          coverageRatio:
+            vegetated === null
+              ? null
+              : Math.round(Math.min(vegetated / demo.declaredQuantity, 99) * 10_000) / 10_000,
+          changeVsPreviousPct: change === null ? null : Math.round(change * 100) / 100,
+          metrics: {
+            ...stats,
+            ndviChangePct: ndviChange === null ? null : Math.round(ndviChange * 100) / 100,
+            previousObservationId: previous?.id ?? null,
+            sceneId: o.scene_id,
+            provider: 'sentinel2-l2a',
+            simulated: false,
+            processingVersion: fixture.processing_version,
+            ndviPreviewKey: ndviKey,
+            visualPreviewKey: visualKey,
+            model: NDVI_REAL_MODEL,
+          },
+          createdAt: receivedAt,
+        }),
+      );
+      if (o.usable && o.ndvi_mean !== null) previous = observation;
+      this.seededObservations.set(`${asset.id}:${o.scene_id}`, {
+        fixture: o,
+        acquiredAt,
+        evidence,
+        observation,
+      });
+    }
+  }
+
+  /** Reglas de alerta evaluadas sobre el resultado de una verificación histórica real. */
+  private async raiseVerificationAlerts(
+    m: EntityManager,
+    demo: DemoAsset,
+    asset: AssetEntity,
+    type: AssetTypeEntity,
+    establishment: SeededEstablishment,
+    run: {
+      runId: string;
+      at: Date;
+      detected: number | null;
+      finalScore: number;
+      anomalies: Anomaly[];
+      vegetationChange: number | null;
+      evidenceIds: string[];
+    },
+  ) {
+    const rules = await m.find(AlertRuleEntity, { where: { enabled: true } });
+    const ctx: AlertEvaluationContext = {
+      phase: 'VERIFICATION',
+      now: run.at,
+      asset: {
+        id: asset.id,
+        name: asset.name,
+        assetTypeCode: type.code,
+        declaredQuantity: demo.declaredQuantity,
+        unitLabel: unitLabel(asset.unit, demo.declaredQuantity),
+        establishmentName: establishment.entity.name,
+      },
+      verification: {
+        runId: run.runId,
+        detectedQuantity: run.detected,
+        finalScore: run.finalScore,
+        previousDetectedQuantity: null,
+        locationVerified: true,
+        locationDistanceM: null,
+        anomalies: run.anomalies,
+        vegetationChangePct: run.vegetationChange,
+        evidenceIds: run.evidenceIds,
+      },
+      newestEvidenceAt: null,
+      lastVerifiedAt: run.at,
+      documents: [],
+    };
+    for (const rule of rules) {
+      if (rule.assetTypeCodes.length > 0 && !rule.assetTypeCodes.includes(type.code)) continue;
+      const evaluator = EVALUATORS.find((e) => e.type === rule.conditionType);
+      if (!evaluator || !evaluator.phases.includes('VERIFICATION')) continue;
+      if (['EVIDENCE_STALE', 'DOCUMENT_EXPIRING'].includes(rule.conditionType)) continue;
+      const candidate = evaluator.evaluate(ctx, rule.parameters);
+      const dedupe = `${asset.id}:${rule.code}`;
+      if (!candidate || this.raisedAlerts.has(dedupe)) continue;
+      this.raisedAlerts.add(dedupe);
+      const alert = await m.save(
+        m.create(AlertEntity, {
+          organizationId: this.organizationId,
+          assetId: asset.id,
+          verificationRunId: run.runId,
+          ruleId: rule.id,
+          type: rule.code,
+          severity: rule.severity,
+          status: 'OPEN',
+          title: candidate.title,
+          description: candidate.description,
+          context: {
+            ...candidate.context,
+            verificationId: run.runId,
+            evidenceIds:
+              (candidate.context.evidenceIds as string[] | undefined) ??
+              (typeof candidate.context.evidenceId === 'string'
+                ? [candidate.context.evidenceId]
+                : run.evidenceIds),
+            rule: {
+              code: rule.code,
+              conditionType: rule.conditionType,
+              severity: rule.severity,
+              parameters: rule.parameters,
+            },
+            phase: 'VERIFICATION',
+          },
+          createdAt: new Date(run.at.getTime() + 60_000),
+          updatedAt: new Date(run.at.getTime() + 60_000),
+        }),
+      );
+      await this.audit(
+        m,
+        'ALERT_CREATED',
+        'alert',
+        alert.id,
+        alert.createdAt,
+        { type: alert.type, severity: alert.severity },
+        null,
+      );
+      await this.event(
+        m,
+        asset.id,
+        run.runId,
+        'ALERT_RAISED',
+        alert.title,
+        alert.createdAt,
+        alert.severity,
+      );
+    }
   }
 
   // ------------------------------------------------------------------ alertas
@@ -1234,12 +1867,11 @@ export class DemoSeeder {
         });
     };
 
+    // Los activos con serie satelital real generan sus alertas a partir de cada verificación.
+    if (this.fixtures.has(demo.key)) return;
     switch (demo.key) {
       case 'DJ-VIN':
         await raise('VEGETATION_AREA_CHANGE', 'VERIFICATION', lastVerifiedAt!);
-        break;
-      case 'LM-FOR':
-        await raise('NO_RECENT_VERIFICATION', 'MONITORING', this.at(5, 9));
         break;
       case 'SC-BOV':
         await raise('NO_RECENT_VERIFICATION', 'MONITORING', this.at(1, 9));

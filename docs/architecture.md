@@ -297,3 +297,59 @@ sequenceDiagram
 | 8 | Metadata por JSON Schema en `asset_types` | Nuevos tipos de activo sin migraciones | Validación estricta en API y formulario generado en UI |
 | 9 | PostGIS para geocercas y superficies | Cálculos espaciales correctos y con índices | Requiere imagen `postgis/postgis` |
 | 10 | MinIO (Chainguard) en desarrollo | MinIO dejó de publicar imágenes oficiales | Cualquier S3 compatible sirve en otros entornos |
+
+## 10. Verificación con señales reales (CV y Sentinel-2)
+
+### 10.1 Real vs. simulado
+
+| Capacidad | Real (por defecto) | Simulado (explícito) |
+|---|---|---|
+| Conteo de ganado | `CV_PROVIDER=ai-service` + `AI_SERVICE_DETECTOR=yolox`: YOLOX-S (Megvii, Apache-2.0), pesos COCO oficiales en ONNX, ONNX Runtime en CPU | `CV_PROVIDER=mock` (tests) · `AI_SERVICE_DETECTOR=classical` (contador OpenCV, solo escenas sintéticas) |
+| Imágenes satelitales | `SATELLITE_PROVIDER=stac`: Sentinel-2 L2A (ítems STAC + COG del bucket público `sentinel-cogs`, sin credenciales) | `SATELLITE_PROVIDER=mock`: serie SIMULADA, fuente `SATELLITE_SENTINEL2_SIMULATED` |
+| Cámaras de campo | — | Gateway simulado: entrega imágenes de la biblioteca demo |
+| Registro SENASA | — | Simulado |
+
+Cada evidencia, observación y versión de modelo registra `simulated`/`isSimulated`. Las imágenes de cámara de la demo son **composiciones sintéticas** (recortes de bovinos de fotos reales de Open Images V7, CC BY 2.0, pegados sobre pastura procedural, con verdad de campo exacta); el conteo lo hace el detector real.
+
+### 10.2 Pipeline de visión (ganado)
+
+`validación (firma de archivo) → calidad (nitidez, exposición, dHash) → detección YOLOX-S (letterbox 640, decodificación por grilla, NMS por pasada) → mosaico SAHI-like para imágenes grandes (640 px, solape 0,2; fusión IoU/IoS) → filtro por clase (vaca/oveja/caballo) y confianza → conteo`.
+
+Salida por imagen: `count`, `detections[]` (caja y score), `confidence` (score medio), `inference_passes`, `score_threshold`, `processing_ms`, modelo y versión. En la verificación se agregan `detected_quantity`, `absolute_difference`, `relative_error`, `match_percentage` y `detection_confidence`; las detecciones (hasta 500) quedan en el vínculo evidencia–verificación.
+
+Benchmark (`apps/ai-service/benchmarks/`, `scripts/benchmark_cattle.py`): Open Images V7 Cattle/Bull sin *group-of*, 511 imágenes / 1.129 animales; umbral elegido en *validation*, métricas en *test*:
+
+| Modelo | Clases | Mosaico | Umbral | MAE | Precisión | Recall | Error total | ms/img |
+|---|---|---|---|---|---|---|---|---|
+| YOLOX-Tiny | livestock | no | 0,25 | 0,95 | 0,84 | 0,58 | −30,7 % | 30 |
+| **YOLOX-S** | livestock | no | 0,12 | **0,82** | 0,79 | 0,66 | −16,2 % | 97 |
+| YOLOX-S | livestock | 640 | 0,25 | 0,91 | 0,69 | 0,66 | −4,9 % | 452 |
+| YOLOX-M | livestock | no | 0,25 | 0,80 | 0,82 | 0,66 | −19,7 % | 218 |
+
+Escenas densas (composiciones, `cattle-composites.json`): umbral 0,40 con mosaico calibrado en El Trébol (812 → 807); reportado en La Esperanza: 1.490 animales reales → 1.510 detectados (+1,3 %). Elegido YOLOX-S: mejor relación MAE/latencia en CPU, sin dependencia de PyTorch y con licencia permisiva (se descartó Ultralytics por AGPL).
+
+### 10.3 Pipeline satelital (cultivos, viñedos, frutales, forestales)
+
+`polígono del activo → búsqueda de escenas (STAC Earth Search; si no responde, ítems STAC del bucket por tile MGRS, incluidos tiles vecinos solapados) → filtro temporal (30 días) y por nubosidad de escena → lectura por ventana de B04/B08/SCL (COG por HTTP range) → máscara SCL (nubes, sombras, nieve, nodata) → NDVI = (B08−B04)/(B08+B04) → estadísticas sobre el polígono`.
+
+Por observación: NDVI media/mediana/mín/máx/p10/p90/desvío, `vegetation_pct` y superficie con vegetación activa (umbral por tipo: cultivos 0,4; forestal 0,5; frutales 0,35; viñedos 0,3), nubosidad **sobre el lote**, fracción válida, calidad `GOOD`/`ACCEPTABLE`/`LOW_CONFIDENCE`, vista NDVI y color verdadero recortadas. `AI_SERVICE_MAX_CLOUD_COVER` (20 %) y fracción válida mínima (0,6) definen si es utilizable; las no utilizables quedan como evidencia **EXCLUIDA** con el motivo.
+
+Detección de cambios (`satellite/domain/vegetation-change.ts`): contra la observación anterior y la mediana de 60 días; caída significativa si ≤ −15 % y ≥ 0,08 de NDVI. Solo se confirma con observaciones `GOOD` (con nubosidad parcial se informa como no confirmada). Fenología (`phenology.ts`): presiembra/implantación (por fecha de siembra y cultivo) y reposo invernal de perennes hacen la verificación **no concluyente** en lugar de una falsa alarma.
+
+### 10.4 Motor, evidencia, alertas y monitoreo
+
+- Estrategias por tipo (`LIVESTOCK_COUNTING`, `VEGETATION_AREA`, `EVIDENCE_REVIEW`); la evaluación de vegetación es una función pura (`vegetation-assessment.ts`) usada por el pipeline y por el seed. El score (`agro-score/1.0.0`) no cambió: recibe los resultados reales.
+- Evidencia satelital: archivo = vista NDVI (SHA-256), metadatos `satellite`, `sceneId`, `tile`, `acquisitionDate`, `cloudCoverPct`, `bands`, `processingVersion`, `model`/`modelVersion`, ubicación (centroide) y `resultSha256` de las estadísticas.
+- Alertas nuevas: `VEGETATION_DECLINE` ("Disminución significativa de actividad vegetal") y `OBSERVATION_LOW_CONFIDENCE`; `EVIDENCE_STALE` aplica también a vegetación. El contexto de cada alerta referencia `verificationId`, `evidenceIds`, `metric` y la regla (migración `1791000000000`).
+- Monitoreo: el scheduler existente crea verificaciones periódicas que ejecutan estas estrategias; `GET /assets/:id/monitoring` expone `verificationStrategy`. `GET /assets/:id/satellite` devuelve la serie con estadísticas, calidad y vistas.
+
+### 10.5 Datos demo reales
+
+`infra/seed-assets/satellite/real/<lote>/` contiene series Sentinel-2 procesadas con el mismo código (`scripts/build_satellite_fixtures.py`): trigo (61 ha, VERIFICADO), maíz temprano (54 ha: barbecho → "Disminución significativa de actividad vegetal", hoy en implantación → no concluyente), eucaliptos (80 ha) y viñedo (12,5 ha: verificado en verano, no concluyente en reposo). Los lotes son parcelas reales detectadas por NDVI; titulares, cultivo declarado y montos son ficticios.
+
+### 10.6 Pendiente para producción
+
+- **Frutales (San José)**: no se encontró una parcela real con la segmentación automática (chacras unidas por cortinas de álamos); su historial sigue **SIMULADO** y está marcado como tal.
+- Cámaras reales (gateway RTSP/ONVIF) y fine-tuning del detector con imágenes del campo (vista aérea/drone, ganado en corrales); el modelo COCO subcuenta animales pequeños o agrupados.
+- Catálogo STAC con SLA o réplica propia, caché de COG y cola dedicada para lotes grandes; máscara de nubes con dilatación/modelo específico (s2cloudless).
+- Polígonos cargados por el productor (KML/SHP) en lugar de los de la demo; validación de superposición con catastro.

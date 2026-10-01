@@ -359,11 +359,12 @@ export const EVIDENCE_SOURCES: {
   },
   {
     code: 'SATELLITE_SENTINEL2_STAC',
-    name: 'Sentinel-2 L2A (STAC)',
+    name: 'Sentinel-2 L2A (AWS Open Data)',
     kind: 'SATELLITE',
-    provider: 'stac-sentinel2',
+    provider: 'sentinel2-l2a',
     isSimulated: false,
-    description: 'Escenas Sentinel-2 obtenidas de un catálogo STAC',
+    description:
+      'Escenas Sentinel-2 L2A reales (ítems STAC y COG del bucket público sentinel-cogs); NDVI con máscara de nubes SCL',
   },
   {
     code: 'RFID_SIMULATED',
@@ -421,6 +422,31 @@ export const AI_MODELS: {
     provider: 'ai-service',
     description: 'Diferencia normalizada con umbral de Otsu.',
     version: '1.0.0',
+    isSimulated: false,
+    metrics: {},
+  },
+  {
+    code: 'yolox-s-coco',
+    name: 'YOLOX-S (COCO) — detector de ganado',
+    task: 'ANIMAL_COUNTING',
+    provider: 'ai-service',
+    description:
+      'YOLOX-S de Megvii (Apache-2.0), pesos COCO oficiales en ONNX; clases vaca/oveja/caballo, mosaico para escenas grandes.',
+    version: '0.1.1rc0-onnx',
+    isSimulated: false,
+    metrics: {
+      benchmark:
+        'Open Images V7 test (Cattle/Bull, sin group-of): ver benchmarks/cattle-openimages.json',
+    },
+  },
+  {
+    code: 'sentinel2-ndvi',
+    name: 'NDVI Sentinel-2 L2A',
+    task: 'VEGETATION_INDEX',
+    provider: 'ai-service',
+    description:
+      'NDVI (B08−B04)/(B08+B04) sobre el polígono con máscara de nubes SCL y control de calidad por observación.',
+    version: 'agro-ndvi/1.0.0',
     isSimulated: false,
     metrics: {},
   },
@@ -490,7 +516,16 @@ export const ALERT_RULES: {
     severity: 'INFO',
     conditionType: 'EVIDENCE_STALE',
     parameters: { maxAgeHours: 72 },
-    assetTypeCodes: ['BOVINOS', 'SILOBOLSAS', 'SILOS', 'MAQUINARIA'],
+    assetTypeCodes: [
+      'BOVINOS',
+      'SILOBOLSAS',
+      'SILOS',
+      'MAQUINARIA',
+      'CULTIVOS',
+      'VINEDOS',
+      'FRUTALES',
+      'FORESTAL',
+    ],
   },
   {
     code: 'LOCATION_MISMATCH',
@@ -517,6 +552,24 @@ export const ALERT_RULES: {
     severity: 'WARNING',
     conditionType: 'VEGETATION_AREA_DROP',
     parameters: { thresholdPct: 8 },
+    assetTypeCodes: ['CULTIVOS', 'VINEDOS', 'FRUTALES', 'FORESTAL'],
+  },
+  {
+    code: 'VEGETATION_DECLINE',
+    name: 'Disminución significativa de actividad vegetal',
+    description: 'Caída del NDVI respecto de la observación anterior o de la línea base',
+    severity: 'WARNING',
+    conditionType: 'VEGETATION_DECLINE',
+    parameters: { thresholdPct: 15 },
+    assetTypeCodes: ['CULTIVOS', 'VINEDOS', 'FRUTALES', 'FORESTAL'],
+  },
+  {
+    code: 'OBSERVATION_LOW_CONFIDENCE',
+    name: 'Observación satelital de baja confianza',
+    description: 'Sin escena utilizable en la ventana (nubosidad sobre el lote o sin cobertura)',
+    severity: 'INFO',
+    conditionType: 'OBSERVATION_LOW_CONFIDENCE',
+    parameters: {},
     assetTypeCodes: ['CULTIVOS', 'VINEDOS', 'FRUTALES', 'FORESTAL'],
   },
   {

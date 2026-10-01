@@ -16,6 +16,8 @@ export interface PipelineContext {
   asset: AssetEntity;
   assetType: AssetTypeEntity;
   establishment: EstablishmentEntity;
+  /** Metadata vigente del activo según el esquema de su tipo (p. ej. fecha de siembra). */
+  metadata: Record<string, unknown>;
   documents: DocumentEntity[];
   monitoring: { enabled: boolean; maxEvidenceAgeHours: number; intervalHours: number } | null;
   history: HistoricalResultRow[];

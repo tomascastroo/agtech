@@ -3,13 +3,7 @@ import { TimestampedEntity } from '../../../database/base.entity.js';
 import { AnimalIdentificationEntity } from './animal-identification.entity.js';
 
 export type AnimalCategory =
-  | 'VACA'
-  | 'VAQUILLONA'
-  | 'TERNERO'
-  | 'TERNERA'
-  | 'NOVILLO'
-  | 'NOVILLITO'
-  | 'TORO';
+  'VACA' | 'VAQUILLONA' | 'TERNERO' | 'TERNERA' | 'NOVILLO' | 'NOVILLITO' | 'TORO';
 
 /** Identidad individual del animal (capacidad de fase 4; el MVP no depende de ella). */
 @Entity('animals')

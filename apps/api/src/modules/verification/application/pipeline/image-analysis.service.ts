@@ -13,7 +13,7 @@ import { isAnalyzed, type PipelineContext } from './pipeline-context.js';
 
 /** Problemas de imagen que invalidan un conteo automático. */
 const DISQUALIFYING_ISSUES = new Set(['BLURRY', 'UNDEREXPOSED', 'OVEREXPOSED']);
-const MAX_DETECTIONS_STORED = 60;
+const MAX_DETECTIONS_STORED = 500;
 
 /**
  * Ejecuta visión computacional sobre la evidencia de la verificación y persiste el resultado
@@ -65,6 +65,9 @@ export class ImageAnalysisService {
           clusteredComponents: result.clusteredComponents,
           detectionsTotal: result.detections.length,
           detectionsSample: result.detections.slice(0, MAX_DETECTIONS_STORED),
+          imageSize: { width: result.image.width, height: result.image.height },
+          inferencePasses: result.inferencePasses ?? 1,
+          scoreThreshold: result.scoreThreshold ?? null,
           quality: this.quality(result.image),
           model: result.model,
           provider: this.cv.name,

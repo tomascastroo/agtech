@@ -23,6 +23,8 @@ export interface AlertEvaluationContext {
     locationDistanceM: number | null;
     anomalies: Anomaly[];
     vegetationChangePct: number | null;
+    /** Evidencias primarias de la verificación (trazabilidad de la alerta). */
+    evidenceIds?: string[];
   };
   newestEvidenceAt: Date | null;
   /** Antigüedad máxima configurada para el activo; prevalece sobre el parámetro de la regla. */
@@ -76,7 +78,13 @@ export const EVALUATORS: readonly AlertConditionEvaluator[] = [
       return {
         title: 'Diferencia significativa entre cantidad declarada y detectada',
         description: `Se verificaron ${fmt(detected)} ${ctx.asset.unitLabel} sobre ${fmt(ctx.asset.declaredQuantity)} declaradas (${fmt(ratio * 100, 1)} %), por debajo del umbral de ${fmt(threshold * 100)} %.`,
-        context: { detected, declared: ctx.asset.declaredQuantity, ratio, threshold },
+        context: {
+          metric: 'detected_quantity',
+          detected,
+          declared: ctx.asset.declaredQuantity,
+          ratio,
+          threshold,
+        },
       };
     },
   },
@@ -92,7 +100,7 @@ export const EVALUATORS: readonly AlertConditionEvaluator[] = [
       return {
         title: 'Disminución de actividad ganadera',
         description: `La cantidad detectada bajó ${fmt(dropPct, 1)} % respecto de la verificación anterior (${fmt(previous)} → ${fmt(current)}).`,
-        context: { previous, current, dropPct, thresholdPct },
+        context: { metric: 'detected_quantity', previous, current, dropPct, thresholdPct },
       };
     },
   },
@@ -112,7 +120,12 @@ export const EVALUATORS: readonly AlertConditionEvaluator[] = [
           ageHours === null
             ? 'El activo no tiene evidencia registrada.'
             : `La última evidencia tiene ${fmt(ageHours / 24, 1)} días de antigüedad (máximo configurado: ${fmt(maxAgeHours)} h).`,
-        context: { newestEvidenceAt: newest?.toISOString() ?? null, maxAgeHours },
+        context: {
+          metric: 'evidence_age_hours',
+          newestEvidenceAt: newest?.toISOString() ?? null,
+          ageHours: ageHours === null ? null : Math.round(ageHours),
+          maxAgeHours,
+        },
       };
     },
   },
@@ -124,7 +137,7 @@ export const EVALUATORS: readonly AlertConditionEvaluator[] = [
       return {
         title: 'Evidencia fuera del establecimiento declarado',
         description: `Al menos una evidencia fue capturada a ${fmt(ctx.verification.locationDistanceM ?? 0)} m del límite de ${ctx.asset.establishmentName}.`,
-        context: { distanceM: ctx.verification.locationDistanceM },
+        context: { metric: 'location_distance_m', distanceM: ctx.verification.locationDistanceM },
       };
     },
   },
@@ -157,11 +170,43 @@ export const EVALUATORS: readonly AlertConditionEvaluator[] = [
         title: 'Cambio en la superficie cultivada',
         description: `La superficie con vegetación activa es de ${fmt(detected, 1)} ha sobre ${fmt(ctx.asset.declaredQuantity, 1)} ha declaradas (${fmt(coverageDrop, 1)} % menos).`,
         context: {
+          metric: 'vegetated_area_ha',
           detectedHa: detected,
           declaredHa: ctx.asset.declaredQuantity,
           coverageDropPct: coverageDrop,
           changeVsPreviousPct: change,
         },
+      };
+    },
+  },
+  {
+    type: 'VEGETATION_DECLINE',
+    phases: ['VERIFICATION'],
+    evaluate(ctx, { thresholdPct = 15 }) {
+      const anomaly = ctx.verification?.anomalies.find((a) => a.code === 'VEGETATION_DECLINE');
+      if (!anomaly) return null;
+      const d = anomaly.details ?? {};
+      const change = (d.changePct ?? d.baselineChangePct) as number | null;
+      if (change === null || change > -thresholdPct) return null;
+      return {
+        title: 'Disminución significativa de actividad vegetal',
+        description: anomaly.message,
+        context: { ...d, thresholdPct },
+      };
+    },
+  },
+  {
+    type: 'OBSERVATION_LOW_CONFIDENCE',
+    phases: ['VERIFICATION'],
+    evaluate(ctx) {
+      const anomaly = ctx.verification?.anomalies.find(
+        (a) => a.code === 'LOW_CONFIDENCE_OBSERVATION',
+      );
+      if (!anomaly) return null;
+      return {
+        title: 'Observación satelital de baja confianza',
+        description: anomaly.message,
+        context: { ...anomaly.details },
       };
     },
   },

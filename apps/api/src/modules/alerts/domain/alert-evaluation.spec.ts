@@ -1,4 +1,5 @@
 import { anomalyScore, EVALUATORS, type AlertEvaluationContext } from './alert-evaluation.js';
+import type { Anomaly } from '../../verification/domain/verification.types.js';
 import type { AlertConditionType } from './alert.types.js';
 
 const NOW = new Date('2026-10-01T12:00:00Z');
@@ -129,5 +130,45 @@ describe('Evaluadores de alertas', () => {
         { code: 'LOCATION_MISMATCH', severity: 'CRITICAL', message: '' },
       ]),
     ).toBe(0.7);
+  });
+});
+
+describe('Alertas sobre señales satelitales reales', () => {
+  const vegetation = (anomalies: Anomaly[]) =>
+    context({
+      asset: {
+        ...context().asset,
+        assetTypeCode: 'CULTIVOS',
+        declaredQuantity: 54,
+        unitLabel: 'ha',
+      },
+      verification: { ...context().verification!, detectedQuantity: null, anomalies },
+    });
+
+  it('disminución significativa de actividad vegetal referencia evidencia y métrica', () => {
+    const e = evaluator('VEGETATION_DECLINE');
+    const alert = e.evaluate(
+      vegetation([
+        {
+          code: 'VEGETATION_DECLINE',
+          severity: 'WARNING',
+          message: 'Disminución significativa de actividad vegetal',
+          details: { evidenceId: 'ev1', metric: 'ndvi_mean', changePct: -45.1 },
+        },
+      ]),
+      { thresholdPct: 15 },
+    );
+    expect(alert?.title).toBe('Disminución significativa de actividad vegetal');
+    expect(alert?.context).toMatchObject({ evidenceId: 'ev1', metric: 'ndvi_mean' });
+    expect(e.evaluate(vegetation([]), { thresholdPct: 15 })).toBeNull();
+  });
+
+  it('observación de baja confianza por nubosidad', () => {
+    const e = evaluator('OBSERVATION_LOW_CONFIDENCE');
+    const alert = e.evaluate(
+      vegetation([{ code: 'LOW_CONFIDENCE_OBSERVATION', severity: 'WARNING', message: 'nubes' }]),
+      {},
+    );
+    expect(alert?.title).toBe('Observación satelital de baja confianza');
   });
 });

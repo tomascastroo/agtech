@@ -1,0 +1,733 @@
+{
+  "dataset": "Open Images V7 (validation para calibrar, test para reportar), etiquetas Cattle/Bull, sin group-of",
+  "generated_at": "2026-10-01T18:39:07+00:00",
+  "iou_threshold": 0.5,
+  "runs": [
+    {
+      "model": "yolox_tiny",
+      "input_size": [
+        416,
+        416
+      ],
+      "execution_provider": "CPUExecutionProvider",
+      "selected_threshold": 0.2,
+      "validation_sweep": {
+        "0.20": {
+          "images": 121,
+          "animals": 270,
+          "detected": 144,
+          "mae": 1.223,
+          "mean_error": -1.041,
+          "total_relative_error": -0.4667,
+          "herd_images": 11,
+          "herd_mean_relative_error": 0.7477,
+          "precision": 0.8542,
+          "recall": 0.4556,
+          "f1": 0.5942
+        },
+        "0.25": {
+          "images": 121,
+          "animals": 270,
+          "detected": 139,
+          "mae": 1.248,
+          "mean_error": -1.083,
+          "total_relative_error": -0.4852,
+          "herd_images": 11,
+          "herd_mean_relative_error": 0.7591,
+          "precision": 0.8633,
+          "recall": 0.4444,
+          "f1": 0.5868
+        },
+        "0.30": {
+          "images": 121,
+          "animals": 270,
+          "detected": 130,
+          "mae": 1.289,
+          "mean_error": -1.157,
+          "total_relative_error": -0.5185,
+          "herd_images": 11,
+          "herd_mean_relative_error": 0.7705,
+          "precision": 0.8846,
+          "recall": 0.4259,
+          "f1": 0.575
+        },
+        "0.35": {
+          "images": 121,
+          "animals": 270,
+          "detected": 123,
+          "mae": 1.298,
+          "mean_error": -1.215,
+          "total_relative_error": -0.5444,
+          "herd_images": 11,
+          "herd_mean_relative_error": 0.7705,
+          "precision": 0.9187,
+          "recall": 0.4185,
+          "f1": 0.5751
+        },
+        "0.40": {
+          "images": 121,
+          "animals": 270,
+          "detected": 118,
+          "mae": 1.289,
+          "mean_error": -1.256,
+          "total_relative_error": -0.563,
+          "herd_images": 11,
+          "herd_mean_relative_error": 0.7705,
+          "precision": 0.9407,
+          "recall": 0.4111,
+          "f1": 0.5722
+        },
+        "0.45": {
+          "images": 121,
+          "animals": 270,
+          "detected": 113,
+          "mae": 1.331,
+          "mean_error": -1.298,
+          "total_relative_error": -0.5815,
+          "herd_images": 11,
+          "herd_mean_relative_error": 0.8016,
+          "precision": 0.9381,
+          "recall": 0.3926,
+          "f1": 0.5535
+        },
+        "0.50": {
+          "images": 121,
+          "animals": 270,
+          "detected": 108,
+          "mae": 1.372,
+          "mean_error": -1.339,
+          "total_relative_error": -0.6,
+          "herd_images": 11,
+          "herd_mean_relative_error": 0.8146,
+          "precision": 0.9352,
+          "recall": 0.3741,
+          "f1": 0.5344
+        }
+      },
+      "test": {
+        "images": 390,
+        "animals": 859,
+        "detected": 438,
+        "mae": 1.203,
+        "mean_error": -1.079,
+        "total_relative_error": -0.4901,
+        "herd_images": 30,
+        "herd_mean_relative_error": 0.6086,
+        "precision": 0.8881,
+        "recall": 0.4529,
+        "f1": 0.5998
+      },
+      "latency_ms": {
+        "mean": 28.6,
+        "p50": 25.3,
+        "p95": 45.7
+      },
+      "class_set": "cow"
+    },
+    {
+      "model": "yolox_tiny",
+      "input_size": [
+        416,
+        416
+      ],
+      "execution_provider": "CPUExecutionProvider",
+      "selected_threshold": 0.25,
+      "validation_sweep": {
+        "0.20": {
+          "images": 121,
+          "animals": 270,
+          "detected": 199,
+          "mae": 1.033,
+          "mean_error": -0.587,
+          "total_relative_error": -0.263,
+          "herd_images": 11,
+          "herd_mean_relative_error": 0.5591,
+          "precision": 0.7739,
+          "recall": 0.5704,
+          "f1": 0.6567
+        },
+        "0.25": {
+          "images": 121,
+          "animals": 270,
+          "detected": 194,
+          "mae": 1.025,
+          "mean_error": -0.628,
+          "total_relative_error": -0.2815,
+          "herd_images": 11,
+          "herd_mean_relative_error": 0.5409,
+          "precision": 0.7938,
+          "recall": 0.5704,
+          "f1": 0.6638
+        },
+        "0.30": {
+          "images": 121,
+          "animals": 270,
+          "detected": 185,
+          "mae": 1.066,
+          "mean_error": -0.702,
+          "total_relative_error": -0.3148,
+          "herd_images": 11,
+          "herd_mean_relative_error": 0.5523,
+          "precision": 0.8054,
+          "recall": 0.5519,
+          "f1": 0.6549
+        },
+        "0.35": {
+          "images": 121,
+          "animals": 270,
+          "detected": 179,
+          "mae": 1.05,
+          "mean_error": -0.752,
+          "total_relative_error": -0.337,
+          "herd_images": 11,
+          "herd_mean_relative_error": 0.5523,
+          "precision": 0.8268,
+          "recall": 0.5481,
+          "f1": 0.6592
+        },
+        "0.40": {
+          "images": 121,
+          "animals": 270,
+          "detected": 175,
+          "mae": 1.033,
+          "mean_error": -0.785,
+          "total_relative_error": -0.3519,
+          "herd_images": 11,
+          "herd_mean_relative_error": 0.5523,
+          "precision": 0.8457,
+          "recall": 0.5481,
+          "f1": 0.6652
+        },
+        "0.45": {
+          "images": 121,
+          "animals": 270,
+          "detected": 168,
+          "mae": 1.091,
+          "mean_error": -0.843,
+          "total_relative_error": -0.3778,
+          "herd_images": 11,
+          "herd_mean_relative_error": 0.5834,
+          "precision": 0.8452,
+          "recall": 0.5259,
+          "f1": 0.6484
+        },
+        "0.50": {
+          "images": 121,
+          "animals": 270,
+          "detected": 162,
+          "mae": 1.124,
+          "mean_error": -0.893,
+          "total_relative_error": -0.4,
+          "herd_images": 11,
+          "herd_mean_relative_error": 0.6078,
+          "precision": 0.8395,
+          "recall": 0.5037,
+          "f1": 0.6296
+        }
+      },
+      "test": {
+        "images": 390,
+        "animals": 859,
+        "detected": 595,
+        "mae": 0.954,
+        "mean_error": -0.677,
+        "total_relative_error": -0.3073,
+        "herd_images": 30,
+        "herd_mean_relative_error": 0.3704,
+        "precision": 0.842,
+        "recall": 0.5832,
+        "f1": 0.6891
+      },
+      "latency_ms": {
+        "mean": 30.3,
+        "p50": 26.8,
+        "p95": 46.0
+      },
+      "class_set": "livestock"
+    },
+    {
+      "model": "yolox_s",
+      "input_size": [
+        640,
+        640
+      ],
+      "execution_provider": "CPUExecutionProvider",
+      "selected_threshold": 0.2,
+      "validation_sweep": {
+        "0.20": {
+          "images": 121,
+          "animals": 270,
+          "detected": 148,
+          "mae": 1.107,
+          "mean_error": -1.008,
+          "total_relative_error": -0.4519,
+          "herd_images": 11,
+          "herd_mean_relative_error": 0.6886,
+          "precision": 0.9324,
+          "recall": 0.5111,
+          "f1": 0.6603
+        },
+        "0.25": {
+          "images": 121,
+          "animals": 270,
+          "detected": 144,
+          "mae": 1.107,
+          "mean_error": -1.041,
+          "total_relative_error": -0.4667,
+          "herd_images": 11,
+          "herd_mean_relative_error": 0.7068,
+          "precision": 0.9444,
+          "recall": 0.5037,
+          "f1": 0.657
+        },
+        "0.30": {
+          "images": 121,
+          "animals": 270,
+          "detected": 142,
+          "mae": 1.124,
+          "mean_error": -1.058,
+          "total_relative_error": -0.4741,
+          "herd_images": 11,
+          "herd_mean_relative_error": 0.7182,
+          "precision": 0.9437,
+          "recall": 0.4963,
+          "f1": 0.6505
+        },
+        "0.35": {
+          "images": 121,
+          "animals": 270,
+          "detected": 137,
+          "mae": 1.149,
+          "mean_error": -1.099,
+          "total_relative_error": -0.4926,
+          "herd_images": 11,
+          "herd_mean_relative_error": 0.7295,
+          "precision": 0.9489,
+          "recall": 0.4815,
+          "f1": 0.6388
+        },
+        "0.40": {
+          "images": 121,
+          "animals": 270,
+          "detected": 135,
+          "mae": 1.165,
+          "mean_error": -1.116,
+          "total_relative_error": -0.5,
+          "herd_images": 11,
+          "herd_mean_relative_error": 0.7477,
+          "precision": 0.9481,
+          "recall": 0.4741,
+          "f1": 0.6321
+        },
+        "0.45": {
+          "images": 121,
+          "animals": 270,
+          "detected": 134,
+          "mae": 1.174,
+          "mean_error": -1.124,
+          "total_relative_error": -0.5037,
+          "herd_images": 11,
+          "herd_mean_relative_error": 0.7477,
+          "precision": 0.9478,
+          "recall": 0.4704,
+          "f1": 0.6287
+        },
+        "0.50": {
+          "images": 121,
+          "animals": 270,
+          "detected": 130,
+          "mae": 1.174,
+          "mean_error": -1.157,
+          "total_relative_error": -0.5185,
+          "herd_images": 11,
+          "herd_mean_relative_error": 0.7477,
+          "precision": 0.9692,
+          "recall": 0.4667,
+          "f1": 0.63
+        }
+      },
+      "test": {
+        "images": 390,
+        "animals": 859,
+        "detected": 503,
+        "mae": 1.005,
+        "mean_error": -0.913,
+        "total_relative_error": -0.4144,
+        "herd_images": 30,
+        "herd_mean_relative_error": 0.5226,
+        "precision": 0.8907,
+        "recall": 0.5215,
+        "f1": 0.6579
+      },
+      "latency_ms": {
+        "mean": 90.6,
+        "p50": 83.0,
+        "p95": 136.9
+      },
+      "class_set": "cow"
+    },
+    {
+      "model": "yolox_s",
+      "input_size": [
+        640,
+        640
+      ],
+      "execution_provider": "CPUExecutionProvider",
+      "selected_threshold": 0.2,
+      "validation_sweep": {
+        "0.20": {
+          "images": 121,
+          "animals": 270,
+          "detected": 198,
+          "mae": 0.909,
+          "mean_error": -0.595,
+          "total_relative_error": -0.2667,
+          "herd_images": 11,
+          "herd_mean_relative_error": 0.4364,
+          "precision": 0.8434,
+          "recall": 0.6185,
+          "f1": 0.7137
+        },
+        "0.25": {
+          "images": 121,
+          "animals": 270,
+          "detected": 192,
+          "mae": 0.909,
+          "mean_error": -0.645,
+          "total_relative_error": -0.2889,
+          "herd_images": 11,
+          "herd_mean_relative_error": 0.4841,
+          "precision": 0.8542,
+          "recall": 0.6074,
+          "f1": 0.71
+        },
+        "0.30": {
+          "images": 121,
+          "animals": 270,
+          "detected": 191,
+          "mae": 0.917,
+          "mean_error": -0.653,
+          "total_relative_error": -0.2926,
+          "herd_images": 11,
+          "herd_mean_relative_error": 0.4955,
+          "precision": 0.8534,
+          "recall": 0.6037,
+          "f1": 0.7072
+        },
+        "0.35": {
+          "images": 121,
+          "animals": 270,
+          "detected": 184,
+          "mae": 0.942,
+          "mean_error": -0.711,
+          "total_relative_error": -0.3185,
+          "herd_images": 11,
+          "herd_mean_relative_error": 0.5182,
+          "precision": 0.8641,
+          "recall": 0.5889,
+          "f1": 0.7004
+        },
+        "0.40": {
+          "images": 121,
+          "animals": 270,
+          "detected": 181,
+          "mae": 0.967,
+          "mean_error": -0.736,
+          "total_relative_error": -0.3296,
+          "herd_images": 11,
+          "herd_mean_relative_error": 0.5364,
+          "precision": 0.8619,
+          "recall": 0.5778,
+          "f1": 0.6918
+        },
+        "0.45": {
+          "images": 121,
+          "animals": 270,
+          "detected": 179,
+          "mae": 0.983,
+          "mean_error": -0.752,
+          "total_relative_error": -0.337,
+          "herd_images": 11,
+          "herd_mean_relative_error": 0.5364,
+          "precision": 0.8603,
+          "recall": 0.5704,
+          "f1": 0.686
+        },
+        "0.50": {
+          "images": 121,
+          "animals": 270,
+          "detected": 175,
+          "mae": 0.983,
+          "mean_error": -0.785,
+          "total_relative_error": -0.3519,
+          "herd_images": 11,
+          "herd_mean_relative_error": 0.5364,
+          "precision": 0.8743,
+          "recall": 0.5667,
+          "f1": 0.6876
+        }
+      },
+      "test": {
+        "images": 390,
+        "animals": 859,
+        "detected": 678,
+        "mae": 0.833,
+        "mean_error": -0.464,
+        "total_relative_error": -0.2107,
+        "herd_images": 30,
+        "herd_mean_relative_error": 0.33,
+        "precision": 0.8142,
+        "recall": 0.6426,
+        "f1": 0.7183
+      },
+      "latency_ms": {
+        "mean": 95.6,
+        "p50": 86.0,
+        "p95": 148.1
+      },
+      "class_set": "livestock"
+    },
+    {
+      "model": "yolox_m",
+      "input_size": [
+        640,
+        640
+      ],
+      "execution_provider": "CPUExecutionProvider",
+      "selected_threshold": 0.2,
+      "validation_sweep": {
+        "0.20": {
+          "images": 121,
+          "animals": 270,
+          "detected": 159,
+          "mae": 1.017,
+          "mean_error": -0.917,
+          "total_relative_error": -0.4111,
+          "herd_images": 11,
+          "herd_mean_relative_error": 0.7205,
+          "precision": 0.8931,
+          "recall": 0.5259,
+          "f1": 0.662
+        },
+        "0.25": {
+          "images": 121,
+          "animals": 270,
+          "detected": 148,
+          "mae": 1.041,
+          "mean_error": -1.008,
+          "total_relative_error": -0.4519,
+          "herd_images": 11,
+          "herd_mean_relative_error": 0.7432,
+          "precision": 0.9392,
+          "recall": 0.5148,
+          "f1": 0.6651
+        },
+        "0.30": {
+          "images": 121,
+          "animals": 270,
+          "detected": 145,
+          "mae": 1.066,
+          "mean_error": -1.033,
+          "total_relative_error": -0.463,
+          "herd_images": 11,
+          "herd_mean_relative_error": 0.7545,
+          "precision": 0.9448,
+          "recall": 0.5074,
+          "f1": 0.6602
+        },
+        "0.35": {
+          "images": 121,
+          "animals": 270,
+          "detected": 143,
+          "mae": 1.083,
+          "mean_error": -1.05,
+          "total_relative_error": -0.4704,
+          "herd_images": 11,
+          "herd_mean_relative_error": 0.7545,
+          "precision": 0.951,
+          "recall": 0.5037,
+          "f1": 0.6586
+        },
+        "0.40": {
+          "images": 121,
+          "animals": 270,
+          "detected": 143,
+          "mae": 1.083,
+          "mean_error": -1.05,
+          "total_relative_error": -0.4704,
+          "herd_images": 11,
+          "herd_mean_relative_error": 0.7545,
+          "precision": 0.951,
+          "recall": 0.5037,
+          "f1": 0.6586
+        },
+        "0.45": {
+          "images": 121,
+          "animals": 270,
+          "detected": 141,
+          "mae": 1.083,
+          "mean_error": -1.066,
+          "total_relative_error": -0.4778,
+          "herd_images": 11,
+          "herd_mean_relative_error": 0.7545,
+          "precision": 0.9574,
+          "recall": 0.5,
+          "f1": 0.6569
+        },
+        "0.50": {
+          "images": 121,
+          "animals": 270,
+          "detected": 140,
+          "mae": 1.091,
+          "mean_error": -1.074,
+          "total_relative_error": -0.4815,
+          "herd_images": 11,
+          "herd_mean_relative_error": 0.7545,
+          "precision": 0.9643,
+          "recall": 0.5,
+          "f1": 0.6585
+        }
+      },
+      "test": {
+        "images": 390,
+        "animals": 859,
+        "detected": 523,
+        "mae": 0.995,
+        "mean_error": -0.862,
+        "total_relative_error": -0.3912,
+        "herd_images": 30,
+        "herd_mean_relative_error": 0.5069,
+        "precision": 0.8834,
+        "recall": 0.5378,
+        "f1": 0.6686
+      },
+      "latency_ms": {
+        "mean": 232.9,
+        "p50": 201.5,
+        "p95": 444.3
+      },
+      "class_set": "cow"
+    },
+    {
+      "model": "yolox_m",
+      "input_size": [
+        640,
+        640
+      ],
+      "execution_provider": "CPUExecutionProvider",
+      "selected_threshold": 0.25,
+      "validation_sweep": {
+        "0.20": {
+          "images": 121,
+          "animals": 270,
+          "detected": 210,
+          "mae": 0.843,
+          "mean_error": -0.496,
+          "total_relative_error": -0.2222,
+          "herd_images": 11,
+          "herd_mean_relative_error": 0.3727,
+          "precision": 0.8286,
+          "recall": 0.6444,
+          "f1": 0.725
+        },
+        "0.25": {
+          "images": 121,
+          "animals": 270,
+          "detected": 202,
+          "mae": 0.826,
+          "mean_error": -0.562,
+          "total_relative_error": -0.2519,
+          "herd_images": 11,
+          "herd_mean_relative_error": 0.3955,
+          "precision": 0.8515,
+          "recall": 0.637,
+          "f1": 0.7288
+        },
+        "0.30": {
+          "images": 121,
+          "animals": 270,
+          "detected": 199,
+          "mae": 0.851,
+          "mean_error": -0.587,
+          "total_relative_error": -0.263,
+          "herd_images": 11,
+          "herd_mean_relative_error": 0.4182,
+          "precision": 0.8543,
+          "recall": 0.6296,
+          "f1": 0.7249
+        },
+        "0.35": {
+          "images": 121,
+          "animals": 270,
+          "detected": 191,
+          "mae": 0.884,
+          "mean_error": -0.653,
+          "total_relative_error": -0.2926,
+          "herd_images": 11,
+          "herd_mean_relative_error": 0.4591,
+          "precision": 0.8691,
+          "recall": 0.6148,
+          "f1": 0.7202
+        },
+        "0.40": {
+          "images": 121,
+          "animals": 270,
+          "detected": 186,
+          "mae": 0.909,
+          "mean_error": -0.694,
+          "total_relative_error": -0.3111,
+          "herd_images": 11,
+          "herd_mean_relative_error": 0.5,
+          "precision": 0.871,
+          "recall": 0.6,
+          "f1": 0.7105
+        },
+        "0.45": {
+          "images": 121,
+          "animals": 270,
+          "detected": 183,
+          "mae": 0.917,
+          "mean_error": -0.719,
+          "total_relative_error": -0.3222,
+          "herd_images": 11,
+          "herd_mean_relative_error": 0.5182,
+          "precision": 0.8743,
+          "recall": 0.5926,
+          "f1": 0.7064
+        },
+        "0.50": {
+          "images": 121,
+          "animals": 270,
+          "detected": 181,
+          "mae": 0.934,
+          "mean_error": -0.736,
+          "total_relative_error": -0.3296,
+          "herd_images": 11,
+          "herd_mean_relative_error": 0.5182,
+          "precision": 0.8785,
+          "recall": 0.5889,
+          "f1": 0.7051
+        }
+      },
+      "test": {
+        "images": 390,
+        "animals": 859,
+        "detected": 690,
+        "mae": 0.797,
+        "mean_error": -0.433,
+        "total_relative_error": -0.1967,
+        "herd_images": 30,
+        "herd_mean_relative_error": 0.2661,
+        "precision": 0.8232,
+        "recall": 0.6612,
+        "f1": 0.7334
+      },
+      "latency_ms": {
+        "mean": 208.9,
+        "p50": 193.3,
+        "p95": 298.3
+      },
+      "class_set": "livestock"
+    }
+  ]
+}

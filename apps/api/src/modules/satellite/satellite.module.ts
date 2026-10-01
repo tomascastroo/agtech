@@ -6,9 +6,9 @@ import { ObjectStorage } from '../storage/object-storage.js';
 import { SatelliteIngestionService } from './application/satellite-ingestion.service.js';
 import { SatelliteImageryProvider } from './domain/satellite.provider.js';
 import { MockSatelliteProvider } from './infrastructure/mock-satellite.provider.js';
+import { Sentinel2SatelliteProvider } from './infrastructure/sentinel2-satellite.provider.js';
 import { SatelliteImageEntity } from './infrastructure/satellite-image.entity.js';
 import { SatelliteObservationEntity } from './infrastructure/satellite-observation.entity.js';
-import { StacSatelliteProvider } from './infrastructure/stac-satellite.provider.js';
 import { SatelliteController } from './presentation/satellite.controller.js';
 
 @Module({
@@ -24,7 +24,7 @@ import { SatelliteController } from './presentation/satellite.controller.js';
       inject: [AppConfig, ObjectStorage],
       useFactory: (config: AppConfig, storage: ObjectStorage): SatelliteImageryProvider =>
         config.env.SATELLITE_PROVIDER === 'stac'
-          ? new StacSatelliteProvider(config)
+          ? new Sentinel2SatelliteProvider(config)
           : new MockSatelliteProvider(storage),
     },
   ],

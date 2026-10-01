@@ -99,6 +99,17 @@ export class LivestockCountingStrategy implements VerificationStrategy {
                 source: 'computer_vision',
               },
               {
+                key: 'absolute_difference',
+                value: Math.abs(detected - declared),
+                unit: 'HEAD',
+                source: 'computer_vision',
+              },
+              {
+                key: 'relative_error',
+                value: Math.round(((detected - declared) / declared) * 10_000) / 10_000,
+                source: 'computer_vision',
+              },
+              {
                 key: 'match_percentage',
                 value:
                   Math.round(

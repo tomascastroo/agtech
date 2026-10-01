@@ -31,8 +31,9 @@ x-api-env: &api-env
   AI_SERVICE_URL: http://ai-service:8000
   AI_SERVICE_TOKEN: ${AI_SERVICE_TOKEN:-dev-only-ai-service-token}
   CV_PROVIDER: ${CV_PROVIDER:-ai-service}
-  SATELLITE_PROVIDER: ${SATELLITE_PROVIDER:-mock}
-  STAC_API_URL: ${STAC_API_URL:-https://earth-search.aws.element84.com/v1}
+  # stac = Sentinel-2 L2A real (sin credenciales) · mock = serie SIMULADA
+  SATELLITE_PROVIDER: ${SATELLITE_PROVIDER:-stac}
+  AI_SERVICE_SATELLITE_TIMEOUT_MS: ${AI_SERVICE_SATELLITE_TIMEOUT_MS:-180000}
   CAMERA_GATEWAY: ${CAMERA_GATEWAY:-simulated}
   REGISTRY_PROVIDER: ${REGISTRY_PROVIDER:-mock}
   MONITORING_TICK_SECONDS: ${MONITORING_TICK_SECONDS:-300}
@@ -97,6 +98,9 @@ services:
       AI_SERVICE_TOKEN: ${AI_SERVICE_TOKEN:-dev-only-ai-service-token}
       AI_SERVICE_ENVIRONMENT: ${NODE_ENV:-development}
       AI_SERVICE_LOG_LEVEL: ${AI_SERVICE_LOG_LEVEL:-INFO}
+      AI_SERVICE_DETECTOR: ${AI_SERVICE_DETECTOR:-yolox}
+      AI_SERVICE_SENTINEL_CATALOG: ${AI_SERVICE_SENTINEL_CATALOG:-auto}
+      AI_SERVICE_MAX_CLOUD_COVER: ${AI_SERVICE_MAX_CLOUD_COVER:-20}
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health/live', timeout=3).status == 200 else 1)"]
       interval: 10s

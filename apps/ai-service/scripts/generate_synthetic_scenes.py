@@ -324,7 +324,12 @@ def main() -> None:
     objects_dir = args.out / "objects"
     objects_dir.mkdir(parents=True, exist_ok=True)
     manifest: dict[str, list[dict[str, object]]] = {"cameras": [], "satellite": [], "objects": []}
-    for scene in CAMERA_SCENES:
+    composites = cameras_dir / "composites.json"
+    previous = args.out / "manifest.json"
+    if composites.exists() and previous.exists():
+        # Las cámaras demo son composiciones con recortes reales (generate_cattle_composites.py).
+        manifest["cameras"] = json.loads(previous.read_text())["cameras"]
+    for scene in () if manifest["cameras"] else CAMERA_SCENES:
         path = cameras_dir / f"{scene.serial}.jpg"
         cv2.imwrite(str(path), render_camera_scene(scene), [cv2.IMWRITE_JPEG_QUALITY, JPEG_QUALITY])
         manifest["cameras"].append(

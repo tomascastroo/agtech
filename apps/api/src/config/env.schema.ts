@@ -38,9 +38,18 @@ export const envSchema = z
     AI_SERVICE_TOKEN: z.string().default(''),
     AI_SERVICE_TIMEOUT_MS: z.coerce.number().int().min(1000).max(120000).default(30000),
 
-    CV_PROVIDER: z.enum(['ai-service', 'mock']).default('ai-service'),
-    SATELLITE_PROVIDER: z.enum(['mock', 'stac']).default('mock'),
-    STAC_API_URL: z.url().default('https://earth-search.aws.element84.com/v1'),
+    // `real` es sinónimo de `ai-service` (detector YOLOX en el servicio de visión).
+    CV_PROVIDER: z
+      .enum(['ai-service', 'real', 'mock'])
+      .default('ai-service')
+      .transform((v) => (v === 'real' ? 'ai-service' : v)),
+    // `stac`/`sentinel2`: Sentinel-2 L2A real (AWS Open Data, sin credenciales) vía el servicio
+    // de visión; `mock`: escenas simuladas para desarrollo sin conexión.
+    SATELLITE_PROVIDER: z
+      .enum(['mock', 'stac', 'sentinel2'])
+      .default('stac')
+      .transform((v) => (v === 'sentinel2' ? 'stac' : v)),
+    AI_SERVICE_SATELLITE_TIMEOUT_MS: z.coerce.number().int().min(5000).max(600000).default(180000),
     CAMERA_GATEWAY: z.enum(['simulated']).default('simulated'),
     REGISTRY_PROVIDER: z.enum(['mock']).default('mock'),
 

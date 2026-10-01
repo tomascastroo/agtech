@@ -14,6 +14,7 @@ import { NotFoundError } from '../../../common/domain/errors.js';
 import { AssetsRepository } from '../../assets/infrastructure/assets.repository.js';
 import { AuditService } from '../../audit/application/audit.service.js';
 import { AUDIT_ACTIONS } from '../../audit/application/audit.types.js';
+import type { MonitoringConfigurationEntity } from '../infrastructure/monitoring-configuration.entity.js';
 import { MonitoringConfigService } from '../application/monitoring-config.service.js';
 import { MonitoringEventsService } from '../application/monitoring-events.service.js';
 import { PortfolioService } from '../application/portfolio.service.js';
@@ -43,6 +44,25 @@ class MonitoringConfigDto {
   @Min(1)
   @Max(8760)
   maxEvidenceAgeHours?: number;
+}
+
+/** Configuración de monitoreo con la estrategia de verificación que ejecuta el scheduler. */
+function monitoringView(
+  config: MonitoringConfigurationEntity,
+  verificationStrategy: string | null,
+) {
+  return {
+    id: config.id,
+    assetId: config.assetId,
+    enabled: config.enabled,
+    intervalHours: config.intervalHours,
+    maxEvidenceAgeHours: config.maxEvidenceAgeHours,
+    lastRunAt: config.lastRunAt,
+    nextRunAt: config.nextRunAt,
+    verificationStrategy,
+    createdAt: config.createdAt,
+    updatedAt: config.updatedAt,
+  };
 }
 
 @ApiTags('Monitoreo')
@@ -84,7 +104,8 @@ export class MonitoringController {
   ) {
     const asset = await this.assets.findById(user.organizationId, assetId);
     if (!asset) throw new NotFoundError('Activo', assetId);
-    return this.configs.forAsset(assetId);
+    const config = await this.configs.forAsset(assetId);
+    return config ? monitoringView(config, asset.assetType?.verificationStrategy ?? null) : null;
   }
 
   @Put('assets/:assetId/monitoring')
@@ -98,7 +119,10 @@ export class MonitoringController {
   ) {
     const asset = await this.assets.findById(user.organizationId, assetId);
     if (!asset) throw new NotFoundError('Activo', assetId);
-    const updated = await this.configs.update(user.organizationId, assetId, dto);
+    const updated = monitoringView(
+      await this.configs.update(user.organizationId, assetId, dto),
+      asset.assetType?.verificationStrategy ?? null,
+    );
     await this.audit.record({
       actor: { kind: 'user', user },
       action: AUDIT_ACTIONS.MONITORING_UPDATED,

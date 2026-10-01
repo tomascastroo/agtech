@@ -15,6 +15,8 @@ import {
 const DAY_MS = 86_400_000;
 const REVISIT_DAYS = 5;
 const EPOCH = Date.UTC(2026, 0, 3, 14, 0, 49);
+/** Igual criterio que el procesamiento real: con más nubes la observación no es utilizable. */
+const SIMULATED_MAX_CLOUD_PCT = 20;
 
 /** Confianza del análisis: nubosidad de escena penaliza en forma moderada (máscara SCL). */
 export const sceneConfidence = (cloudCoverPct: number): number =>
@@ -72,7 +74,12 @@ export class MockSatelliteProvider extends SatelliteImageryProvider {
   async analyzeVegetation(
     scene: SatelliteScene,
     _aoi: GeoMultiPolygon,
-    context: { assetId: string; declaredAreaHa: number; baseline: VegetationBaseline | null },
+    context: {
+      assetId: string;
+      declaredAreaHa: number;
+      baseline: VegetationBaseline | null;
+      vegetationThreshold?: number;
+    },
   ): Promise<VegetationAnalysis> {
     const noise = unit(`${context.assetId}:${scene.sceneId}`) - 0.5;
     const baselineArea = context.baseline?.vegetatedAreaHa ?? context.declaredAreaHa * 0.985;
@@ -86,13 +93,23 @@ export class MockSatelliteProvider extends SatelliteImageryProvider {
       ? { bytes: await this.storage.getObject(previewKey), mimeType: 'image/jpeg' }
       : null;
     const cloud = scene.cloudCoverPct ?? 0;
+    const usable = cloud <= SIMULATED_MAX_CLOUD_PCT;
     return {
       ndviMean: Math.round((baselineNdvi + noise * 0.02) * 10_000) / 10_000,
       ndviStd: 0.06,
       vegetatedAreaHa,
+      vegetationPct: Math.round((vegetatedAreaHa / context.declaredAreaHa) * 10_000) / 100,
       analyzedAreaHa: context.declaredAreaHa,
       cloudCoverPct: cloud,
+      sceneCloudCoverPct: cloud,
+      validFraction: Math.round((1 - cloud / 100) * 10_000) / 10_000,
+      usable,
+      quality: usable ? 'ACCEPTABLE' : 'LOW_CONFIDENCE',
+      issues: usable ? [] : ['CLOUD_COVER_ABOVE_LIMIT'],
+      vegetationThreshold: context.vegetationThreshold,
       confidence: sceneConfidence(cloud),
+      bands: ['B04', 'B08'],
+      processingVersion: 'simulated-ndvi/1.0.0',
       preview,
       model: { code: 'simulated-ndvi-analyzer', version: '1.0.0', simulated: true },
     };
