@@ -236,3 +236,21 @@ export const PROVINCES = [
   'Tierra del Fuego',
   'Tucumán',
 ];
+
+/** Origen de la ubicación de una evidencia (la del establecimiento no es ubicación de captura). */
+export const LOCATION_SOURCE_LABELS: Record<string, string> = {
+  DEVICE_GPS: 'GPS del teléfono',
+  EXIF: 'GPS de la imagen (EXIF)',
+  MANUAL: 'Coordenadas ingresadas manualmente',
+  DEVICE_INSTALLATION: 'Ubicación de la cámara instalada',
+  ASSET_LOCATION: 'Ubicación del establecimiento (no es la ubicación de captura)',
+  NONE: 'Sin ubicación de captura',
+};
+
+export function locationLabel(
+  source: string | null | undefined,
+  accuracyM?: number | null,
+): string {
+  const label = LOCATION_SOURCE_LABELS[source ?? 'NONE'] ?? source ?? '';
+  return accuracyM != null ? `${label} · ±${Math.round(accuracyM)} m` : label;
+}

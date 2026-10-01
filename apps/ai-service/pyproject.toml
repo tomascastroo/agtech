@@ -13,6 +13,8 @@ dependencies = [
   "pydantic-settings>=2.15.0,<3",
   "onnxruntime>=1.23",
   "rasterio>=1.4",
+  "rapidocr-onnxruntime>=1.4.4",
+  "pypdfium2>=4.30",
 ]
 
 [dependency-groups]

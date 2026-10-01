@@ -13,7 +13,7 @@ import { Icon } from '@/components/ui/Icon';
 import { api, ApiError } from '@/lib/api/client';
 import type { ProducerRequestDetail, Unit } from '@/lib/api/types';
 import { formatNumber, unitLabel } from '@/lib/format';
-import { DOCUMENT_TYPE_LABELS } from '@/lib/labels';
+import { DOCUMENT_TYPE_LABELS, locationLabel } from '@/lib/labels';
 
 /**
  * Solicitud de garantía vista por el productor: progreso, pedidos de información y cada paso
@@ -85,7 +85,6 @@ export default function ProducerRequestPage() {
             <PhotoCapture
               endpoint={`${base}/evidence`}
               guidance={r.guaranteeType.evidenceGuidance}
-              defaultLocation={r.asset.location}
               onUploaded={refresh}
             />
             <EvidenceGrid items={r.evidence} />
@@ -165,13 +164,17 @@ function EvidenceGrid({ items }: { items: ProducerRequestDetail['evidence'] }) {
             target="_blank"
             rel="noreferrer"
             className={styles.thumb}
+            title={locationLabel(e.locationSource, e.locationAccuracyM)}
           >
             {e.url ? (
               // eslint-disable-next-line @next/next/no-img-element -- URL firmada del almacenamiento
               <img src={e.url} alt={String(e.metadata.description ?? 'Evidencia')} loading="lazy" />
             ) : null}
             <span className={styles.thumbState}>
-              {new Date(e.capturedAt).toLocaleDateString('es-AR')}
+              {new Date(e.capturedAt).toLocaleDateString('es-AR')} ·{' '}
+              {['DEVICE_GPS', 'EXIF'].includes(e.locationSource ?? '')
+                ? `GPS${e.locationAccuracyM !== null ? ` ±${Math.round(e.locationAccuracyM)} m` : ''}`
+                : 'sin GPS'}
             </span>
           </a>
         ))}

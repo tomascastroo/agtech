@@ -13,6 +13,7 @@ import { openSignedUrl } from '@/lib/download';
 import { formatBytes, formatDate } from '@/lib/format';
 import { DOCUMENT_STATUS_LABELS, DOCUMENT_TYPE_LABELS } from '@/lib/labels';
 import { useCan } from '@/lib/permissions';
+import { DocumentAnalysisNote } from './DocumentAnalysisNote';
 import { DocumentStatusBadge } from './StatusBadges';
 import styles from './domain.module.css';
 
@@ -83,7 +84,9 @@ export function DocumentsPanel({
     form.set('file', file);
     try {
       const created = await upload.mutateAsync(form);
-      setNotice(`"${created.title}" cargado. Queda pendiente de revisión.`);
+      setNotice(
+        `"${created.title}" cargado. Queda pendiente de revisión; la lectura automática se muestra en la tabla.`,
+      );
       setType('');
       setTitle('');
       setIssuedAt('');
@@ -142,7 +145,12 @@ export function DocumentsPanel({
             {
               key: 'status',
               header: 'Estado',
-              render: (d) => <DocumentStatusBadge status={d.status} />,
+              render: (d) => (
+                <>
+                  <DocumentStatusBadge status={d.status} />
+                  <DocumentAnalysisNote analysis={d.analysis} />
+                </>
+              ),
             },
             ...(compact
               ? []

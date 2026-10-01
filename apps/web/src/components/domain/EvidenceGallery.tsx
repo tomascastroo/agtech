@@ -6,6 +6,7 @@ import { Modal } from '@/components/ui/Modal';
 import { DescriptionList } from '@/components/ui/Panel';
 import type { EvidenceItem, VerificationEvidence } from '@/lib/api/types';
 import { formatDateTime, formatNumber, formatPercent } from '@/lib/format';
+import { locationLabel } from '@/lib/labels';
 import { SimulatedBadge } from './StatusBadges';
 import styles from './domain.module.css';
 
@@ -16,6 +17,8 @@ export interface GalleryItem {
   kind: EvidenceItem['type'];
   capturedAt: string;
   location: [number, number] | null;
+  /** Origen y precisión de la ubicación (la del establecimiento no es la de captura). */
+  locationText: string;
   sourceName: string;
   simulated: boolean;
   sha256: string | null;
@@ -62,6 +65,7 @@ export function fromEvidenceItem(item: EvidenceItem): GalleryItem {
     kind: item.type,
     capturedAt: item.capturedAt,
     location: item.location ? item.location.coordinates : null,
+    locationText: locationText(item),
     sourceName: item.source?.name ?? 'Carga manual',
     simulated: item.source?.simulated ?? false,
     sha256: item.sha256,
@@ -104,11 +108,18 @@ export function fromVerificationEvidence(
 const coords = (c: [number, number] | null) =>
   c ? `${c[1].toFixed(5)}, ${c[0].toFixed(5)}` : 'Sin geolocalización';
 
+function locationText(item: EvidenceItem): string {
+  if (item.type === 'SATELLITE_SCENE')
+    return coords(item.location ? item.location.coordinates : null);
+  const origin = locationLabel(item.locationSource, item.locationAccuracyM);
+  return item.location ? `${coords(item.location.coordinates)} · ${origin}` : origin;
+}
+
 function details(item: GalleryItem): [string, string][] {
   const rows: [string, string][] = [
     ['Captura', formatDateTime(item.capturedAt)],
     ['Fuente', item.sourceName],
-    ['Ubicación', coords(item.location)],
+    ['Ubicación', item.locationText],
   ];
   if (item.model) rows.push(['Modelo', item.model]);
   if (item.confidence !== undefined && item.confidence !== null)

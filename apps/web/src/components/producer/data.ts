@@ -19,8 +19,12 @@ export const useProducerRequest = (id: string) =>
   useQuery({
     queryKey: producerKeys.request(id),
     queryFn: () => api<ProducerRequestDetail>(`/producer/me/requests/${id}`),
-    // Mientras se verifica, el estado se actualiza solo.
-    refetchInterval: (q) => (q.state.data?.producerStatus === 'VERIFYING' ? 5000 : false),
+    // Mientras se verifica o se leen documentos, el estado se actualiza solo.
+    refetchInterval: (q) =>
+      q.state.data?.producerStatus === 'VERIFYING' ||
+      q.state.data?.documents?.documents.some((d) => d.analysis?.status === 'PENDING')
+        ? 5000
+        : false,
   });
 
 /** Refresca la solicitud y el inicio después de cada acción del productor. */

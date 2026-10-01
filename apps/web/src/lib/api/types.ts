@@ -155,6 +155,32 @@ export interface DocumentItem {
   expiresAt: string | null;
   scope: 'ASSET' | 'ESTABLISHMENT';
   uploadedAt: string;
+  analysis?: DocumentAnalysis | null;
+}
+
+/** Lectura automática del documento comparada con lo declarado (no certifica autenticidad). */
+export interface DocumentAnalysis {
+  status: 'PENDING' | 'CONSISTENT' | 'REVIEW_REQUIRED' | 'FAILED';
+  method: 'PDF_TEXT' | 'OCR' | null;
+  detectedType: string | null;
+  extractedFields: {
+    renspa?: string[];
+    cuit?: string[];
+    holderNames?: string[];
+    issuedAt?: string | null;
+    expiresAt?: string | null;
+  };
+  extractionConfidence: number | null;
+  validationResults: {
+    check: 'TEXT' | 'DOCUMENT_TYPE' | 'RENSPA' | 'CUIT' | 'HOLDER' | 'EXPIRY';
+    status: 'MATCH' | 'MISMATCH' | 'NOT_FOUND' | 'NOT_DECLARED';
+    required: boolean;
+    message: string;
+  }[];
+  engine: string | null;
+  error: string | null;
+  analyzedAt: string | null;
+  disclaimer: string;
 }
 
 export interface DocumentRequirement {
@@ -172,6 +198,8 @@ export interface EvidenceItem {
   deviceId: string | null;
   capturedAt: string;
   location: GeoPoint | null;
+  locationSource: string | null;
+  locationAccuracyM: number | null;
   mimeType: string | null;
   sha256: string | null;
   metadata: Record<string, unknown>;
@@ -574,8 +602,10 @@ export interface GuaranteeRequest {
     finalScore: number | null;
     confidence: number | null;
     riskLevel: string | null;
+    counting?: CountingBreakdown | null;
   } | null;
   alerts?: { id: string; type: string; severity: string; title: string; status: string }[];
+  crossSources?: CrossSource[];
   invitation?: { url: string; expiresAt: string };
   producerStatus: ProducerStatus;
   progress: { key: string; label: string; state: 'DONE' | 'PENDING' | 'TODO' | 'IN_PROGRESS' }[];
@@ -643,4 +673,44 @@ export interface ProducerOverview {
     requestId: string;
     guaranteeType: GuaranteeRequest['guaranteeType'];
   })[];
+}
+
+/** Desglose del conteo: detecciones por foto vs animales únicos estimados. */
+export interface CountingBreakdown {
+  photos: {
+    evidenceId: string;
+    role: 'PRIMARY' | 'SUPPORTING' | 'EXCLUDED';
+    detectedCount: number | null;
+    confidence: number | null;
+    exclusionReason: string | null;
+    capturedAt: string;
+    fromCamera: boolean;
+    fileName: string | null;
+  }[];
+  detectionsSum: number | null;
+  uniqueEstimate: number | null;
+  overlapGroups: number | null;
+  confidence: number | null;
+  possibleOverlap: boolean;
+  overlapMessage: string | null;
+}
+
+/** Una fuente independiente de evidencia y lo que informa (informativo; no altera el score). */
+export interface CrossSource {
+  key: 'DECLARATION' | 'VISION' | 'RFID' | 'GPS' | 'DOCUMENTS' | 'SENASA' | 'HISTORY';
+  label: string;
+  value: string;
+  state: 'CONSISTENT' | 'WARNING' | 'NO_DATA';
+  simulated: boolean;
+}
+
+export interface RfidReading {
+  id: string;
+  electronicId: string;
+  observedAt: string;
+  status: 'IDENTIFIED' | 'UNKNOWN_TAG' | 'OTHER_ESTABLISHMENT';
+  source: 'READER_BRIDGE' | 'SIMULATED';
+  establishmentName: string;
+  officialTag: string | null;
+  readerSerial: string | null;
 }

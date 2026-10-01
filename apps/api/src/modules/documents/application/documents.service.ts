@@ -14,6 +14,7 @@ import { storageKeys } from '../../storage/storage-keys.js';
 import { requirementAlternatives, type DocumentType } from '../domain/document.types.js';
 import type { DocumentEntity } from '../infrastructure/document.entity.js';
 import { DocumentsRepository } from '../infrastructure/documents.repository.js';
+import { DocumentAnalysisService } from './document-analysis.service.js';
 
 export interface UploadedFile {
   buffer: Buffer;
@@ -48,6 +49,7 @@ export class DocumentsService {
     private readonly storage: ObjectStorage,
     private readonly audit: AuditService,
     private readonly events: MonitoringEventsService,
+    private readonly analysis: DocumentAnalysisService,
   ) {}
 
   async listForAsset(organizationId: string, assetId: string) {
@@ -69,7 +71,8 @@ export class DocumentsService {
         status: match?.status ?? null,
       };
     });
-    return { documents, requirements };
+    const analyses = await this.analysis.forDocuments(documents.map((d) => d.id));
+    return { documents, requirements, analyses };
   }
 
   async uploadForAsset(
@@ -204,6 +207,7 @@ export class DocumentsService {
       metadata: { type: document.type, sha256, sizeBytes: file.size, assetId: target.assetId },
       context,
     });
+    this.analysis.schedule(document, file.buffer);
     return document;
   }
 }

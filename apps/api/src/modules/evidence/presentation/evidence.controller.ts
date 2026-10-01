@@ -13,11 +13,15 @@ import { ApiConsumes, ApiOperation, ApiPropertyOptional, ApiTags } from '@nestjs
 import { Type } from 'class-transformer';
 import {
   IsISO8601,
+  IsIn,
   IsLatitude,
   IsLongitude,
+  IsNumber,
   IsOptional,
   IsString,
+  Max,
   MaxLength,
+  Min,
 } from 'class-validator';
 import type { AuthenticatedUser } from '../../../common/auth/authenticated-user.js';
 import {
@@ -28,6 +32,7 @@ import {
 } from '../../../common/auth/decorators.js';
 import { PERMISSIONS } from '../../../common/auth/permissions.js';
 import { uploadOptions } from '../../../common/files/file-signature.js';
+import { LOCATION_SOURCES, type LocationSource } from '../domain/capture-location.js';
 import { EvidenceService } from '../application/evidence.service.js';
 import { presentEvidence } from './evidence.presenter.js';
 
@@ -48,6 +53,19 @@ export class UploadEvidenceDto {
   @Type(() => Number)
   @IsLongitude()
   longitude?: number;
+
+  @ApiPropertyOptional({ description: 'Precisión de la ubicación del dispositivo (m)' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @Max(100_000)
+  accuracyM?: number;
+
+  @ApiPropertyOptional({ enum: LOCATION_SOURCES })
+  @IsOptional()
+  @IsIn(LOCATION_SOURCES)
+  locationSource?: LocationSource;
 
   @ApiPropertyOptional()
   @IsOptional()

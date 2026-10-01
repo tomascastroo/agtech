@@ -15,8 +15,9 @@ import { Panel } from '@/components/ui/Panel';
 import { Stat, StatRow } from '@/components/ui/Stat';
 import { api, ApiError } from '@/lib/api/client';
 import { useApiMutation } from '@/lib/api/queries';
-import type { GuaranteeRequest, Unit } from '@/lib/api/types';
-import { formatNumber, unitLabel } from '@/lib/format';
+import { DataTable } from '@/components/ui/Table';
+import type { CountingBreakdown, CrossSource, GuaranteeRequest, Unit } from '@/lib/api/types';
+import { formatDateTime, formatNumber, unitLabel } from '@/lib/format';
 import { DOCUMENT_TYPE_LABELS } from '@/lib/labels';
 
 /**
@@ -149,7 +150,10 @@ export function RequestDetailView() {
               ) : null}
             </div>
           ) : null}
+          {v?.counting ? <CountingDetail counting={v.counting} /> : null}
         </Panel>
+
+        {r.crossSources ? <CrossSourcesPanel sources={r.crossSources} /> : null}
 
         <InformationRequestsPanel request={r} onDone={() => query.refetch()} />
 
@@ -183,6 +187,101 @@ export function RequestDetailView() {
         </Panel>
       </div>
     </>
+  );
+}
+
+const SOURCE_STATE = {
+  CONSISTENT: { label: 'Consistente', tone: 'success' },
+  WARNING: { label: 'Revisar', tone: 'warning' },
+  NO_DATA: { label: 'Sin datos', tone: 'neutral' },
+} as const;
+
+/** Lo que informa cada fuente independiente, lado a lado. No modifica el score. */
+function CrossSourcesPanel({ sources }: { sources: CrossSource[] }) {
+  return (
+    <Panel
+      title="Fuentes cruzadas"
+      subtitle="Qué dice cada fuente independiente sobre el activo. Informativo: no modifica el score."
+    >
+      <DataTable
+        caption="Fuentes cruzadas"
+        rows={sources}
+        rowKey={(s) => s.key}
+        columns={[
+          { key: 'label', header: 'Fuente', render: (s) => s.label },
+          {
+            key: 'value',
+            header: 'Informa',
+            render: (s) => (
+              <>
+                {s.value}
+                {s.simulated ? (
+                  <>
+                    {' '}
+                    <Badge tone="warning">SIMULADO</Badge>
+                  </>
+                ) : null}
+              </>
+            ),
+          },
+          {
+            key: 'state',
+            header: 'Estado',
+            render: (s) => (
+              <Badge tone={SOURCE_STATE[s.state].tone}>{SOURCE_STATE[s.state].label}</Badge>
+            ),
+          },
+        ]}
+      />
+    </Panel>
+  );
+}
+
+const ROLE_LABEL = { PRIMARY: 'Usada', SUPPORTING: 'Respaldo', EXCLUDED: 'Excluida' } as const;
+
+/** Detecciones por foto y animales únicos estimados (las fotos no se suman sin más). */
+function CountingDetail({ counting: c }: { counting: CountingBreakdown }) {
+  return (
+    <div className={styles.stackTight} style={{ marginTop: 16 }}>
+      {c.uniqueEstimate != null && c.detectionsSum != null ? (
+        <p className={styles.muted}>
+          Detecciones sumadas entre fotos: {formatNumber(c.detectionsSum)} · Animales únicos
+          estimados: <strong>{formatNumber(c.uniqueEstimate)}</strong>
+          {c.confidence != null ? ` · confianza ${formatNumber(c.confidence * 100)} %` : ''}
+        </p>
+      ) : null}
+      {c.possibleOverlap ? (
+        <Callout tone="warning" title="Posible duplicación entre evidencias">
+          {c.overlapMessage}
+        </Callout>
+      ) : null}
+      <DataTable
+        caption="Detecciones por foto"
+        rows={c.photos}
+        rowKey={(p) => p.evidenceId}
+        columns={[
+          {
+            key: 'photo',
+            header: 'Foto',
+            render: (p) =>
+              `${p.fromCamera ? 'Cámara' : (p.fileName ?? 'Foto')} · ${formatDateTime(p.capturedAt)}`,
+          },
+          { key: 'role', header: 'Uso', render: (p) => p.exclusionReason ?? ROLE_LABEL[p.role] },
+          {
+            key: 'count',
+            header: 'Detectados',
+            numeric: true,
+            render: (p) => (p.detectedCount != null ? formatNumber(p.detectedCount) : '—'),
+          },
+          {
+            key: 'conf',
+            header: 'Confianza',
+            numeric: true,
+            render: (p) => (p.confidence != null ? `${formatNumber(p.confidence * 100)} %` : '—'),
+          },
+        ]}
+      />
+    </div>
   );
 }
 

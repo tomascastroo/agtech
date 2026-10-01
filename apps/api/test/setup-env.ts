@@ -18,6 +18,8 @@ const env: Record<string, string> = {
   JWT_ACCESS_SECRET: 'test-only-jwt-secret-with-enough-length-000000',
   WEB_ORIGIN: 'http://localhost:3000',
   CV_PROVIDER: 'mock',
+  // Lectura de documentos: sin servicio Python en los tests → el análisis queda FAILED.
+  AI_SERVICE_URL: 'http://127.0.0.1:9',
   SATELLITE_PROVIDER: 'mock',
   MONITORING_TICK_SECONDS: '86400',
   VERIFICATION_JOB_ATTEMPTS: '2',

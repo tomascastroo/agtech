@@ -13,12 +13,17 @@ import { ObjectStorage } from '../../storage/object-storage.js';
 import { EVIDENCE_SOURCE_CODES } from '../domain/evidence.types.js';
 import type { EvidenceEntity } from '../infrastructure/evidence.entity.js';
 import { EvidenceRepository } from '../infrastructure/evidence.repository.js';
+import { readExifGps } from '../../../common/files/exif-gps.js';
+import { resolveCaptureLocation, type LocationSource } from '../domain/capture-location.js';
 import { EvidenceRecorder } from './evidence-recorder.js';
 
 export interface UploadEvidenceCommand {
   capturedAt?: string;
   latitude?: number;
   longitude?: number;
+  /** Precisión informada por el dispositivo (metros). */
+  accuracyM?: number;
+  locationSource?: LocationSource;
   description?: string;
 }
 
@@ -49,14 +54,26 @@ export class EvidenceService {
     const check = EVIDENCE_UPLOAD_POLICY.validate(file);
     if (!check.ok) throw new ValidationFailedError(check.reason);
 
-    const capturedAt = command.capturedAt ? new Date(command.capturedAt) : new Date();
+    const exif = readExifGps(file.buffer);
+    const location = resolveCaptureLocation(command, exif);
+    // Fecha: la informada por el dispositivo; si no hay, la fecha original EXIF; si no, la carga.
+    const exifDate = exif.capturedAt ? new Date(`${exif.capturedAt}${exif.offset ?? 'Z'}`) : null;
+    const capturedAtSource = command.capturedAt
+      ? 'CLIENT'
+      : exifDate && !Number.isNaN(exifDate.getTime())
+        ? 'EXIF'
+        : 'UPLOAD';
+    const capturedAt = command.capturedAt
+      ? new Date(command.capturedAt)
+      : capturedAtSource === 'EXIF'
+        ? exifDate!
+        : new Date();
     if (
       Number.isNaN(capturedAt.getTime()) ||
       capturedAt.getTime() > Date.now() + MAX_FUTURE_SKEW_MS
     ) {
       throw new ValidationFailedError('Fecha de captura inválida');
     }
-    const hasLocation = command.latitude !== undefined && command.longitude !== undefined;
 
     return this.dataSource.transaction(async (manager) => {
       const evidence = await this.recorder.record(
@@ -67,12 +84,19 @@ export class EvidenceService {
           sourceCode: EVIDENCE_SOURCE_CODES.MANUAL_UPLOAD,
           type: 'IMAGE',
           capturedAt,
-          location: hasLocation ? point(command.longitude!, command.latitude!) : null,
+          location: location.capture
+            ? point(location.capture.longitude, location.capture.latitude)
+            : null,
           file: { bytes: file.buffer, mimeType: check.kind.mime },
           uploadedBy: user.userId,
           metadata: {
             description: command.description ?? null,
             originalFileName: file.originalname.slice(0, 200),
+            locationSource: location.source,
+            locationAccuracyM: location.accuracyM,
+            contextLocation: location.context,
+            capturedAtSource,
+            exifTimezoneAssumed: capturedAtSource === 'EXIF' && !exif.offset ? 'UTC' : null,
           },
         },
         manager,

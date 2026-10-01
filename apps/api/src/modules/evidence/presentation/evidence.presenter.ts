@@ -1,3 +1,4 @@
+import { inferLocationSource } from '../domain/capture-location.js';
 import type { EvidenceEntity } from '../infrastructure/evidence.entity.js';
 
 export function presentEvidence(evidence: EvidenceEntity, url: string | null) {
@@ -19,6 +20,11 @@ export function presentEvidence(evidence: EvidenceEntity, url: string | null) {
     capturedAt: evidence.capturedAt,
     receivedAt: evidence.receivedAt,
     location: evidence.location,
+    locationSource: inferLocationSource(evidence),
+    locationAccuracyM:
+      typeof evidence.metadata.locationAccuracyM === 'number'
+        ? evidence.metadata.locationAccuracyM
+        : null,
     mimeType: evidence.mimeType,
     sizeBytes: evidence.sizeBytes,
     sha256: evidence.sha256,

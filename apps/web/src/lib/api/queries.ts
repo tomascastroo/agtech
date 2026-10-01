@@ -116,6 +116,9 @@ export const useDocuments = (assetId: string) =>
       api<{ documents: DocumentItem[]; requirements: DocumentRequirement[] }>(
         `/assets/${assetId}/documents`,
       ),
+    // Mientras haya lecturas automáticas en curso se refresca para mostrar el resultado.
+    refetchInterval: (q) =>
+      q.state.data?.documents.some((d) => d.analysis?.status === 'PENDING') ? 4000 : false,
   });
 
 export const useEvidence = (assetId: string) =>

@@ -12,6 +12,7 @@ from ..config import Settings, get_settings
 from ..domain.change_detection import detect_changes
 from ..domain.counting import CounterParams, count_animals
 from ..domain.detection import TilingParams
+from ..domain.documents import DOCUMENT_ANALYZER_VERSION, classify, extract_fields
 from ..domain.image_quality import assess_quality
 from ..domain.livestock import count_livestock
 from ..domain.models_registry import (
@@ -28,6 +29,7 @@ from ..domain.sentinel2 import (
     SceneNotFoundError,
     VegetationThresholds,
 )
+from ..infrastructure.document_reader import UnreadableDocumentError, read_document
 from ..infrastructure.image_io import DecodedImage, InvalidImageError, decode_image
 from ..infrastructure.sentinel_catalog import CatalogUnavailableError
 from ..infrastructure.sentinel_reader import PolygonOutsideSceneError, analyze_scene
@@ -36,6 +38,8 @@ from .schemas import (
     ChangeResponse,
     CountResponse,
     DetectionOut,
+    DocumentAnalysisResponse,
+    DocumentFieldsOut,
     ExifInfo,
     ImageAnalysisResponse,
     ModelInfo,
@@ -355,3 +359,34 @@ async def changes(
 
 def _elapsed_ms(started: float) -> int:
     return int((time.perf_counter() - started) * 1000)
+
+
+@router.post("/documents/analyze", response_model=DocumentAnalysisResponse)
+async def analyze_document(
+    settings: SettingsDep, file: Annotated[UploadFile, File()]
+) -> DocumentAnalysisResponse:
+    """OCR o capa de texto + clasificación + campos (RENSPA, CUIT, titular, fechas)."""
+    started = time.perf_counter()
+    data = await file.read(settings.max_upload_bytes + 1)
+    if len(data) > settings.max_upload_bytes:
+        raise HTTPException(status.HTTP_413_CONTENT_TOO_LARGE, "Archivo demasiado grande")
+    try:
+        doc = await run_in_threadpool(read_document, data)
+    except UnreadableDocumentError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
+    fields = extract_fields(doc.text)
+    classification = classify(doc.text)
+    return DocumentAnalysisResponse(
+        method=doc.method,
+        text_confidence=doc.confidence,
+        pages=doc.pages,
+        lines=doc.lines,
+        text_excerpt=doc.text[:4000],
+        detected_type=classification.document_type,
+        classification_score=classification.score,
+        classification_keywords=classification.matched,
+        fields=DocumentFieldsOut(**asdict(fields)),
+        engine="pdfium-text" if doc.method == "PDF_TEXT" else "rapidocr-onnxruntime",
+        version=DOCUMENT_ANALYZER_VERSION,
+        processing_ms=_elapsed_ms(started),
+    )

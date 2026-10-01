@@ -51,7 +51,11 @@ export const envSchema = z
       .transform((v) => (v === 'sentinel2' ? 'stac' : v)),
     AI_SERVICE_SATELLITE_TIMEOUT_MS: z.coerce.number().int().min(5000).max(600000).default(180000),
     CAMERA_GATEWAY: z.enum(['simulated']).default('simulated'),
-    REGISTRY_PROVIDER: z.enum(['mock']).default('mock'),
+    // `mock`: fichas simuladas; `senasa`: adapter oficial (requiere convenio y credenciales).
+    REGISTRY_PROVIDER: z.enum(['mock', 'senasa']).default('mock'),
+    SENASA_API_URL: z.union([z.url(), z.literal('')]).default(''),
+    SENASA_CLIENT_ID: z.string().default(''),
+    SENASA_CLIENT_SECRET: z.string().default(''),
 
     RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(10).max(100_000).default(300),
     /**
