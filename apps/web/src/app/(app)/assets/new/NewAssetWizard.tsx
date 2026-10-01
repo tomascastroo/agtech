@@ -28,7 +28,12 @@ import { api, ApiError } from '@/lib/api/client';
 import { keys, useApiMutation, useAssetTypes, useEstablishments } from '@/lib/api/queries';
 import type { AssetDetail, AssetType, EstablishmentSummary, GeoPoint } from '@/lib/api/types';
 import { formatNumber, unitLabel } from '@/lib/format';
-import { ESTABLISHMENT_TYPE_LABELS, STRATEGY_DESCRIPTIONS, TENURE_LABELS } from '@/lib/labels';
+import {
+  ESTABLISHMENT_TYPE_LABELS,
+  PROVINCES,
+  STRATEGY_DESCRIPTIONS,
+  TENURE_LABELS,
+} from '@/lib/labels';
 
 const STEPS = [
   { id: 'types', label: 'Activos' },
@@ -39,33 +44,6 @@ const STEPS = [
   { id: 'verify', label: 'Verificación' },
 ] as const;
 type StepId = (typeof STEPS)[number]['id'];
-
-const PROVINCES = [
-  'Buenos Aires',
-  'Catamarca',
-  'Chaco',
-  'Chubut',
-  'Ciudad Autónoma de Buenos Aires',
-  'Córdoba',
-  'Corrientes',
-  'Entre Ríos',
-  'Formosa',
-  'Jujuy',
-  'La Pampa',
-  'La Rioja',
-  'Mendoza',
-  'Misiones',
-  'Neuquén',
-  'Río Negro',
-  'Salta',
-  'San Juan',
-  'San Luis',
-  'Santa Cruz',
-  'Santa Fe',
-  'Santiago del Estero',
-  'Tierra del Fuego',
-  'Tucumán',
-];
 
 const SOURCE_LABELS: Record<string, string> = {
   CAMERA: 'cámaras',

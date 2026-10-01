@@ -78,6 +78,11 @@ export const ROLE_DEFINITIONS: Record<
     description: 'Consulta toda la información y el registro de auditoría',
     permissions: READ_ONLY,
   },
+  PRODUCER: {
+    name: 'Productor',
+    description: 'Declara establecimiento, activos y evidencia de su solicitud (acceso por link)',
+    permissions: [],
+  },
   VIEWER: {
     name: 'Consulta',
     description: 'Acceso de solo lectura a la cartera',

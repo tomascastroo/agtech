@@ -2,7 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import type { AuthenticatedUser } from '../../../common/auth/authenticated-user.js';
 import type { RequestContext } from '../../../common/auth/decorators.js';
-import { NotFoundError, ValidationFailedError } from '../../../common/domain/errors.js';
+import {
+  ForbiddenActionError,
+  NotFoundError,
+  ValidationFailedError,
+} from '../../../common/domain/errors.js';
 import { toMultiPolygon } from '../../../common/geo/geo-validation.js';
 import { point, type GeoMultiPolygon } from '../../../common/geo/geojson.js';
 import { AuditService } from '../../audit/application/audit.service.js';
@@ -145,6 +149,16 @@ export class AssetsService {
   ) {
     const asset = await this.assets.findById(user.organizationId, id);
     if (!asset || !asset.assetType) throw new NotFoundError('Activo', id);
+    // La declaración del productor (solicitud de garantía) no puede editarla la entidad.
+    const [declared] = (await this.dataSource.query(
+      'SELECT 1 FROM guarantee_requests WHERE asset_id = $1 LIMIT 1',
+      [asset.id],
+    )) as unknown[];
+    if (declared) {
+      throw new ForbiddenActionError(
+        'El activo fue declarado por el productor en una solicitud de garantía: no puede editarse',
+      );
+    }
     if (command.metadata) this.assertMetadata(asset.assetType, command.metadata);
 
     const changes: Record<string, { from: unknown; to: unknown }> = {};

@@ -31,7 +31,7 @@ import { uploadOptions } from '../../../common/files/file-signature.js';
 import { EvidenceService } from '../application/evidence.service.js';
 import { presentEvidence } from './evidence.presenter.js';
 
-class UploadEvidenceDto {
+export class UploadEvidenceDto {
   @ApiPropertyOptional({ description: 'Fecha y hora de captura (ISO 8601)' })
   @IsOptional()
   @IsISO8601()

@@ -353,3 +353,25 @@ Detección de cambios (`satellite/domain/vegetation-change.ts`): contra la obser
 - Cámaras reales (gateway RTSP/ONVIF) y fine-tuning del detector con imágenes del campo (vista aérea/drone, ganado en corrales); el modelo COCO subcuenta animales pequeños o agrupados.
 - Catálogo STAC con SLA o réplica propia, caché de COG y cola dedicada para lotes grandes; máscara de nubes con dilatación/modelo específico (s2cloudless).
 - Polígonos cargados por el productor (KML/SHP) en lugar de los de la demo; validación de superposición con catastro.
+
+## 11. Solicitudes de garantía (modelo productor → AgroGarantías → entidad)
+
+Flujo: la entidad crea una **solicitud de garantía** (`POST /guarantee-requests`) y obtiene un
+link; el **productor** lo abre (`/solicitud/<token>`, sin cuenta), registra o reutiliza el
+establecimiento (mismo RENSPA y titular), declara el activo con el catálogo existente, carga
+documentación y fotos, y envía la declaración. La solicitud pasa a **Lista para verificar** y se
+ejecuta el pipeline de verificación existente (YOLOX-S / Sentinel-2, score, alertas). La entidad
+consulta el resultado en `/requests/<id>`.
+
+- Datos: tabla `guarantee_requests` (migración `1792000000000`); el resto reutiliza
+  establishments, assets, documents, evidence, verification_runs/results y alerts. Los datos
+  pertenecen a la organización solicitante (multi-tenancy sin cambios).
+- Productor: usuario propio con rol `PRODUCER` (sin permisos sobre la cartera, deshabilitado
+  para login con contraseña); las operaciones del link reutilizan los servicios existentes con
+  esa identidad, por lo que quedan en el audit log.
+- Link: token aleatorio de 256 bits, se guarda solo su SHA-256, vence a los 30 días y la entidad
+  puede regenerarlo (invalida el anterior). Cada endpoint del link solo accede a su solicitud.
+- Separación: la declaración enviada no puede modificarse (409) y la entidad no puede editar
+  un activo declarado por el productor (403).
+- Fuera de alcance de esta versión: emails/notificaciones, app móvil, RFID, cuentas de
+  productor con varias solicitudes.

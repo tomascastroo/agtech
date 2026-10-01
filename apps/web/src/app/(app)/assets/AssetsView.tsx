@@ -41,8 +41,8 @@ export function AssetsView() {
         description="Activos declarados por los productores, su última verificación y su estado como garantía."
         actions={
           can('assets:write') ? (
-            <LinkButton href="/assets/new" variant="primary" icon="plus">
-              Nuevo activo
+            <LinkButton href="/requests/new" variant="primary" icon="plus">
+              Nueva solicitud de garantía
             </LinkButton>
           ) : null
         }
