@@ -1,21 +1,23 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { RequestStageBadge } from '@/components/domain/RequestStageBadge';
 import { OutcomeBadge, RiskBadge, SeverityBadge } from '@/components/domain/StatusBadges';
 import styles from '@/components/domain/domain.module.css';
 import { Button, LinkButton } from '@/components/ui/Button';
 import { Callout, ErrorState, Loading } from '@/components/ui/Feedback';
-import { Input } from '@/components/ui/Field';
+import { Field, FormRow, Input, Select } from '@/components/ui/Field';
+import { Badge } from '@/components/ui/Badge';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Panel } from '@/components/ui/Panel';
 import { Stat, StatRow } from '@/components/ui/Stat';
-import { api } from '@/lib/api/client';
+import { api, ApiError } from '@/lib/api/client';
 import { useApiMutation } from '@/lib/api/queries';
 import type { GuaranteeRequest, Unit } from '@/lib/api/types';
 import { formatNumber, unitLabel } from '@/lib/format';
+import { DOCUMENT_TYPE_LABELS } from '@/lib/labels';
 
 /**
  * Vista de la entidad: separa la declaración del productor (solo lectura), la verificación de
@@ -149,6 +151,8 @@ export function RequestDetailView() {
           ) : null}
         </Panel>
 
+        <InformationRequestsPanel request={r} onDone={() => query.refetch()} />
+
         <Panel
           title="3 · Evaluación de la entidad"
           subtitle="Resultado, evidencia y alertas para decidir sobre la garantía."
@@ -179,5 +183,116 @@ export function RequestDetailView() {
         </Panel>
       </div>
     </>
+  );
+}
+
+/** Pedidos de documentación o evidencia adicional al productor (quedan como tareas en su portal). */
+function InformationRequestsPanel({
+  request: r,
+  onDone,
+}: {
+  request: GuaranteeRequest;
+  onDone: () => unknown;
+}) {
+  const [kind, setKind] = useState<'DOCUMENT' | 'EVIDENCE'>('EVIDENCE');
+  const [documentType, setDocumentType] = useState('ID_CUIT');
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const create = useApiMutation((body: object) =>
+    api(`/guarantee-requests/${r.id}/information-requests`, { method: 'POST', body }),
+  );
+  if (!r.asset) return null;
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    setError(null);
+    if (message.trim().length < 3) return setError('Escribí qué necesitás del productor.');
+    try {
+      await create.mutateAsync({
+        kind,
+        documentType: kind === 'DOCUMENT' ? documentType : undefined,
+        message: message.trim(),
+      });
+      setMessage('');
+      await onDone();
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'No fue posible enviar el pedido.');
+    }
+  };
+  return (
+    <Panel
+      title="Pedidos de información al productor"
+      subtitle="El productor lo recibe como tarea en su portal. Lo que aporte queda como evidencia nueva; la declaración no cambia."
+    >
+      {r.informationRequests.length > 0 ? (
+        <ul className={styles.stackTight} style={{ marginBottom: 12 }}>
+          {r.informationRequests.map((i) => (
+            <li key={i.id} className={styles.inline}>
+              <Badge tone={i.status === 'OPEN' ? 'warning' : 'success'} dot>
+                {i.status === 'OPEN' ? 'Pendiente' : 'Respondido'}
+              </Badge>
+              <span>
+                {i.kind === 'EVIDENCE'
+                  ? 'Evidencia'
+                  : `Documento (${DOCUMENT_TYPE_LABELS[i.documentType ?? ''] ?? 'cualquiera'})`}
+                : {i.message}
+              </span>
+              <span className={styles.muted}>
+                {new Date(i.createdAt).toLocaleDateString('es-AR')}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      <form onSubmit={submit} className={styles.stackTight} aria-label="Solicitar información">
+        <FormRow columns={2}>
+          <Field label="Qué necesitás">
+            {(p) => (
+              <Select
+                {...p}
+                value={kind}
+                onChange={(e) => setKind(e.target.value as 'DOCUMENT' | 'EVIDENCE')}
+              >
+                <option value="EVIDENCE">Más evidencia (fotos)</option>
+                <option value="DOCUMENT">Documentación adicional</option>
+              </Select>
+            )}
+          </Field>
+          {kind === 'DOCUMENT' ? (
+            <Field label="Documento">
+              {(p) => (
+                <Select
+                  {...p}
+                  value={documentType}
+                  onChange={(e) => setDocumentType(e.target.value)}
+                >
+                  {Object.entries(DOCUMENT_TYPE_LABELS).map(([k, v]) => (
+                    <option key={k} value={k}>
+                      {v}
+                    </option>
+                  ))}
+                </Select>
+              )}
+            </Field>
+          ) : null}
+        </FormRow>
+        <Field label="Mensaje para el productor" required>
+          {(p) => (
+            <Input
+              {...p}
+              value={message}
+              maxLength={500}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="Ej.: Agregá fotografías del rodeo desde otros sectores del establecimiento."
+            />
+          )}
+        </Field>
+        {error ? <Callout tone="critical">{error}</Callout> : null}
+        <div>
+          <Button type="submit" loading={create.isPending} variant="secondary">
+            Solicitar al productor
+          </Button>
+        </div>
+      </form>
+    </Panel>
   );
 }

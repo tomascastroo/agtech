@@ -17,6 +17,7 @@ import { DocumentEntity } from '../modules/documents/infrastructure/document.ent
 import { EstablishmentLocationEntity } from '../modules/establishments/infrastructure/establishment-location.entity.js';
 import { EstablishmentEntity } from '../modules/establishments/infrastructure/establishment.entity.js';
 import { EvidenceSourceEntity } from '../modules/evidence/infrastructure/evidence-source.entity.js';
+import { InformationRequestEntity } from '../modules/guarantee-requests/infrastructure/information-request.entity.js';
 import { GuaranteeRequestEntity } from '../modules/guarantee-requests/infrastructure/guarantee-request.entity.js';
 import { EvidenceEntity } from '../modules/evidence/infrastructure/evidence.entity.js';
 import { ExternalDataSnapshotEntity } from '../modules/external-data/infrastructure/external-data-snapshot.entity.js';
@@ -37,6 +38,7 @@ import { VerificationRunEntity } from '../modules/verification/infrastructure/ve
 
 export const ENTITIES = [
   GuaranteeRequestEntity,
+  InformationRequestEntity,
   OrganizationEntity,
   PermissionEntity,
   RoleEntity,

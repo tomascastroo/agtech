@@ -51,7 +51,7 @@ describe('Solicitud de garantía: banco → link → productor → verificación
   it('el productor completa establecimiento, activo y evidencia con el link', async () => {
     const view = await producer().get(`/api/producer/requests/${token}`).expect(200);
     expect(view.body.requester.name).toBe('Banco del Campo');
-    expect(view.body.verification).toBeUndefined();
+    expect(view.body.verification).toBeNull(); // el productor no ve score ni resultado de la entidad
     await producer()
       .post(`/api/producer/requests/${token}/establishment`)
       .send({

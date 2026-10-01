@@ -32,7 +32,22 @@ import {
 import { RoleEntity } from '../../users/infrastructure/role.entity.js';
 import { UserEntity } from '../../users/infrastructure/user.entity.js';
 import { VerificationRequestService } from '../../verification/application/verification-request.service.js';
+import { presentDocument } from '../../documents/presentation/documents.controller.js';
+import { presentEvidence } from '../../evidence/presentation/evidence.presenter.js';
 import { GuaranteeRequestEntity } from '../infrastructure/guarantee-request.entity.js';
+import {
+  InformationRequestEntity,
+  type InformationRequestKind,
+} from '../infrastructure/information-request.entity.js';
+import { PasswordHasher } from '../../auth/application/password-hasher.js';
+
+/** Documentos del titular o del inmueble: se registran a nivel establecimiento. */
+const ESTABLISHMENT_LEVEL_DOCUMENTS = new Set([
+  'RENSPA',
+  'PROPERTY_DEED',
+  'LEASE_CONTRACT',
+  'ID_CUIT',
+]);
 
 const DAY_MS = 86_400_000;
 export const INVITATION_DAYS = 30;
@@ -60,12 +75,15 @@ export class GuaranteeRequestsService {
   constructor(
     @InjectRepository(GuaranteeRequestEntity)
     private readonly requests: Repository<GuaranteeRequestEntity>,
+    @InjectRepository(InformationRequestEntity)
+    private readonly infoRequests: Repository<InformationRequestEntity>,
+    private readonly hasher: PasswordHasher,
     private readonly dataSource: DataSource,
     private readonly config: AppConfig,
     private readonly assetsRepository: AssetsRepository,
     private readonly establishments: EstablishmentsService,
     private readonly assets: AssetsService,
-    private readonly documents: DocumentsService,
+    private readonly documentsService: DocumentsService,
     private readonly evidence: EvidenceService,
     private readonly verifications: VerificationRequestService,
     private readonly audit: AuditService,
@@ -167,7 +185,7 @@ export class GuaranteeRequestsService {
     return this.present(request);
   }
 
-  // ------------------------------------------------------------------ productor
+  // ------------------------------------------------------------------ productor: invitación
   async resolveToken(token: string): Promise<GuaranteeRequestEntity> {
     if (!/^[A-Za-z0-9_-]{20,128}$/.test(token)) throw new NotFoundError('Solicitud de garantía');
     const request = await this.requests.findOneBy({ inviteTokenHash: sha256Hex(token) });
@@ -182,12 +200,199 @@ export class GuaranteeRequestsService {
     return this.present(await this.resolveToken(token), { forProducer: true });
   }
 
+  /**
+   * Aceptación de la invitación: el productor crea su acceso (email + contraseña) sobre su
+   * usuario PRODUCER. Desde entonces el link deja de ser credencial y entra con su cuenta.
+   * Si ya tiene cuenta de productor en la misma entidad, la solicitud se suma a esa cuenta.
+   */
+  async acceptInvitation(
+    token: string,
+    command: { email: string; password: string; fullName?: string },
+    context: RequestContext,
+  ) {
+    const request = await this.resolveToken(token);
+    if (request.acceptedAt) {
+      throw new ConflictError('La invitación ya fue aceptada: ingresá con tu email y contraseña');
+    }
+    const email = command.email.trim().toLowerCase();
+    const users = this.dataSource.getRepository(UserEntity);
+    const existing = await users
+      .createQueryBuilder('u')
+      .addSelect('u.passwordHash')
+      .leftJoinAndSelect('u.role', 'role')
+      .where('lower(u.email) = :email', { email })
+      .andWhere('u.deletedAt IS NULL')
+      .getOne();
+    let producerUserId = request.producerUserId;
+    if (existing && existing.id !== request.producerUserId) {
+      const sameProducer =
+        existing.role?.code === 'PRODUCER' &&
+        existing.organizationId === request.organizationId &&
+        existing.status === 'ACTIVE' &&
+        (await this.hasher.verify(existing.passwordHash, command.password));
+      if (!sameProducer) {
+        throw new ConflictError(
+          'Ese email ya tiene una cuenta. Si es tuya, usá la misma contraseña para sumar esta solicitud.',
+        );
+      }
+      producerUserId = existing.id;
+    } else {
+      await users.update(
+        { id: request.producerUserId },
+        {
+          email,
+          passwordHash: await this.hasher.hash(command.password),
+          status: 'ACTIVE',
+          ...(command.fullName?.trim() ? { fullName: command.fullName.trim() } : {}),
+        },
+      );
+    }
+    await this.requests.update(
+      { id: request.id },
+      {
+        producerUserId,
+        acceptedAt: new Date(),
+        status: request.status === 'INVITED' ? 'IN_PROGRESS' : request.status,
+      },
+    );
+    await this.audit.record({
+      actor: {
+        kind: 'user',
+        user: await this.producerUser(
+          Object.assign(new GuaranteeRequestEntity(), request, { producerUserId }),
+        ),
+      },
+      action: AUDIT_ACTIONS.GUARANTEE_REQUEST_ACCEPTED,
+      resourceType: 'guarantee_request',
+      resourceId: request.id,
+      metadata: { linkedToExistingAccount: producerUserId !== request.producerUserId },
+      context,
+    });
+    return { email, requestId: request.id };
+  }
+
+  /** Operaciones por link: válidas solo mientras la invitación no fue aceptada. */
+  private async byToken(token: string) {
+    const request = await this.resolveToken(token);
+    if (request.acceptedAt) {
+      throw new ForbiddenActionError('La invitación ya fue aceptada: ingresá con tu cuenta');
+    }
+    return request;
+  }
+
   async producerCreateEstablishment(
     token: string,
     command: CreateEstablishmentCommand,
     context: RequestContext,
   ) {
-    const request = await this.editable(token);
+    await this.establishmentFor(await this.byToken(token), command, context);
+    return this.producerView(token);
+  }
+
+  async producerCreateAsset(
+    token: string,
+    command: Omit<CreateAssetCommand, 'establishmentId' | 'assetTypeCode'>,
+    context: RequestContext,
+  ) {
+    await this.assetFor(await this.byToken(token), command, context);
+    return this.producerView(token);
+  }
+
+  async producerUploadDocument(
+    token: string,
+    file: UploadedFile | undefined,
+    command: UploadDocumentCommand,
+    context: RequestContext,
+  ) {
+    return this.documentFor(await this.byToken(token), file, command, context);
+  }
+
+  async producerUploadEvidence(
+    token: string,
+    file: UploadedFile | undefined,
+    command: UploadEvidenceCommand,
+    context: RequestContext,
+  ) {
+    return this.evidenceFor(await this.byToken(token), file, command, context);
+  }
+
+  async producerSubmit(token: string, context: RequestContext) {
+    await this.submitFor(await this.byToken(token), context);
+    return this.producerView(token);
+  }
+
+  // ------------------------------------------------------------------ productor: portal (sesión)
+  /** Solicitud del productor autenticado (rol PRODUCER, solo las propias). */
+  async mine(user: AuthenticatedUser, id: string): Promise<GuaranteeRequestEntity> {
+    if (user.role !== 'PRODUCER')
+      throw new ForbiddenActionError('Acceso exclusivo para productores');
+    const request = await this.requests.findOneBy({
+      id,
+      producerUserId: user.userId,
+      organizationId: user.organizationId,
+    });
+    if (!request) throw new NotFoundError('Solicitud de garantía', id);
+    return request;
+  }
+
+  /** Inicio del portal: solicitudes, tareas, establecimientos y activos del productor. */
+  async overview(user: AuthenticatedUser) {
+    if (user.role !== 'PRODUCER')
+      throw new ForbiddenActionError('Acceso exclusivo para productores');
+    const rows = await this.requests.find({
+      where: { producerUserId: user.userId, organizationId: user.organizationId },
+      order: { createdAt: 'DESC' },
+    });
+    const requests = await Promise.all(rows.map((r) => this.present(r, { forProducer: true })));
+    const establishments = new Map<string, unknown>();
+    const assets = new Map<string, unknown>();
+    for (const r of requests) {
+      if (r.establishment) establishments.set(String(r.establishment.id), r.establishment);
+      if (r.asset)
+        assets.set(String(r.asset.id), {
+          ...r.asset,
+          requestId: r.id,
+          guaranteeType: r.guaranteeType,
+        });
+    }
+    return {
+      producer: { name: user.fullName, email: user.email },
+      requests,
+      tasks: requests.flatMap((r) =>
+        r.tasks.map((t) => ({ ...t, requestId: r.id, assetName: r.asset?.name ?? null })),
+      ),
+      establishments: [...establishments.values()],
+      assets: [...assets.values()],
+    };
+  }
+
+  async producerDetail(user: AuthenticatedUser, id: string) {
+    const request = await this.mine(user, id);
+    const view = await this.present(request, { forProducer: true });
+    const [documents, evidence] = await Promise.all([
+      request.assetId
+        ? this.documentsService.listForAsset(request.organizationId, request.assetId)
+        : null,
+      request.assetId ? this.evidence.listForAsset(request.organizationId, request.assetId) : [],
+    ]);
+    return {
+      ...view,
+      documents: documents
+        ? {
+            documents: documents.documents.map(presentDocument),
+            requirements: documents.requirements,
+          }
+        : null,
+      evidence: evidence.map((e) => presentEvidence(e.evidence, e.url)),
+    };
+  }
+
+  async establishmentFor(
+    request: GuaranteeRequestEntity,
+    command: CreateEstablishmentCommand,
+    context: RequestContext,
+  ) {
+    this.assertDeclarationOpen(request);
     if (request.establishmentId)
       throw new ConflictError('La solicitud ya tiene un establecimiento');
     const producer = await this.producerUser(request);
@@ -211,15 +416,14 @@ export class GuaranteeRequestsService {
       { id: request.id },
       { establishmentId: establishment.id, status: 'IN_PROGRESS' },
     );
-    return this.producerView(token);
   }
 
-  async producerCreateAsset(
-    token: string,
+  async assetFor(
+    request: GuaranteeRequestEntity,
     command: Omit<CreateAssetCommand, 'establishmentId' | 'assetTypeCode'>,
     context: RequestContext,
   ) {
-    const request = await this.editable(token);
+    this.assertDeclarationOpen(request);
     if (!request.establishmentId)
       throw new ValidationFailedError('Primero registrá el establecimiento');
     if (request.assetId) throw new ConflictError('La solicitud ya tiene un activo declarado');
@@ -234,36 +438,47 @@ export class GuaranteeRequestsService {
       context,
     );
     await this.requests.update({ id: request.id }, { assetId: asset.id, status: 'IN_PROGRESS' });
-    return this.producerView(token);
   }
 
-  async producerUploadDocument(
-    token: string,
+  /**
+   * Documentación: se puede aportar también después de enviar la declaración (no la modifica).
+   * Los documentos del titular/inmueble quedan a nivel establecimiento, como en la vista bancaria.
+   */
+  async documentFor(
+    request: GuaranteeRequestEntity,
     file: UploadedFile | undefined,
     command: UploadDocumentCommand,
     context: RequestContext,
   ) {
-    const request = await this.editable(token);
-    if (!request.assetId) throw new ValidationFailedError('Primero declará el activo');
+    if (!request.assetId || !request.establishmentId)
+      throw new ValidationFailedError('Primero declará el activo');
     const producer = await this.producerUser(request);
-    return this.documents.uploadForAsset(producer, request.assetId, file, command, context);
+    return ESTABLISHMENT_LEVEL_DOCUMENTS.has(command.type)
+      ? this.documentsService.uploadForEstablishment(
+          producer,
+          request.establishmentId,
+          file,
+          command,
+          context,
+        )
+      : this.documentsService.uploadForAsset(producer, request.assetId, file, command, context);
   }
 
-  async producerUploadEvidence(
-    token: string,
-    file: { buffer: Buffer; originalname: string; mimetype: string; size: number } | undefined,
+  /** Evidencia nueva (fotos): siempre permitida; no modifica la declaración enviada. */
+  async evidenceFor(
+    request: GuaranteeRequestEntity,
+    file: UploadedFile | undefined,
     command: UploadEvidenceCommand,
     context: RequestContext,
   ) {
-    const request = await this.editable(token);
     if (!request.assetId) throw new ValidationFailedError('Primero declará el activo');
     const producer = await this.producerUser(request);
     return this.evidence.uploadManual(producer, request.assetId, file, command, context);
   }
 
-  /** El productor confirma su declaración: queda lista y AgroGarantías ejecuta la verificación. */
-  async producerSubmit(token: string, context: RequestContext) {
-    const request = await this.editable(token);
+  /** El productor confirma su declaración: queda inmutable y AgroGarantías ejecuta la verificación. */
+  async submitFor(request: GuaranteeRequestEntity, context: RequestContext) {
+    this.assertDeclarationOpen(request);
     const view = await this.present(request);
     if (view.missing.length > 0) {
       throw new ValidationFailedError(`Falta completar: ${view.missing.join(', ')}`);
@@ -281,21 +496,117 @@ export class GuaranteeRequestsService {
       metadata: { assetId: request.assetId },
       context,
     });
-    const run = await this.verifications.request(
-      { kind: 'system', organizationId: request.organizationId, process: 'guarantee-request' },
-      { assetId: request.assetId!, note: 'Declaración del productor completada', trigger: 'API' },
+    await this.runVerification(request, 'Declaración del productor completada');
+  }
+
+  // ------------------------------------------------------------------ pedidos de información
+  async requestInformation(
+    user: AuthenticatedUser,
+    id: string,
+    command: { kind: InformationRequestKind; documentType?: string; message: string },
+    context: RequestContext,
+  ) {
+    const request = await this.requests.findOneBy({ id, organizationId: user.organizationId });
+    if (!request) throw new NotFoundError('Solicitud de garantía', id);
+    if (!request.assetId) {
+      throw new ValidationFailedError('El productor todavía no declaró el activo');
+    }
+    const created = await this.infoRequests.save(
+      this.infoRequests.create({
+        organizationId: user.organizationId,
+        guaranteeRequestId: id,
+        kind: command.kind,
+        documentType: command.kind === 'DOCUMENT' ? (command.documentType ?? null) : null,
+        message: command.message.trim(),
+        status: 'OPEN',
+        requestedBy: user.userId,
+      }),
     );
-    await this.requests.update({ id: request.id }, { verificationRunId: run.id });
-    return this.producerView(token);
+    await this.audit.record({
+      actor: { kind: 'user', user },
+      action: AUDIT_ACTIONS.INFORMATION_REQUESTED,
+      resourceType: 'guarantee_request',
+      resourceId: id,
+      metadata: {
+        informationRequestId: created.id,
+        kind: created.kind,
+        documentType: created.documentType,
+      },
+      context,
+    });
+    return this.present(request);
+  }
+
+  /**
+   * El productor indica que respondió el pedido. Exige al menos un aporte nuevo del tipo
+   * pedido posterior al pedido; si la declaración ya fue enviada, AgroGarantías vuelve a verificar.
+   */
+  async respondInformation(
+    user: AuthenticatedUser,
+    id: string,
+    informationRequestId: string,
+    context: RequestContext,
+  ) {
+    const request = await this.mine(user, id);
+    const info = await this.infoRequests.findOneBy({
+      id: informationRequestId,
+      guaranteeRequestId: id,
+    });
+    if (!info) throw new NotFoundError('Pedido de información', informationRequestId);
+    if (info.status !== 'OPEN') throw new ConflictError('El pedido ya fue respondido');
+    const [row] = (await this.dataSource.query(
+      info.kind === 'EVIDENCE'
+        ? `SELECT count(*)::int AS n FROM evidence WHERE asset_id = $1 AND type = 'IMAGE' AND created_at > $2`
+        : `SELECT count(*)::int AS n FROM documents WHERE (asset_id = $1 OR establishment_id = $3)
+             AND created_at > $2 AND ($4::text IS NULL OR type = $4)`,
+      info.kind === 'EVIDENCE'
+        ? [request.assetId, info.createdAt]
+        : [request.assetId, info.createdAt, request.establishmentId, info.documentType],
+    )) as { n: number }[];
+    if (!row || row.n === 0) {
+      throw new ValidationFailedError(
+        info.kind === 'EVIDENCE' ? 'Agregá al menos una foto nueva' : 'Subí el documento pedido',
+      );
+    }
+    await this.infoRequests.update(
+      { id: info.id },
+      { status: 'RESPONDED', respondedAt: new Date() },
+    );
+    await this.audit.record({
+      actor: { kind: 'user', user },
+      action: AUDIT_ACTIONS.INFORMATION_RESPONDED,
+      resourceType: 'guarantee_request',
+      resourceId: id,
+      metadata: { informationRequestId: info.id, kind: info.kind, contributions: row.n },
+      context,
+    });
+    if (request.status === 'READY_FOR_VERIFICATION') {
+      await this.runVerification(
+        request,
+        'Nueva evidencia/documentación aportada por el productor',
+      );
+    }
+    return this.producerDetail(user, id);
   }
 
   // ------------------------------------------------------------------ helpers
-  private async editable(token: string) {
-    const request = await this.resolveToken(token);
+  private assertDeclarationOpen(request: GuaranteeRequestEntity) {
     if (request.status === 'READY_FOR_VERIFICATION') {
       throw new ConflictError('La declaración ya fue enviada y no puede modificarse');
     }
-    return request;
+  }
+
+  /** Ejecuta la verificación existente; si ya hay una en curso, se conserva esa. */
+  private async runVerification(request: GuaranteeRequestEntity, note: string) {
+    try {
+      const run = await this.verifications.request(
+        { kind: 'system', organizationId: request.organizationId, process: 'guarantee-request' },
+        { assetId: request.assetId!, note, trigger: 'API' },
+      );
+      await this.requests.update({ id: request.id }, { verificationRunId: run.id });
+    } catch (error) {
+      if (!(error instanceof ConflictError)) throw error;
+    }
   }
 
   /** Identidad del productor para reutilizar los servicios existentes (auditoría incluida). */
@@ -325,58 +636,88 @@ export class GuaranteeRequestsService {
   private async present(request: GuaranteeRequestEntity, options: { forProducer?: boolean } = {}) {
     const q = (sql: string, params: unknown[]) =>
       this.dataSource.query(sql, params) as Promise<Record<string, unknown>[]>;
-    const [[org], [type], [establishment], [asset], counts, [verification], alerts] =
-      await Promise.all([
-        q(`SELECT name, kind FROM organizations WHERE id = $1`, [request.organizationId]),
-        q(
-          `SELECT code, name, default_unit AS unit, verification_strategy AS "verificationStrategy",
-                  metadata_schema AS "metadataSchema", evidence_sources AS "evidenceSources"
+    const [
+      [org],
+      [type],
+      [establishment],
+      [asset],
+      counts,
+      [verification],
+      alerts,
+      docs,
+      info,
+      [guarantee],
+    ] = await Promise.all([
+      q(`SELECT name, kind FROM organizations WHERE id = $1`, [request.organizationId]),
+      q(
+        `SELECT code, name, default_unit AS unit, verification_strategy AS "verificationStrategy",
+                  metadata_schema AS "metadataSchema", evidence_sources AS "evidenceSources",
+                  required_documents AS "requiredDocuments", evidence_guidance AS "evidenceGuidance"
            FROM asset_types WHERE code = $1`,
-          [request.assetTypeCode],
-        ),
-        request.establishmentId
-          ? q(
-              `SELECT e.id, e.name, e.province, e.locality, e.renspa, ST_AsGeoJSON(l.point)::json AS point
+        [request.assetTypeCode],
+      ),
+      request.establishmentId
+        ? q(
+            `SELECT e.id, e.name, e.province, e.locality, e.renspa, ST_AsGeoJSON(l.point)::json AS point
                FROM establishments e LEFT JOIN establishment_locations l
                  ON l.establishment_id = e.id AND l.kind = 'MAIN' WHERE e.id = $1`,
-              [request.establishmentId],
-            )
-          : Promise.resolve([]),
-        request.assetId
-          ? q(
-              `SELECT id, name, declared_quantity::float AS "declaredQuantity", unit, status,
+            [request.establishmentId],
+          )
+        : Promise.resolve([]),
+      request.assetId
+        ? q(
+            `SELECT id, name, declared_quantity::float AS "declaredQuantity", unit, status,
                       ST_AsGeoJSON(location)::json AS location, area IS NOT NULL AS "hasArea"
                FROM assets WHERE id = $1`,
-              [request.assetId],
-            )
-          : Promise.resolve([]),
-        request.assetId
-          ? q(
-              `SELECT (SELECT count(*)::int FROM evidence WHERE asset_id = $1 AND type = 'IMAGE') AS evidence,
-                      (SELECT count(*)::int FROM documents WHERE asset_id = $1) AS documents`,
-              [request.assetId],
-            )
-          : Promise.resolve([{ evidence: 0, documents: 0 }]),
-        request.verificationRunId && !options.forProducer
-          ? q(
-              `SELECT r.id AS "runId", r.status, r.completed_at AS "completedAt", res.outcome,
+            [request.assetId],
+          )
+        : Promise.resolve([]),
+      request.assetId
+        ? q(
+            `SELECT (SELECT count(*)::int FROM evidence WHERE asset_id = $1 AND type = 'IMAGE') AS evidence,
+                      (SELECT count(*)::int FROM documents
+                        WHERE asset_id = $1 OR (asset_id IS NULL AND establishment_id = $2)) AS documents`,
+            [request.assetId, request.establishmentId],
+          )
+        : Promise.resolve([{ evidence: 0, documents: 0 }]),
+      request.verificationRunId
+        ? q(
+            `SELECT r.id AS "runId", r.status, r.completed_at AS "completedAt", res.outcome,
                       res.declared_quantity::float AS "declaredQuantity",
                       res.detected_quantity::float AS "detectedQuantity",
                       res.match_percentage::float AS "matchPercentage", res.final_score AS "finalScore",
                       res.confidence::float AS confidence, res.risk_level AS "riskLevel"
                FROM verification_runs r LEFT JOIN verification_results res ON res.verification_run_id = r.id
                WHERE r.asset_id = $1 ORDER BY r.queued_at DESC LIMIT 1`,
-              [request.assetId],
-            )
-          : Promise.resolve([]),
-        request.assetId && !options.forProducer
-          ? q(
-              `SELECT id, type, severity, title, status, created_at AS "createdAt" FROM alerts
+            [request.assetId],
+          )
+        : Promise.resolve([]),
+      request.assetId && !options.forProducer
+        ? q(
+            `SELECT id, type, severity, title, status, created_at AS "createdAt" FROM alerts
                WHERE asset_id = $1 AND status <> 'RESOLVED' ORDER BY created_at DESC LIMIT 20`,
-              [request.assetId],
-            )
-          : Promise.resolve([]),
-      ]);
+            [request.assetId],
+          )
+        : Promise.resolve([]),
+      request.assetId
+        ? q(
+            `SELECT type, status FROM documents
+               WHERE asset_id = $1 OR (asset_id IS NULL AND establishment_id = $2)`,
+            [request.assetId, request.establishmentId],
+          )
+        : Promise.resolve([]),
+      q(
+        `SELECT id, kind, document_type AS "documentType", message, status, created_at AS "createdAt",
+                  responded_at AS "respondedAt"
+           FROM information_requests WHERE guarantee_request_id = $1 ORDER BY created_at DESC`,
+        [request.id],
+      ),
+      request.assetId
+        ? q(`SELECT id FROM guarantees WHERE asset_id = $1 AND status = 'ACTIVE' LIMIT 1`, [
+            request.assetId,
+          ])
+        : Promise.resolve([]),
+    ]);
     const c = (counts[0] ?? { evidence: 0, documents: 0 }) as {
       evidence: number;
       documents: number;
@@ -389,6 +730,24 @@ export class GuaranteeRequestsService {
     if (asset && !vegetation && c.evidence === 0) missing.push('evidencia (fotos)');
     if (asset && vegetation && !asset.hasArea) missing.push('polígono del lote');
 
+    // Documentación requerida por el tipo de activo (misma regla que la ficha del activo).
+    const requiredDocuments = ((type?.requiredDocuments as string[] | undefined) ?? []).map(
+      (requirement) => {
+        const alternatives = requirement.split('|');
+        const match = (docs as { type: string; status: string }[]).find(
+          (d) => alternatives.includes(d.type) && d.status !== 'REJECTED',
+        );
+        return {
+          requirement,
+          alternatives,
+          satisfied: Boolean(match),
+          status: match?.status ?? null,
+        };
+      },
+    );
+    const missingDocuments = requiredDocuments.filter((r) => !r.satisfied);
+    const openInfo = (info as { status: string }[]).filter((i) => i.status === 'OPEN');
+
     const stage = verification?.outcome
       ? 'VERIFIED'
       : request.status === 'READY_FOR_VERIFICATION'
@@ -396,10 +755,125 @@ export class GuaranteeRequestsService {
           ? 'VERIFICATION_FAILED'
           : 'READY_FOR_VERIFICATION'
         : request.status;
+    const submitted = request.status === 'READY_FOR_VERIFICATION';
+    const verifying =
+      verification && ['PENDING', 'PROCESSING'].includes(String(verification.status));
+    // Estado comprensible para el productor (sin estados técnicos).
+    const producerStatus = guarantee
+      ? 'FINALIZED'
+      : openInfo.length > 0
+        ? 'INFO_REQUIRED'
+        : submitted
+          ? verification?.outcome
+            ? 'VERIFIED'
+            : verifying
+              ? 'VERIFYING'
+              : 'READY_FOR_VERIFICATION'
+          : !request.acceptedAt && request.status === 'INVITED'
+            ? 'INVITATION_PENDING'
+            : !establishment || !asset
+              ? 'PREPARING'
+              : missing.length > 0
+                ? 'PENDING_EVIDENCE'
+                : missingDocuments.length > 0
+                  ? 'PENDING_DOCUMENTATION'
+                  : 'PREPARING';
+
+    const step = (done: boolean, warn = false) => (done ? 'DONE' : warn ? 'PENDING' : 'TODO');
+    const progress = [
+      { key: 'request', label: 'Solicitud', state: 'DONE' },
+      { key: 'establishment', label: 'Establecimiento', state: step(Boolean(establishment)) },
+      { key: 'asset', label: 'Activo', state: step(Boolean(asset)) },
+      {
+        key: 'evidence',
+        label: 'Evidencia',
+        state: asset
+          ? step(!missing.some((m) => m.startsWith('evidencia') || m.startsWith('polígono')), true)
+          : 'TODO',
+      },
+      {
+        key: 'documents',
+        label: 'Documentación',
+        state: asset ? step(missingDocuments.length === 0, true) : 'TODO',
+      },
+      {
+        key: 'verification',
+        label: 'Verificación',
+        state: verification?.outcome ? 'DONE' : submitted ? 'IN_PROGRESS' : 'TODO',
+      },
+      { key: 'result', label: 'Resultado', state: verification?.outcome ? 'DONE' : 'TODO' },
+    ];
+
+    // Tareas pendientes del productor, en el orden en que conviene resolverlas.
+    const assetName = (asset?.name as string | undefined) ?? 'el activo';
+    const requesterName = (org?.name as string | undefined) ?? 'La entidad';
+    const typeName = (type?.name as string | undefined) ?? 'Activo';
+    const tasks: {
+      kind: string;
+      title: string;
+      description: string;
+      informationRequestId?: string;
+      documentType?: string | null;
+    }[] = [];
+    for (const i of info as {
+      id: string;
+      kind: string;
+      documentType: string | null;
+      message: string;
+      status: string;
+    }[]) {
+      if (i.status !== 'OPEN') continue;
+      tasks.push({
+        kind: i.kind === 'EVIDENCE' ? 'INFO_EVIDENCE' : 'INFO_DOCUMENT',
+        title: `${requesterName} solicita ${i.kind === 'EVIDENCE' ? 'más evidencia' : 'documentación adicional'}`,
+        description: i.message,
+        informationRequestId: i.id,
+        documentType: i.documentType,
+      });
+    }
+    if (!submitted) {
+      if (!establishment)
+        tasks.push({
+          kind: 'ESTABLISHMENT',
+          title: 'Registrar el establecimiento',
+          description: 'Dónde está el activo que ofrecés en garantía.',
+        });
+      else if (!asset)
+        tasks.push({
+          kind: 'ASSET',
+          title: 'Declarar el activo',
+          description: `${typeName}: qué ofrecés y cuánto.`,
+        });
+      else {
+        if (missing.length > 0)
+          tasks.push({
+            kind: 'EVIDENCE',
+            title: vegetation ? 'Delimitar el lote' : `Agregar evidencia de ${assetName}`,
+            description:
+              (type?.evidenceGuidance as string | undefined) ?? 'Agregá fotos del activo.',
+          });
+        if (missingDocuments.length > 0)
+          tasks.push({
+            kind: 'DOCUMENTS',
+            title: 'Completar documentación',
+            description: `${missingDocuments.length} documento(s) requerido(s) pendiente(s).`,
+          });
+        if (missing.length === 0)
+          tasks.push({
+            kind: 'SUBMIT',
+            title: 'Enviar la declaración',
+            description: 'Revisá y enviá para que AgroGarantías verifique.',
+          });
+      }
+    }
+
     return {
       id: request.id,
       status: request.status,
       stage,
+      producerStatus,
+      progress,
+      tasks,
       requester: { name: org?.name ?? '', kind: org?.kind ?? null },
       producer: {
         name: request.producerName,
@@ -411,14 +885,22 @@ export class GuaranteeRequestsService {
       currency: request.currency,
       notes: request.notes,
       inviteExpiresAt: request.inviteExpiresAt,
+      acceptedAt: request.acceptedAt,
       submittedAt: request.submittedAt,
       createdAt: request.createdAt,
       establishment: establishment ?? null,
       asset: asset ?? null,
       evidenceCount: c.evidence,
       documentCount: c.documents,
+      requiredDocuments,
       missing,
-      verification: options.forProducer ? undefined : (verification ?? null),
+      informationRequests: info,
+      // El productor ve el estado de la verificación, no la evaluación (score/alertas) de la entidad.
+      verification: options.forProducer
+        ? verification
+          ? { status: verification.status, completed: Boolean(verification.outcome) }
+          : null
+        : (verification ?? null),
       alerts: options.forProducer ? undefined : alerts,
     };
   }

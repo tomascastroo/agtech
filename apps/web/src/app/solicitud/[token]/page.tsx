@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
-import { ProducerRequestFlow } from './ProducerRequestFlow';
+import { AcceptInvitation } from './AcceptInvitation';
 
-export const metadata: Metadata = { title: 'Solicitud de garantía — Productor' };
+export const metadata: Metadata = { title: 'Invitación — Solicitud de garantía' };
 
 export default function Page() {
-  return <ProducerRequestFlow />;
+  return <AcceptInvitation />;
 }
