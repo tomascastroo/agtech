@@ -1,7 +1,7 @@
 {
   "name": "agrogarantias",
   "private": true,
-  "description": "AgroGarant\u00edas \u2014 verificaci\u00f3n remota y recurrente de activos agropecuarios",
+  "description": "AgroGarantías — verificación remota y recurrente de activos agropecuarios",
   "engines": {
     "node": ">=22.12.0"
   },
@@ -12,13 +12,17 @@
     "test:e2e": "pnpm --filter @agrogarantias/web test:e2e",
     "lint": "pnpm -r --filter ./apps/* run lint",
     "typecheck": "pnpm -r --filter ./apps/* run typecheck",
-    "format": "prettier --write \"apps/api/{src,test}/**/*.ts\" \"apps/web/src/**/*.{ts,tsx,css}\"",
-    "format:check": "prettier --check \"apps/api/{src,test}/**/*.ts\" \"apps/web/src/**/*.{ts,tsx,css}\"",
+    "format": "prettier --write \"apps/api/{src,test}/**/*.ts\" \"apps/web/{src,e2e}/**/*.{ts,tsx,css}\"",
+    "format:check": "prettier --check \"apps/api/{src,test}/**/*.ts\" \"apps/web/{src,e2e}/**/*.{ts,tsx,css}\"",
     "migration:run": "pnpm --filter @agrogarantias/api migration:run",
     "migration:revert": "pnpm --filter @agrogarantias/api migration:revert",
     "seed": "pnpm --filter @agrogarantias/api seed",
     "infra:up": "docker compose up -d postgres redis minio",
-    "infra:down": "docker compose down"
+    "infra:down": "docker compose down",
+    "db:bootstrap": "pnpm --filter @agrogarantias/api build && pnpm --filter @agrogarantias/api db:bootstrap",
+    "db:reset": "pnpm --filter @agrogarantias/api build && pnpm --filter @agrogarantias/api db:reset",
+    "test:ai": "uv run --directory apps/ai-service pytest -q",
+    "lint:ai": "uv run --directory apps/ai-service ruff check ."
   },
   "packageManager": "pnpm@10.28.0"
 }

@@ -57,7 +57,7 @@ export class LoggingModule {
                 res: (res: { statusCode: number }) => ({ statusCode: res.statusCode }),
               },
               transport:
-                config.env.NODE_ENV === 'development'
+                config.env.LOG_FORMAT === 'pretty'
                   ? {
                       target: 'pino-pretty',
                       options: { singleLine: true, translateTime: 'SYS:HH:MM:ss' },

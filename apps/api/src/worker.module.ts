@@ -9,12 +9,14 @@ import { MonitoringWorkerModule } from './modules/monitoring/monitoring-worker.m
 import { ReportsWorkerModule } from './modules/reports/reports-worker.module.js';
 import { StorageModule } from './modules/storage/storage.module.js';
 import { VerificationWorkerModule } from './modules/verification/verification-worker.module.js';
+import { ObservabilityModule } from './common/observability/error-reporter.js';
 
 /** Proceso worker: consume las colas de verificación, informes y monitoreo. */
 @Module({
   imports: [
     AppConfigModule,
     LoggingModule.forService('agrogarantias-worker'),
+    ObservabilityModule,
     DatabaseModule,
     QueuesModule,
     StorageModule,

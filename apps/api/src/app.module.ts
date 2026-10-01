@@ -24,12 +24,14 @@ import { SatelliteModule } from './modules/satellite/satellite.module.js';
 import { StorageModule } from './modules/storage/storage.module.js';
 import { UsersModule } from './modules/users/users.module.js';
 import { VerificationModule } from './modules/verification/verification.module.js';
+import { ObservabilityModule } from './common/observability/error-reporter.js';
 
 /** Proceso HTTP (API REST). El procesamiento pesado vive en WorkerModule. */
 @Module({
   imports: [
     AppConfigModule,
     LoggingModule.forService('agrogarantias-api'),
+    ObservabilityModule,
     DatabaseModule,
     QueuesModule,
     ThrottlerModule.forRootAsync({

@@ -2,6 +2,7 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { UnrecoverableError, type Job } from 'bullmq';
 import { DomainError } from '../../../common/domain/errors.js';
+import { ErrorReporter } from '../../../common/observability/error-reporter.js';
 import { QUEUES, type VerificationJobData } from '../../../common/queues/queues.js';
 import { PIPELINE_STEPS, type PipelineProgress } from '../domain/verification.types.js';
 import { VerificationPipeline } from '../application/pipeline/verification-pipeline.js';
@@ -11,7 +12,10 @@ import { VerificationPipeline } from '../application/pipeline/verification-pipel
 export class VerificationProcessor extends WorkerHost {
   private readonly logger = new Logger(VerificationProcessor.name);
 
-  constructor(private readonly pipeline: VerificationPipeline) {
+  constructor(
+    private readonly pipeline: VerificationPipeline,
+    private readonly reporter: ErrorReporter,
+  ) {
     super();
   }
 
@@ -40,6 +44,14 @@ export class VerificationProcessor extends WorkerHost {
             ? message
             : `Error interno del procesamiento (${message})`;
         await this.pipeline.fail(runId, reason);
+        if (!(error instanceof DomainError)) {
+          this.reporter.capture(error, {
+            component: 'verification-worker',
+            requestId: requestId ?? null,
+            organizationId: job.data.organizationId,
+            extra: { runId, attempts: job.attemptsMade + 1 },
+          });
+        }
       }
       throw error;
     }

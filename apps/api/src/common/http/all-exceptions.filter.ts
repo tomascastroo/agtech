@@ -3,12 +3,12 @@ import {
   Catch,
   HttpException,
   HttpStatus,
-  Logger,
   type ExceptionFilter,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { QueryFailedError } from 'typeorm';
 import { DomainError } from '../domain/errors.js';
+import type { ErrorReporter } from '../observability/error-reporter.js';
 
 const DOMAIN_STATUS: Record<string, number> = {
   NOT_FOUND: HttpStatus.NOT_FOUND,
@@ -34,7 +34,7 @@ interface ErrorBody {
 /** Manejo centralizado de errores: respuesta uniforme, sin filtrar detalles internos. */
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
-  private readonly logger = new Logger('ExceptionFilter');
+  constructor(private readonly reporter: ErrorReporter) {}
 
   catch(exception: unknown, host: ArgumentsHost): void {
     const http = host.switchToHttp();
@@ -44,10 +44,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const body = this.toBody(exception, requestId);
 
     if (body.statusCode >= 500) {
-      this.logger.error(
-        { err: exception, requestId, path: request.originalUrl },
-        'Error no controlado',
-      );
+      this.reporter.capture(exception, { component: 'http', requestId, path: request.originalUrl });
     }
     response.status(body.statusCode).json(body);
   }

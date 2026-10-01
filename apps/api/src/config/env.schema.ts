@@ -11,6 +11,8 @@ export const envSchema = z
     LOG_LEVEL: z
       .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
       .default('info'),
+    /** json (por defecto, para agregadores de logs) o pretty (legible en consola, requiere pino-pretty). */
+    LOG_FORMAT: z.enum(['json', 'pretty']).default('json'),
 
     DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
     DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(100).default(10),
@@ -43,6 +45,11 @@ export const envSchema = z
     REGISTRY_PROVIDER: z.enum(['mock']).default('mock'),
 
     RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(10).max(100_000).default(300),
+    /**
+     * Proxies confiables delante de la API (el BFF de Next.js cuenta como uno). Con un ingress
+     * que fije X-Forwarded-For, usar 2. Determina la IP usada en rate limiting y auditoría.
+     */
+    TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(1),
     RATE_LIMIT_LOGIN_PER_MINUTE: z.coerce.number().int().min(1).max(10_000).default(10),
 
     MONITORING_TICK_SECONDS: z.coerce.number().int().min(30).max(86400).default(300),

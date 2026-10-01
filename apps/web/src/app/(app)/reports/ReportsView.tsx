@@ -70,9 +70,7 @@ export function ReportsView() {
                       </Link>
                     }
                     subtitle={
-                      r.asset
-                        ? `${r.asset.name} · ${r.asset.establishmentName ?? ''}`
-                        : undefined
+                      r.asset ? `${r.asset.name} · ${r.asset.establishmentName ?? ''}` : undefined
                     }
                   />
                 ),

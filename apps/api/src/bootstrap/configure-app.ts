@@ -4,12 +4,13 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { AllExceptionsFilter } from '../common/http/all-exceptions.filter.js';
+import { ErrorReporter } from '../common/observability/error-reporter.js';
 import { COOKIE_NAMES, CSRF_HEADER } from '../common/http/cookies.js';
 import type { AppConfig } from '../config/app-config.js';
 
 /** Configuración HTTP común a producción y tests (seguridad, validación, prefijos, OpenAPI). */
 export function configureApp(app: NestExpressApplication, config: AppConfig): void {
-  app.set('trust proxy', 1);
+  app.set('trust proxy', config.env.TRUST_PROXY_HOPS);
   app.disable('x-powered-by');
   app.useBodyParser('json', { limit: '1mb' });
   app.use(
@@ -43,7 +44,7 @@ export function configureApp(app: NestExpressApplication, config: AppConfig): vo
   app.useGlobalPipes(
     new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
   );
-  app.useGlobalFilters(new AllExceptionsFilter());
+  app.useGlobalFilters(new AllExceptionsFilter(app.get(ErrorReporter)));
 
   if (!config.isProduction) {
     const document = SwaggerModule.createDocument(
