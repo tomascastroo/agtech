@@ -11,6 +11,6 @@ import { DocumentsController } from './presentation/documents.controller.js';
   imports: [TypeOrmModule.forFeature([DocumentEntity]), AssetsModule, EstablishmentsModule],
   controllers: [DocumentsController],
   providers: [DocumentsService, DocumentsRepository],
-  exports: [DocumentsRepository],
+  exports: [DocumentsRepository, DocumentsService],
 })
 export class DocumentsModule {}

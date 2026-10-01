@@ -521,3 +521,59 @@ export interface AuditLogItem {
   ip: string | null;
   createdAt: string;
 }
+
+/** Solicitud de garantía: la crea la entidad, la completa el productor, la verifica AgroGarantías. */
+export interface GuaranteeRequest {
+  id: string;
+  status: 'INVITED' | 'IN_PROGRESS' | 'READY_FOR_VERIFICATION';
+  stage: 'INVITED' | 'IN_PROGRESS' | 'READY_FOR_VERIFICATION' | 'VERIFICATION_FAILED' | 'VERIFIED';
+  requester: { name: string; kind: string | null };
+  producer: { name: string; taxId: string; email?: string | null };
+  guaranteeType: {
+    code: string;
+    name?: string;
+    unit?: string;
+    verificationStrategy?: string;
+    metadataSchema?: AssetType['metadataSchema'];
+  };
+  requestedAmount: number | null;
+  currency: string;
+  notes: string | null;
+  inviteExpiresAt: string;
+  submittedAt: string | null;
+  createdAt: string;
+  establishment: {
+    id: string;
+    name: string;
+    province: string;
+    locality: string | null;
+    renspa: string | null;
+    point: GeoPoint | null;
+  } | null;
+  asset: {
+    id: string;
+    name: string;
+    declaredQuantity: number;
+    unit: string;
+    status: string;
+    location: GeoPoint | null;
+    hasArea: boolean;
+  } | null;
+  evidenceCount: number;
+  documentCount: number;
+  missing: string[];
+  verification?: {
+    runId: string;
+    status: string;
+    completedAt: string | null;
+    outcome: string | null;
+    declaredQuantity: number | null;
+    detectedQuantity: number | null;
+    matchPercentage: number | null;
+    finalScore: number | null;
+    confidence: number | null;
+    riskLevel: string | null;
+  } | null;
+  alerts?: { id: string; type: string; severity: string; title: string; status: string }[];
+  invitation?: { url: string; expiresAt: string };
+}

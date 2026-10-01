@@ -12,6 +12,7 @@ import styles from './shell.module.css';
 
 const NAV: { href: string; label: string; icon: IconName; section?: string }[] = [
   { href: '/dashboard', label: 'Panel', icon: 'dashboard', section: 'Cartera' },
+  { href: '/requests', label: 'Solicitudes de garantía', icon: 'file' },
   { href: '/assets', label: 'Activos y garantías', icon: 'layers' },
   { href: '/monitoring', label: 'Monitoreo', icon: 'map' },
   { href: '/alerts', label: 'Alertas', icon: 'bell' },

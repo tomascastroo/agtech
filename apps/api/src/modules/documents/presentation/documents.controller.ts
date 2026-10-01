@@ -36,9 +36,9 @@ import {
 import type { DocumentEntity } from '../infrastructure/document.entity.js';
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
-const MAX_UPLOAD_BYTES = 15 * 1_048_576;
+export const MAX_UPLOAD_BYTES = 15 * 1_048_576;
 
-class UploadDocumentDto {
+export class UploadDocumentDto {
   @ApiProperty({ enum: DOCUMENT_TYPES })
   @IsIn(DOCUMENT_TYPES)
   type: DocumentType;
@@ -66,7 +66,7 @@ class ReviewDocumentDto {
   status: 'VALID' | 'REJECTED';
 }
 
-const uploadSchema = {
+export const uploadSchema = {
   schema: {
     type: 'object',
     required: ['file', 'type'],

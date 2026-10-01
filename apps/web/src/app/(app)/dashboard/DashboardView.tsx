@@ -45,8 +45,8 @@ export function DashboardView() {
               Mis garantías
             </LinkButton>
             {can('assets:write') ? (
-              <LinkButton href="/assets/new" variant="primary" icon="plus">
-                Nuevo activo
+              <LinkButton href="/requests/new" variant="primary" icon="plus">
+                Nueva solicitud de garantía
               </LinkButton>
             ) : null}
           </>

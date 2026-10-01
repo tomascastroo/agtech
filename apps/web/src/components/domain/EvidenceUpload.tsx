@@ -13,9 +13,14 @@ import styles from './domain.module.css';
 export function EvidenceUpload({
   assetId,
   defaultLocation,
+  endpoint,
+  onUploaded,
 }: {
   assetId: string;
   defaultLocation: GeoPoint | null;
+  /** Destino alternativo (p. ej. el link del productor); por defecto, la API del activo. */
+  endpoint?: string;
+  onUploaded?: () => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [capturedAt, setCapturedAt] = useState('');
@@ -29,7 +34,8 @@ export function EvidenceUpload({
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const mutation = useApiMutation(
-    (form: FormData) => api<EvidenceItem>(`/assets/${assetId}/evidence`, { method: 'POST', form }),
+    (form: FormData) =>
+      api<EvidenceItem>(endpoint ?? `/assets/${assetId}/evidence`, { method: 'POST', form }),
     [keys.evidence(assetId)],
   );
 
@@ -51,6 +57,7 @@ export function EvidenceUpload({
         form.set('file', file);
         await mutation.mutateAsync(form);
       }
+      onUploaded?.();
       setNotice(
         files.length === 1
           ? 'Imagen incorporada como evidencia.'
