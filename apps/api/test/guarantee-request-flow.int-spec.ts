@@ -107,4 +107,60 @@ describe('Solicitud de garantía: banco → link → productor → verificación
       .send({ declaredQuantity: 300 })
       .expect(403);
   });
+
+  it('reutiliza el establecimiento con el mismo RENSPA y CUIT aunque haya otro titular con ese RENSPA', async () => {
+    const renspa = '06.687.0.01542/00'; // La Esperanza del seed (CUIT 30-71548963-1)
+    await as(ctx, maria)
+      .post('/api/establishments')
+      .send({
+        name: 'La Esperanza Norte',
+        holderName: 'Agropecuaria La Esperanza S.A.',
+        holderTaxId: '30-71549896-7',
+        renspa,
+        establishmentType: 'CRIA',
+        tenure: 'LEASED',
+        province: 'Buenos Aires',
+        location: { latitude: -36.7905, longitude: -59.153 },
+      })
+      .expect(201);
+    const link = async () => {
+      const r = await as(ctx, maria)
+        .post('/api/guarantee-requests')
+        .send({
+          producerName: 'Agropecuaria La Esperanza S.A.',
+          producerTaxId: '30-71549896-7',
+          assetTypeCode: 'BOVINOS',
+        })
+        .expect(201);
+      return `/api/producer/requests/${String(r.body.invitation.url).split('/solicitud/')[1]}`;
+    };
+    const body = (holderTaxId: string) => ({
+      name: 'La Esperanza',
+      holderName: 'Agropecuaria La Esperanza S.A.',
+      holderTaxId,
+      renspa,
+      establishmentType: 'CRIA',
+      tenure: 'LEASED',
+      province: 'Buenos Aires',
+      location: { latitude: -36.7905, longitude: -59.153 },
+    });
+    const same = await link();
+    const reused = await ctx
+      .http()
+      .post(`${same}/establishment`)
+      .send(body('30-71549896-7'))
+      .expect(201);
+    expect(reused.body.establishment.name).toBe('La Esperanza Norte');
+    await ctx
+      .http()
+      .post(`${same}/asset`)
+      .send({
+        name: 'Rodeo Norte',
+        declaredQuantity: 1500,
+        metadata: { sistema_productivo: 'Cría', raza_predominante: 'Angus' },
+      })
+      .expect(201);
+    const other = await link();
+    await ctx.http().post(`${other}/establishment`).send(body('30-50001234-6')).expect(409);
+  });
 });

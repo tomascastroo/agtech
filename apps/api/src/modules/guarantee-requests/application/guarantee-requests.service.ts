@@ -191,15 +191,18 @@ export class GuaranteeRequestsService {
     if (request.establishmentId)
       throw new ConflictError('La solicitud ya tiene un establecimiento');
     const producer = await this.producerUser(request);
-    // Si el establecimiento ya está registrado (mismo RENSPA y mismo titular) se reutiliza.
+    // Si el establecimiento ya está registrado con el mismo RENSPA y el mismo CUIT del titular se
+    // reutiliza. Puede haber más de uno con ese RENSPA: se prioriza el del mismo titular y solo se
+    // rechaza si el RENSPA pertenece únicamente a otros titulares.
     const [existing] = command.renspa
       ? ((await this.dataSource.query(
-          `SELECT id, holder_tax_id AS "holderTaxId" FROM establishments
-           WHERE organization_id = $1 AND renspa = $2 AND deleted_at IS NULL LIMIT 1`,
-          [request.organizationId, command.renspa],
-        )) as { id: string; holderTaxId: string }[])
+          `SELECT id, holder_tax_id = $3 AS "sameHolder" FROM establishments
+           WHERE organization_id = $1 AND renspa = $2 AND deleted_at IS NULL
+           ORDER BY (holder_tax_id = $3) DESC, created_at ASC LIMIT 1`,
+          [request.organizationId, command.renspa, command.holderTaxId],
+        )) as { id: string; sameHolder: boolean }[])
       : [];
-    if (existing && existing.holderTaxId !== command.holderTaxId) {
+    if (existing && !existing.sameHolder) {
       throw new ConflictError('El RENSPA ya está registrado a nombre de otro titular');
     }
     const establishment =
