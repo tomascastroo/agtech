@@ -51,6 +51,8 @@ export interface RequestOptions {
   body?: unknown;
   form?: FormData;
   signal?: AbortSignal;
+  /** false: ante una sesión vencida lanza ApiError 401 en lugar de navegar a /login. */
+  redirectOnUnauthorized?: boolean;
 }
 
 async function send(path: string, options: RequestOptions): Promise<Response> {
@@ -75,8 +77,15 @@ async function send(path: string, options: RequestOptions): Promise<Response> {
 export async function api<T>(path: string, options: RequestOptions = {}): Promise<T> {
   let response = await send(path, options);
   if (response.status === 401 && !path.startsWith('/auth/')) {
-    if (await refreshSession()) response = await send(path, options);
-    if (response.status === 401 && typeof window !== 'undefined') {
+    // Si el refresh falla puede ser porque otra pestaña ya renovó la sesión (las cookies son
+    // compartidas): se reintenta igual una vez antes de dar la sesión por vencida.
+    await refreshSession();
+    response = await send(path, options);
+    if (
+      response.status === 401 &&
+      options.redirectOnUnauthorized !== false &&
+      typeof window !== 'undefined'
+    ) {
       const next = encodeURIComponent(window.location.pathname);
       // Navegación completa a propósito: descarta el estado en memoria de la sesión vencida.
       // eslint-disable-next-line @next/next/no-location-assign-relative-destination

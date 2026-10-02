@@ -116,7 +116,13 @@ describe('Autenticación y sesión', () => {
     const rotated = ([] as string[])
       .concat(first.headers['set-cookie'])
       .map((c) => c.split(';')[0]!);
-    // Reutilizar el refresh token original (ya rotado) se considera robo de sesión.
+    // Reutilizar el refresh token original (ya rotado), fuera de la ventana de carrera, se
+    // considera robo de sesión.
+    await ctx.dataSource.query(
+      `UPDATE refresh_tokens SET revoked_at = now() - interval '5 minutes'
+        WHERE replaced_by_id IS NOT NULL AND user_id = (SELECT id FROM users WHERE email = $1)`,
+      [USERS.auditor],
+    );
     await ctx
       .http()
       .post('/api/auth/refresh')
@@ -130,6 +136,31 @@ describe('Autenticación y sesión', () => {
       .set('Cookie', rotated)
       .set('x-csrf-token', newCsrf)
       .expect(401);
+  });
+
+  it('tolera dos renovaciones simultáneas sin cerrar la sesión (carrera, no robo)', async () => {
+    const session = await login(ctx, USERS.viewer);
+    const refresh = () =>
+      ctx
+        .http()
+        .post('/api/auth/refresh')
+        .set('Cookie', session.cookies)
+        .set('x-csrf-token', session.csrf);
+    // Dos pestañas, o un celular que recargó la página antes de guardar la cookie nueva.
+    const first = await refresh().expect(200);
+    const second = await refresh().expect(200);
+    for (const response of [first, second]) {
+      const cookies = ([] as string[])
+        .concat(response.headers['set-cookie'])
+        .map((c) => c.split(';')[0]!);
+      const csrf = cookies.find((c) => c.startsWith('ag_csrf='))!.split('=')[1]!;
+      await ctx
+        .http()
+        .post('/api/auth/refresh')
+        .set('Cookie', cookies)
+        .set('x-csrf-token', csrf)
+        .expect(200);
+    }
   });
 
   it('cierra la sesión revocando el refresh token', async () => {

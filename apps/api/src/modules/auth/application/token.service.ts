@@ -24,6 +24,8 @@ export interface IssuedRefreshToken {
 const ISSUER = 'agrogarantias-api';
 const AUDIENCE = 'agrogarantias';
 const DAY_MS = 86_400_000;
+/** Ventana en la que reusar un token recién rotado se trata como carrera y no como robo. */
+export const REFRESH_REUSE_GRACE_MS = 60_000;
 
 @Injectable()
 export class TokenService {
@@ -85,6 +87,11 @@ export class TokenService {
   /**
    * Rotación de refresh token. Si se presenta un token ya revocado se asume robo y se revoca
    * toda la familia de tokens (todas las sesiones derivadas de ese login).
+   *
+   * Excepción: un token reemplazado por rotación hace menos de REFRESH_REUSE_GRACE_MS es una
+   * carrera legítima, no un robo: dos pestañas renovando a la vez, o un celular que recargó la
+   * página (p. ej. iOS la cerró por memoria) antes de guardar la cookie nueva. En ese caso se
+   * emite otro token de la misma familia en lugar de cerrar la sesión del usuario.
    */
   async rotateRefreshToken(
     rawToken: string,
@@ -93,7 +100,11 @@ export class TokenService {
     const outcome = await this.dataSource.transaction(async (manager) => {
       const current = await this.refreshTokens.findByHash(sha256Hex(rawToken), manager);
       if (!current) return { kind: 'invalid' as const };
-      if (current.revokedAt) {
+      const racing =
+        current.revokedAt !== null &&
+        current.replacedById !== null &&
+        Date.now() - current.revokedAt.getTime() < REFRESH_REUSE_GRACE_MS;
+      if (current.revokedAt && !racing) {
         await this.refreshTokens.revokeFamily(current.familyId, manager);
         return { kind: 'reuse' as const, current };
       }
@@ -113,7 +124,7 @@ export class TokenService {
         },
         manager,
       );
-      await this.refreshTokens.revoke(current.id, next.id, manager);
+      if (!racing) await this.refreshTokens.revoke(current.id, next.id, manager);
       return { kind: 'rotated' as const, userId: current.userId, refresh: { token, expiresAt } };
     });
 

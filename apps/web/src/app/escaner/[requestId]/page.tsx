@@ -37,7 +37,10 @@ export default function ScannerPage() {
     const local = cachedRequest(requestId);
     // Copia local primero (sin señal), luego se actualiza con la API si hay conexión.
     if (local) queueMicrotask(() => setRequest(local));
-    api<ProducerRequestDetail>(`/producer/me/requests/${requestId}`)
+    // Con la copia local el escáner funciona igual: una sesión vencida no lo cierra.
+    api<ProducerRequestDetail>(`/producer/me/requests/${requestId}`, {
+      redirectOnUnauthorized: !local,
+    })
       .then((r) => {
         if (!r.asset) throw new Error('Primero declará el rodeo en la solicitud');
         const value = { id: r.id, assetName: r.asset.name };

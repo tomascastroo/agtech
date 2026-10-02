@@ -150,6 +150,30 @@ Abrí la solicitud en **Solicitudes de garantía**. En **Escaneos de bovinos** v
 | ERROR en el servidor | `docker compose logs worker ai-service`. Si la base se reseteó con `pnpm db:reset`, reiniciá con `docker compose restart api worker` |
 | "Sin señal: abrí el escáner una vez con conexión" | Abrí el escáner con señal al menos una vez antes de usar el modo avión |
 
+| Safari dice "Ocurrió un problema varias veces" | iOS cerró la página por memoria. En iPhone el escáner ahora usa WASM (no WebGPU) y limita la memoria; si vuelve a pasar, mandá los logs (abajo). El escaneo cortado no se pierde: a los ~60 s se sube solo con los cuadros guardados y queda marcado "Escaneo interrumpido" |
+| Me sacó de la cuenta | Volvé a ingresar: los escaneos guardados en el teléfono se suben solos después. La sincronización ya no te manda al login a mitad de un escaneo |
+
+### Ver los logs
+
+**Servidor** (en la computadora, en la carpeta del proyecto):
+
+```bash
+docker compose logs --since 30m web api worker ai-service > logs-escaner.txt
+```
+
+**Celular (iPhone)**, la consola del navegador:
+1. En el iPhone, andá a *Ajustes → Apps → Safari → Avanzado* y activá **Inspector web**.
+2. Conectá el iPhone por cable a una Mac y abrí Safari en la Mac. Si no ves el menú
+   *Desarrollo*, activalo en *Ajustes → Avanzado → Mostrar funciones para desarrolladores web*.
+3. En Safari de la Mac, abrí *Desarrollo → [tu iPhone] → la página del escáner*, y luego la
+   pestaña **Consola**.
+4. Si iOS cerró la página, el motivo queda en el iPhone, en *Ajustes → Privacidad y seguridad →
+   Análisis y mejoras → Datos de análisis*: buscá entradas `JetsamEvent` (memoria) o
+   `com.apple.WebKit.WebContent`.
+
+**Android:** activá la depuración USB, conectalo a la PC y abrí `chrome://inspect` en Chrome
+de la PC.
+
 Limitaciones de esta prueba:
 - Las **fotos subidas** (no las del escáner) y las descargas de documentos usan URLs del
   almacenamiento en `localhost:9000`. En el celular no cargan, pero en la computadora sí. No

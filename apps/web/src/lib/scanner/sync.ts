@@ -6,16 +6,33 @@
  *  4. espera el conteo OFICIAL del servidor.
  * Si se corta la conexión en cualquier punto, la próxima vuelta continúa desde donde quedó.
  */
-import { api, ApiError } from '@/lib/api/client';
+import { api as baseApi, ApiError, type RequestOptions } from '@/lib/api/client';
 import {
+  activeScans,
+  compactFrames,
   deleteFrames,
-  framesOf,
+  deleteScan,
+  frameKeysOf,
+  getFrame,
   getScan,
   listScans,
   updateScan,
   type LocalScan,
   type LocalScanState,
 } from './store';
+
+/**
+ * La sincronización corre en segundo plano (incluso en la pantalla del escáner): si la sesión
+ * venció no navega a /login, porque eso cortaría un escaneo en curso. El escaneo queda
+ * pendiente y se sube cuando el productor vuelva a ingresar.
+ */
+const api = <T>(path: string, options: RequestOptions = {}) =>
+  baseApi<T>(path, { ...options, redirectOnUnauthorized: false });
+
+/** Un escaneo en RECORDING sin actualizar hace más que esto quedó cortado (la página se cerró). */
+export const STALE_RECORDING_MS = 60_000;
+export const INTERRUPTED_WARNING =
+  'Escaneo interrumpido: la página se cerró antes de finalizar; se subieron los cuadros guardados';
 
 interface ServerScan {
   id: string;
@@ -78,10 +95,12 @@ async function syncOne(scan: LocalScan): Promise<void> {
         SAMPLE: new Set(server.receivedSampleIndices ?? []),
         KEY: new Set(server.receivedKeyIndices ?? []),
       };
-      const frames = await framesOf(scan.id);
+      // Un cuadro a la vez: nunca se cargan todas las imágenes del escaneo en memoria.
       let uploaded = have.SAMPLE.size + have.KEY.size;
-      for (const frame of frames) {
-        if (have[frame.kind].has(frame.index)) continue;
+      for (const key of await frameKeysOf(scan.id)) {
+        if (have[key[1]].has(key[2])) continue;
+        const frame = await getFrame(key);
+        if (!frame) continue;
         const form = new FormData();
         form.set('kind', frame.kind);
         form.set('index', String(frame.index));
@@ -154,10 +173,41 @@ async function applyServer(id: string, server: ServerScan) {
   }
 }
 
+/**
+ * Escaneos que quedaron en RECORDING porque la página se cerró o el sistema la mató a mitad del
+ * escaneo: se cierran con los cuadros que alcanzaron a guardarse y pasan a la cola de subida (el
+ * conteo oficial lo hace igual el servidor). Si no llegó a guardarse ningún cuadro se descartan.
+ */
+export async function recoverInterruptedScans(now = Date.now()): Promise<number> {
+  let recovered = 0;
+  for (const scan of await listScans()) {
+    if (scan.state !== 'RECORDING' || activeScans.has(scan.id)) continue;
+    if (now - new Date(scan.updatedAt).getTime() < STALE_RECORDING_MS) continue;
+    const stored = await compactFrames(scan.id);
+    if (stored.samples === 0) {
+      await deleteScan(scan.id);
+      continue;
+    }
+    await updateScan(scan.id, {
+      state: 'PENDING_SYNC',
+      endedAt: scan.endedAt ?? scan.updatedAt,
+      frameCount: stored.samples,
+      keyFrameCount: stored.keys,
+      warnings: [...new Set([...scan.warnings, INTERRUPTED_WARNING])],
+    });
+    recovered += 1;
+  }
+  if (recovered) emit();
+  return recovered;
+}
+
 /** Una vuelta de sincronización de todos los escaneos pendientes (una a la vez). */
 export function syncPendingScans(): Promise<void> {
   if (running) return running;
   running = (async () => {
+    await recoverInterruptedScans();
+    // Mientras se escanea no se sube nada: la cámara y la IA necesitan la memoria y la CPU.
+    if (activeScans.size > 0) return;
     if (isOffline()) return;
     const pending = (await listScans()).filter((s) => ACTIVE.includes(s.state));
     for (const scan of pending) {
@@ -166,7 +216,7 @@ export function syncPendingScans(): Promise<void> {
       try {
         await syncOne(fresh);
       } catch (error) {
-        if (isNetworkError(error)) {
+        if (isNetworkError(error) || (error instanceof ApiError && error.status === 401)) {
           // Sin señal o servidor caído: queda pendiente para la próxima vuelta.
           await setState(scan.id, {
             state: fresh.state === 'PROCESSING' ? 'PROCESSING' : 'PENDING_SYNC',

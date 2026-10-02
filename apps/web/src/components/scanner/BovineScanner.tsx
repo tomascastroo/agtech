@@ -60,7 +60,16 @@ export function BovineScanner({ requestId, assetName }: { requestId: string; ass
     streamRef.current = null;
   }, []);
 
-  useEffect(() => stopCamera, [stopCamera]);
+  useEffect(
+    () => () => {
+      // Salir del escáner a mitad de un escaneo lo finaliza y lo deja guardado para subir, en
+      // lugar de dejar el muestreo corriendo sin cámara.
+      void engineRef.current?.finish();
+      engineRef.current = null;
+      stopCamera();
+    },
+    [stopCamera],
+  );
 
   // Estado de sincronización del resultado (OFFLINE / SINCRONIZANDO / VERIFICADO).
   useEffect(() => {

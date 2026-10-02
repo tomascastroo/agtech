@@ -22,9 +22,12 @@ export function letterboxGeometry(srcW: number, srcH: number, size: number): Let
 }
 
 /** RGBA (canvas, ya con letterbox) → tensor CHW float32 en orden BGR, valores 0-255. */
-export function rgbaToBgrTensor(rgba: Uint8ClampedArray, size: number): Float32Array {
+export function rgbaToBgrTensor(
+  rgba: Uint8ClampedArray,
+  size: number,
+  out = new Float32Array(3 * size * size),
+): Float32Array {
   const plane = size * size;
-  const out = new Float32Array(3 * plane);
   for (let i = 0; i < plane; i++) {
     out[i] = rgba[i * 4 + 2]!; // B
     out[plane + i] = rgba[i * 4 + 1]!; // G

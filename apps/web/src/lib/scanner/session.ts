@@ -10,8 +10,8 @@ import type { OrtYoloxDetector } from './detector';
 import { SCANNER_MODEL } from './detector';
 import { GpsTracker, HeadingTracker, keepScreenOn } from './sensors';
 import {
-  deleteFrames,
-  framesOf,
+  activeScans,
+  compactFrames,
   putFrame,
   saveScan,
   sha256Hex,
@@ -28,6 +28,14 @@ export const KEY_WIDTH = 1280;
 export const KEY_EVERY_MS = 5_000;
 export const MAX_KEY_FRAMES = 12;
 export const MAX_DURATION_S = 180;
+/**
+ * Cuadros que pueden estar codificándose/guardándose a la vez. Si el teléfono no da abasto
+ * (iOS escribe lento en IndexedDB) se saltea el cuadro en lugar de acumular imágenes en
+ * memoria hasta que el sistema cierre la página.
+ */
+export const MAX_PENDING_WRITES = 4;
+/** Cada cuánto se actualiza el escaneo en curso en el teléfono (para recuperarlo si se corta). */
+export const CHECKPOINT_EVERY_MS = 10_000;
 /** Giro más rápido que esto pierde animales en el barrido. */
 export const FAST_TURN_DEG_S = 45;
 
@@ -67,7 +75,9 @@ export class ScanSessionEngine {
   private maxVisible = 0;
   private lastBoxes: Box[] = [];
   private crossingTimes: number[] = [];
-  private pendingWrites: Promise<void>[] = [];
+  private readonly pendingWrites = new Set<Promise<void>>();
+  private skippedFrames = 0;
+  private checkpointTimer: number | null = null;
   private releaseWakeLock: () => void = () => undefined;
   private readonly warnings = new Set<string>();
   private readonly startMs = performance.now();
@@ -97,8 +107,14 @@ export class ScanSessionEngine {
     this.gps.begin();
     this.heading.begin();
     this.releaseWakeLock = await keepScreenOn();
+    activeScans.add(this.id);
     await saveScan(this.snapshot('RECORDING', null));
     this.sampleTimer = window.setInterval(() => this.sample(), 1000 / SAMPLE_FPS);
+    // Si la página se cierra o el sistema la mata, el escaneo queda recuperable con lo último.
+    this.checkpointTimer = window.setInterval(
+      () => void saveScan(this.snapshot('RECORDING', this.deviceResult())).catch(() => undefined),
+      CHECKPOINT_EVERY_MS,
+    );
     this.scheduleDetection();
   }
 
@@ -182,8 +198,16 @@ export class ScanSessionEngine {
     if (this.stopped || this.video.readyState < 2) return;
     if (this.samples >= MAX_DURATION_S * SAMPLE_FPS) return;
     const capturedMs = Math.round(this.elapsedMs());
+    if (this.pendingWrites.size >= MAX_PENDING_WRITES) {
+      this.skippedFrames += 1;
+      return;
+    }
     this.capture('SAMPLE', this.samples++, this.sampleCanvas, 0.75, capturedMs);
-    if (this.keyFrames < MAX_KEY_FRAMES && capturedMs - this.lastKeyAt >= KEY_EVERY_MS) {
+    if (
+      this.keyFrames < MAX_KEY_FRAMES &&
+      capturedMs - this.lastKeyAt >= KEY_EVERY_MS &&
+      this.pendingWrites.size < MAX_PENDING_WRITES
+    ) {
       this.lastKeyAt = capturedMs;
       this.capture('KEY', this.keyFrames++, this.keyCanvas, 0.85, capturedMs);
     }
@@ -210,15 +234,23 @@ export class ScanSessionEngine {
         quality,
       );
     });
-    this.pendingWrites.push(write);
+    this.pendingWrites.add(write);
+    void write.then(() => this.pendingWrites.delete(write));
   }
 
   /** Termina el escaneo: guarda todo en el teléfono, listo para sincronizar. */
   async finish(): Promise<LocalScan> {
     this.stopped = true;
     if (this.sampleTimer !== null) window.clearInterval(this.sampleTimer);
-    await Promise.all(this.pendingWrites);
-    await this.compactFrames();
+    if (this.checkpointTimer !== null) window.clearInterval(this.checkpointTimer);
+    await Promise.all([...this.pendingWrites]);
+    const stored = await compactFrames(this.id);
+    this.samples = stored.samples;
+    this.keyFrames = stored.keys;
+    if (this.skippedFrames > 0)
+      this.warnings.add(
+        `Se omitieron ${this.skippedFrames} cuadros porque el teléfono no llegaba a guardarlos`,
+      );
     this.gps.end();
     this.heading.end();
     this.releaseWakeLock();
@@ -226,8 +258,15 @@ export class ScanSessionEngine {
     if (this.mode === 'SWEEP' && this.heading.sweptDeg === null) {
       this.warnings.add('Sin brújula/giroscopio: no se midió el arco barrido');
     }
+    const scan = this.snapshot('PENDING_SYNC', this.deviceResult());
+    await saveScan(scan);
+    activeScans.delete(this.id);
+    return scan;
+  }
+
+  private deviceResult(): DeviceResult {
     const elapsedS = this.elapsedMs() / 1000;
-    const deviceResult: DeviceResult = {
+    return {
       netCount: this.tracker.netCount,
       positiveCrossings: this.tracker.positiveCrossings,
       negativeCrossings: this.tracker.negativeCrossings,
@@ -240,31 +279,6 @@ export class ScanSessionEngine {
       tracker: TRACKER_VERSION,
       preliminary: true,
     };
-    const scan = this.snapshot('PENDING_SYNC', deviceResult);
-    await saveScan(scan);
-    return scan;
-  }
-
-  /**
-   * Índices consecutivos en orden de captura: si algún cuadro no se pudo guardar no quedan
-   * huecos (el servidor exige todos los índices declarados para finalizar).
-   */
-  private async compactFrames() {
-    const frames = await framesOf(this.id);
-    const byKind = (kind: FrameKind) =>
-      frames
-        .filter((f) => f.kind === kind)
-        .sort((a, b) => a.capturedMs - b.capturedMs || a.index - b.index);
-    const samples = byKind('SAMPLE');
-    const keys = byKind('KEY');
-    const contiguous = (list: typeof frames) => list.every((f, i) => f.index === i);
-    if (!contiguous(samples) || !contiguous(keys)) {
-      await deleteFrames(this.id);
-      for (const [i, f] of samples.entries()) await putFrame({ ...f, index: i });
-      for (const [i, f] of keys.entries()) await putFrame({ ...f, index: i });
-    }
-    this.samples = samples.length;
-    this.keyFrames = keys.length;
   }
 
   get limitReached(): boolean {

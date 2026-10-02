@@ -29,7 +29,24 @@ function loadOrt(): Promise<OrtModule> {
   return ortPromise;
 }
 
+/**
+ * iPhone/iPad: todos los navegadores usan WebKit, y ONNX Runtime con WebGPU en WebKit hace que
+ * iOS cierre la página por memoria a los pocos segundos de escanear ("Ocurrió un problema varias
+ * veces"). Ahí se usa WASM, más lento pero estable. `?ia=webgpu` en la URL fuerza WebGPU para
+ * probar.
+ */
+export function prefersWasm(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  if (typeof location !== 'undefined' && new URLSearchParams(location.search).get('ia') === 'webgpu')
+    return false;
+  const ua = navigator.userAgent;
+  return /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+}
+
 export class OrtYoloxDetector {
+  /** Buffer de entrada reutilizado entre cuadros (evita 2 MB de basura por inferencia). */
+  private readonly input = new Float32Array(3 * INPUT_SIZE * INPUT_SIZE);
+
   private constructor(
     private readonly ort: OrtModule,
     private readonly session: Ort.InferenceSession,
@@ -51,7 +68,7 @@ export class OrtYoloxDetector {
     const model = new Uint8Array(await response.arrayBuffer());
     let session: Ort.InferenceSession | null = null;
     let backend: InferenceBackend = 'wasm';
-    if ('gpu' in navigator) {
+    if ('gpu' in navigator && !prefersWasm()) {
       try {
         session = await ort.InferenceSession.create(model, { executionProviders: ['webgpu'] });
         backend = 'webgpu';
@@ -80,7 +97,7 @@ export class OrtYoloxDetector {
     ctx.fillRect(0, 0, INPUT_SIZE, INPUT_SIZE);
     ctx.drawImage(source, 0, 0, lb.width, lb.height);
     const pixels = ctx.getImageData(0, 0, INPUT_SIZE, INPUT_SIZE).data;
-    const tensor = new this.ort.Tensor('float32', rgbaToBgrTensor(pixels, INPUT_SIZE), [
+    const tensor = new this.ort.Tensor('float32', rgbaToBgrTensor(pixels, INPUT_SIZE, this.input), [
       1,
       3,
       INPUT_SIZE,
