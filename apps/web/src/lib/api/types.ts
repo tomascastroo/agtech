@@ -717,8 +717,52 @@ export interface RfidReading {
   readerSerial: string | null;
 }
 
+/** Manga + RFID: bovino identificado por su caravana (la identidad es el RFID). */
+export interface BovineIndividual {
+  id: string;
+  internalCode: string;
+  electronicId: string;
+  simulated: boolean;
+  animalId: string | null;
+  firstIdentifiedAt: string;
+  lastIdentifiedAt: string;
+  confirmations: number;
+  evidenceImages?: number;
+}
+
+export interface BovineIndividualsResponse {
+  total: number;
+  real: number;
+  simulated: number;
+  items: BovineIndividual[];
+}
+
+export interface BovineIndividualDetail extends BovineIndividual {
+  captures: {
+    id: string;
+    scanSessionId: string;
+    sequence: number;
+    rfidSource: 'READER_BRIDGE' | 'SIMULATED';
+    simulated: boolean;
+    electronicId: string;
+    evidenceId: string | null;
+    processedAt: string | null;
+    trackId: number | null;
+    matcher: string | null;
+    bestFrames: {
+      index: number;
+      capturedMs: number;
+      box: { x: number; y: number; width: number; height: number };
+      score: number;
+      quality: number;
+      sha256: string;
+      url: string | null;
+    }[];
+  }[];
+}
+
 /** Escaneo de bovinos asociado a una solicitud (resumen). */
-export type ScanModeCode = 'FIXED' | 'SWEEP' | 'PEN' | 'PHOTO';
+export type ScanModeCode = 'FIXED' | 'SWEEP' | 'PEN' | 'PHOTO' | 'CHUTE';
 export type EvidenceStatusCode = 'VALIDATED' | 'INCONCLUSIVE' | 'INSUFFICIENT';
 export interface GuidanceItem {
   code: string;
@@ -821,6 +865,14 @@ export interface ScanDetail {
     model: { code: string; version: string; simulated: boolean };
     tracker: string;
     lowerBound: boolean;
+    /** Manga + RFID: asociaciones resueltas por el servidor. */
+    chute?: {
+      confirmed: number;
+      ambiguous: number;
+      insufficient: number;
+      identified: number;
+      rfidSimulated: boolean;
+    } | null;
   } | null;
   quality: 'COMPLETE' | 'LIMITED' | 'INSUFFICIENT' | null;
   warnings: string[];

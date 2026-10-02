@@ -303,3 +303,33 @@
   font-size: var(--text-sm);
   color: #d6e6dc;
 }
+
+/* Manga + RFID */
+.chuteState {
+  font-size: var(--text-lg, 1.15rem);
+  font-weight: 800;
+}
+
+.chuteOk,
+.chuteNo {
+  padding: 10px 12px;
+  border-radius: 10px;
+  display: grid;
+  gap: 4px;
+}
+
+.chuteOk {
+  background: #1f6f43;
+}
+
+.chuteNo {
+  background: #5c3a00;
+}
+
+.chuteList {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+  text-align: left;
+}

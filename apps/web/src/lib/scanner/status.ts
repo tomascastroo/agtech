@@ -41,8 +41,9 @@ export function scanStatus(
       return {
         label: 'VERIFICADO EN SERVIDOR',
         tone: 'done',
-        detail:
-          scan.official?.count !== null && scan.official?.count !== undefined
+        detail: scan.official?.chute
+          ? `Bovinos identificados (oficial): ${scan.official.count ?? 0}${scan.official.chute.ambiguous + scan.official.chute.insufficient ? ` · sin asociar: ${scan.official.chute.ambiguous + scan.official.chute.insufficient}` : ''}${scan.official.simulated ? ' · SIMULADO' : ''}`
+          : scan.official?.count !== null && scan.official?.count !== undefined
             ? `Conteo oficial: ${scan.official.count}${scan.official.lowerBound ? ' (cota inferior)' : ''}${scan.official.simulated ? ' · SIMULADO' : ''}`
             : 'Conteo oficial disponible',
       };

@@ -42,7 +42,7 @@ export interface LiveWindow {
   elapsedS: number;
 }
 
-export const MIN_DURATION_S: Record<Exclude<ScanMode, 'PHOTO'>, number> = {
+export const MIN_DURATION_S: Record<Exclude<ScanMode, 'PHOTO' | 'CHUTE'>, number> = {
   FIXED: 3,
   SWEEP: 5,
   PEN: 5,
@@ -54,7 +54,10 @@ const median = (values: number[]) => {
 };
 
 /** Instrucciones vigentes, de la más importante a la menos. */
-export function liveGuidance(mode: Exclude<ScanMode, 'PHOTO'>, w: LiveWindow): GuidanceCode[] {
+export function liveGuidance(
+  mode: Exclude<ScanMode, 'PHOTO' | 'CHUTE'>,
+  w: LiveWindow,
+): GuidanceCode[] {
   const out: GuidanceCode[] = [];
   const speed =
     w.shifts.length > 0

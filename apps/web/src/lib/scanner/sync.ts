@@ -39,9 +39,23 @@ interface ServerScan {
   status: 'UPLOADING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
   receivedSampleIndices?: number[];
   receivedKeyIndices?: number[];
-  official: { count: number | null; lowerBound: boolean; model: { simulated: boolean } } | null;
+  official: {
+    count: number | null;
+    lowerBound: boolean;
+    model: { simulated: boolean };
+    chute?: NonNullable<LocalScan['official']>['chute'];
+  } | null;
   quality: string | null;
   error: string | null;
+  /** Manga + RFID: estado oficial de cada captura. */
+  captures?: {
+    id: string;
+    status: 'PENDING' | 'CONFIRMED' | 'AMBIGUOUS' | 'INSUFFICIENT_EVIDENCE';
+    reason: string | null;
+    electronicId: string | null;
+    internalCode: string | null;
+    bestFrames: number;
+  }[];
 }
 
 const ACTIVE: LocalScanState[] = ['PENDING_SYNC', 'SYNCING', 'PROCESSING'];
@@ -88,6 +102,7 @@ async function syncOne(scan: LocalScan): Promise<void> {
             }
           : {}),
         device: scan.device,
+        ...(scan.captureZone ? { captureZone: scan.captureZone } : {}),
       },
     });
     if (server.status === 'UPLOADING') {
@@ -112,6 +127,22 @@ async function syncOne(scan: LocalScan): Promise<void> {
         if (uploaded % 10 === 0) await setState(scan.id, { uploaded });
       }
       await setState(scan.id, { uploaded });
+      // Manga + RFID: cada animal (lecturas + índices de sus cuadros). Reenviar no duplica.
+      for (const c of scan.captures ?? []) {
+        await api(`${base}/${scan.id}/captures`, {
+          method: 'POST',
+          body: {
+            id: c.id,
+            sequence: c.sequence,
+            rfidSource: c.rfidSource,
+            ...(c.readerDeviceId ? { readerDeviceId: c.readerDeviceId } : {}),
+            reads: c.reads,
+            frameIndices: c.frameIndices,
+            ...(c.clientTrackId !== null ? { clientTrackId: c.clientTrackId } : {}),
+            clientResult: { ...c.preliminary, preliminary: true },
+          },
+        });
+      }
       try {
         server = await api<ServerScan>(`${base}/${scan.id}/finalize`, {
           method: 'POST',
@@ -120,6 +151,7 @@ async function syncOne(scan: LocalScan): Promise<void> {
             durationS: scan.durationS,
             expectedFrames: scan.frameCount,
             expectedKeyFrames: scan.keyFrameCount,
+            ...(scan.captures ? { expectedCaptures: scan.captures.length } : {}),
             clientResult: scan.deviceResult ?? { preliminary: true },
             ...(scan.heading
               ? {
@@ -159,14 +191,39 @@ async function syncOne(scan: LocalScan): Promise<void> {
 
 async function applyServer(id: string, server: ServerScan) {
   if (server.status === 'COMPLETED') {
+    const local = await getScan(id);
+    const official = new Map((server.captures ?? []).map((c) => [c.id, c]));
     await setState(id, {
       state: 'COMPLETED',
       official: {
         count: server.official?.count ?? null,
         quality: server.quality,
         lowerBound: server.official?.lowerBound ?? false,
-        simulated: server.official?.model.simulated ?? false,
+        simulated:
+          (server.official?.model.simulated ?? false) ||
+          (server.official?.chute?.rfidSimulated ?? false),
+        chute: server.official?.chute ?? null,
       },
+      // La decisión que vale es la del servidor (la del celular queda como referencia).
+      ...(local?.captures
+        ? {
+            captures: local.captures.map((c) => {
+              const o = official.get(c.id);
+              return o
+                ? {
+                    ...c,
+                    official: {
+                      status: o.status,
+                      reason: o.reason,
+                      electronicId: o.electronicId,
+                      internalCode: o.internalCode,
+                      bestFrames: o.bestFrames,
+                    },
+                  }
+                : c;
+            }),
+          }
+        : {}),
     });
   } else if (server.status === 'FAILED') {
     await setState(id, { state: 'FAILED', error: server.error });
@@ -183,6 +240,24 @@ export async function recoverInterruptedScans(now = Date.now()): Promise<number>
   for (const scan of await listScans()) {
     if (scan.state !== 'RECORDING' || activeScans.has(scan.id)) continue;
     if (now - new Date(scan.updatedAt).getTime() < STALE_RECORDING_MS) continue;
+    if (scan.mode === 'CHUTE') {
+      // Manga: los cuadros ya se guardan con índices consecutivos y las capturas los referencian
+      // (no se renumeran). Sin capturas guardadas no hay nada que subir.
+      if (!scan.captures?.length) {
+        await deleteScan(scan.id);
+        continue;
+      }
+      const samples = (await frameKeysOf(scan.id)).filter((k) => k[1] === 'SAMPLE').length;
+      await updateScan(scan.id, {
+        state: 'PENDING_SYNC',
+        endedAt: scan.endedAt ?? scan.updatedAt,
+        frameCount: samples,
+        keyFrameCount: 0,
+        warnings: [...new Set([...scan.warnings, INTERRUPTED_WARNING])],
+      });
+      recovered += 1;
+      continue;
+    }
     const stored = await compactFrames(scan.id);
     if (stored.samples === 0) {
       await deleteScan(scan.id);

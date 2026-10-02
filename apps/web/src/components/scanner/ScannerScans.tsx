@@ -15,6 +15,7 @@ export const MODE_LABELS: Record<LocalScan['mode'], string> = {
   SWEEP: 'Barrido',
   PEN: 'Escáner de corral',
   PHOTO: 'Fotos',
+  CHUTE: 'Manga + RFID',
 };
 
 const EVIDENCE_LABELS: Record<EvidenceStatusCode, string> = {

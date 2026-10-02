@@ -5,7 +5,7 @@
  */
 import type { LineSpec } from './tracker';
 
-export type ScanMode = 'FIXED' | 'SWEEP' | 'PEN' | 'PHOTO';
+export type ScanMode = 'FIXED' | 'SWEEP' | 'PEN' | 'PHOTO' | 'CHUTE';
 export type FrameKind = 'SAMPLE' | 'KEY';
 
 /** Estado local de un escaneo (lo que ve el productor). */
@@ -36,6 +36,32 @@ export interface DeviceResult {
   photos?: number;
 }
 
+export type ChuteStatus = 'CONFIRMED' | 'AMBIGUOUS' | 'INSUFFICIENT_EVIDENCE';
+
+/**
+ * Manga + RFID: un animal registrado en el teléfono (lectura de caravana + cuadros de la
+ * ventana). `preliminary` es la decisión del celular; `official` la del servidor (la única que
+ * vale).
+ */
+export interface LocalChuteCapture {
+  id: string;
+  sequence: number;
+  rfidSource: 'SIMULATED' | 'READER_BRIDGE';
+  readerDeviceId: string | null;
+  reads: { electronicId: string; atMs: number }[];
+  frameIndices: number[];
+  clientTrackId: number | null;
+  preliminary: { status: ChuteStatus; reason: string; electronicId: string | null };
+  capturedAt: string;
+  official: {
+    status: 'PENDING' | ChuteStatus;
+    reason: string | null;
+    electronicId: string | null;
+    internalCode: string | null;
+    bestFrames: number;
+  } | null;
+}
+
 export interface LocalScan {
   id: string;
   requestId: string;
@@ -57,6 +83,9 @@ export interface LocalScan {
   warnings: string[];
   frameCount: number;
   keyFrameCount: number;
+  /** Manga + RFID: zona de captura y animales registrados. */
+  captureZone?: { x1: number; y1: number; x2: number; y2: number };
+  captures?: LocalChuteCapture[];
   uploaded: number;
   state: LocalScanState;
   official: {
@@ -64,6 +93,13 @@ export interface LocalScan {
     quality: string | null;
     lowerBound: boolean;
     simulated: boolean;
+    chute?: {
+      confirmed: number;
+      ambiguous: number;
+      insufficient: number;
+      identified: number;
+      rfidSimulated: boolean;
+    } | null;
   } | null;
   error: string | null;
   updatedAt: string;

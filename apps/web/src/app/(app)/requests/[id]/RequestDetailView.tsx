@@ -4,6 +4,7 @@ import { useParams } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { RequestStageBadge } from '@/components/domain/RequestStageBadge';
+import { BovineIndividualsPanel } from '@/components/domain/BovineIndividualsPanel';
 import { LivestockMonitorPanel } from '@/components/domain/LivestockMonitorPanel';
 import { ScansPanel } from '@/components/domain/ScansPanel';
 import { OutcomeBadge, RiskBadge, SeverityBadge } from '@/components/domain/StatusBadges';
@@ -156,6 +157,10 @@ export function RequestDetailView() {
         </Panel>
 
         {r.asset && r.scans?.length ? <ScansPanel assetId={r.asset.id} /> : null}
+
+        {r.asset && r.scans?.some((s) => s.mode === 'CHUTE') ? (
+          <BovineIndividualsPanel assetId={r.asset.id} />
+        ) : null}
 
         {r.asset && r.guaranteeType.code === 'BOVINOS' ? (
           <LivestockMonitorPanel assetId={r.asset.id} />

@@ -257,7 +257,7 @@ export class ScanSessionEngine {
   }
 
   private currentGuidance(): GuidanceCode[] {
-    if (this.mode === 'PHOTO') return [];
+    if (this.mode === 'PHOTO' || this.mode === 'CHUTE') return [];
     const r = this.recent;
     const spanS = r.length > 1 ? (r[r.length - 1]!.at - r[0]!.at) / 1000 : 0;
     const brightness = r.map((x) => x.brightness).filter((b): b is number => b !== null);

@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { LineChart } from '@/components/charts/LineChart';
 import { AlertsTable } from '@/components/domain/AlertsTable';
 import { DevicesPanel } from '@/components/domain/DevicesPanel';
+import { BovineIndividualsPanel } from '@/components/domain/BovineIndividualsPanel';
 import { LivestockMonitorPanel } from '@/components/domain/LivestockMonitorPanel';
 import { DocumentsPanel } from '@/components/domain/DocumentsPanel';
 import { RfidReadings } from '@/components/domain/RfidReadings';
@@ -662,6 +663,7 @@ export function AssetDetailView() {
         {tab === 'animals' ? (
           <div className={styles.stack}>
             <LivestockMonitorPanel assetId={a.id} />
+            <BovineIndividualsPanel assetId={a.id} />
             <RfidReadings assetId={a.id} />
             <Animals asset={a} />
           </div>

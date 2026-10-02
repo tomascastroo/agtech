@@ -28,6 +28,8 @@ const OFFICIAL_TEXT: Record<ScanDetail['mode'], string> = {
   SWEEP: 'bovinos observados — cota inferior (barrido de una parte del rodeo)',
   PEN: 'bovinos observados (animales únicos) — cota inferior: los tapados por otros no se ven',
   PHOTO: 'bovinos en las fotos (animales únicos) — cota inferior',
+  CHUTE:
+    'bovinos identificados por caravana (RFID) en la manga — comparable con lo declarado solo con lector real y si pasó todo el rodeo',
 };
 
 const pct = (ratio: number) => `${formatNumber(ratio * 100)} %`;
@@ -132,7 +134,17 @@ function ScanCard({ scan }: { scan: ScanDetail }) {
             </dd>
           </>
         ) : null}
-        {official && !official.stillAnimals ? (
+        {official?.chute ? (
+          <>
+            <dt>Asociaciones RFID</dt>
+            <dd data-testid="scan-chute">
+              {official.chute.confirmed} confirmadas · {official.chute.ambiguous} ambiguas ·{' '}
+              {official.chute.insufficient} no determinables (sin asociar)
+              {official.chute.rfidSimulated ? ' · lecturas SIMULADAS' : ''}
+            </dd>
+          </>
+        ) : null}
+        {official && !official.stillAnimals && scan.mode !== 'CHUTE' ? (
           <>
             <dt>Cruces de línea</dt>
             <dd>
