@@ -23,7 +23,7 @@ describe('livestockProfile', () => {
     expect(feedlot.recommendedModes[0]).toBe('PEN');
     expect(cria.recommendedModes[0]).toBe('FIXED');
     expect(pastoreo.recommendedModes[0]).toBe('SWEEP');
-    for (const p of [feedlot, cria, pastoreo]) expect(p.censusModes).toEqual(['FIXED']);
+    for (const p of [feedlot, cria, pastoreo]) expect(p.censusModes).toEqual(['FIXED', 'CHUTE']);
     expect(feedlot.quality.occlusionLimit).toBeGreaterThan(0.35);
     expect(pastoreo.coverageNote).toContain('no permiten afirmar el stock total');
   });

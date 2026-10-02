@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
-import { DataSource } from 'typeorm';
+import { DataSource, type EntityManager } from 'typeorm';
 import type { AuthenticatedUser } from '../../../common/auth/authenticated-user.js';
 import type { RequestContext } from '../../../common/auth/decorators.js';
 import { NotFoundError, ValidationFailedError } from '../../../common/domain/errors.js';
@@ -53,38 +53,13 @@ export class RfidService {
         throw new ValidationFailedError('El lector indicado no es un lector RFID registrado');
     }
 
-    const rows: Partial<RfidObservationEntity>[] = [];
-    for (const reading of input.readings) {
-      const eid = normalizeEid(reading.electronicId);
-      if (!eid)
-        throw new ValidationFailedError(`EID inválido: ${reading.electronicId.slice(0, 40)}`);
-      const observedAt = new Date(reading.observedAt);
-      if (
-        Number.isNaN(observedAt.getTime()) ||
-        observedAt.getTime() > Date.now() + MAX_FUTURE_SKEW_MS
-      )
-        throw new ValidationFailedError('Fecha de lectura inválida');
-      const animal = await this.animalByEid(user.organizationId, eid);
-      rows.push({
-        organizationId: user.organizationId,
-        electronicId: eid,
-        readerDeviceId: input.readerDeviceId ?? null,
-        establishmentId: asset.establishmentId,
-        assetId: asset.id,
-        animalId: animal?.id ?? null,
-        observedAt,
-        location:
-          reading.latitude !== undefined && reading.longitude !== undefined
-            ? point(reading.longitude, reading.latitude)
-            : null,
-        source,
-        rawPayload: reading.rawPayload ?? {},
-        confidence: reading.confidence ?? null,
-        status: classifyReading(animal, asset.establishmentId),
-      });
-    }
-    const repo = this.dataSource.getRepository(RfidObservationEntity);
-    await repo.save(rows.map((r) => repo.create(r)));
+    const rows = await this.record(
+      user.organizationId,
+      asset,
+      input.readings,
+      source,
+      input.readerDeviceId ?? null,
+    );
     await this.audit.record({
       actor: { kind: 'user', user },
       action: AUDIT_ACTIONS.RFID_OBSERVATIONS_INGESTED,
@@ -99,6 +74,52 @@ export class RfidService {
       unknown: rows.filter((r) => r.status === 'UNKNOWN_TAG').length,
       otherEstablishment: rows.filter((r) => r.status === 'OTHER_ESTABLISHMENT').length,
     };
+  }
+
+  /**
+   * Valida, clasifica y guarda lecturas (append-only). La usan la ingesta del puente del lector
+   * y el procesamiento de Manga + RFID, para que ambas apliquen las mismas reglas.
+   */
+  async record(
+    organizationId: string,
+    asset: { id: string; establishmentId: string },
+    readings: RfidReadingInput[],
+    source: RfidSource,
+    readerDeviceId: string | null,
+    manager?: EntityManager,
+  ): Promise<RfidObservationEntity[]> {
+    const rows: Partial<RfidObservationEntity>[] = [];
+    for (const reading of readings) {
+      const eid = normalizeEid(reading.electronicId);
+      if (!eid)
+        throw new ValidationFailedError(`EID inválido: ${reading.electronicId.slice(0, 40)}`);
+      const observedAt = new Date(reading.observedAt);
+      if (
+        Number.isNaN(observedAt.getTime()) ||
+        observedAt.getTime() > Date.now() + MAX_FUTURE_SKEW_MS
+      )
+        throw new ValidationFailedError('Fecha de lectura inválida');
+      const animal = await this.animalByEid(organizationId, eid);
+      rows.push({
+        organizationId,
+        electronicId: eid,
+        readerDeviceId,
+        establishmentId: asset.establishmentId,
+        assetId: asset.id,
+        animalId: animal?.id ?? null,
+        observedAt,
+        location:
+          reading.latitude !== undefined && reading.longitude !== undefined
+            ? point(reading.longitude, reading.latitude)
+            : null,
+        source,
+        rawPayload: reading.rawPayload ?? {},
+        confidence: reading.confidence ?? null,
+        status: classifyReading(animal, asset.establishmentId),
+      });
+    }
+    const repo = (manager ?? this.dataSource.manager).getRepository(RfidObservationEntity);
+    return repo.save(rows.map((r) => repo.create(r)));
   }
 
   /**
@@ -156,7 +177,8 @@ export class RfidService {
     };
   }
 
-  private async animalByEid(organizationId: string, eid: string) {
+  /** Animal registrado con esa caravana en la organización (null si no está registrado). */
+  async animalByEid(organizationId: string, eid: string) {
     const [row] = (await this.dataSource.query(
       `SELECT a.id, a.establishment_id AS "establishmentId"
          FROM animal_identifications ai JOIN animals a ON a.id = ai.animal_id

@@ -34,7 +34,7 @@ from ..domain.models_registry import (
     ModelDescriptor,
     yolox_descriptor,
 )
-from ..domain.scan_processing import BLURRY_SHARPNESS, frame_quality, process_scan
+from ..domain.scan_processing import BLURRY_SHARPNESS, frame_quality, process_scan, track_frames
 from ..domain.sentinel2 import (
     PROCESSING_VERSION,
     NdviResult,
@@ -68,8 +68,11 @@ from .schemas import (
     ScanPenOut,
     ScanProcessResponse,
     ScanTrackOut,
+    ScanTrackResponse,
     SceneOut,
     SceneSearchRequest,
+    TrackedBoxOut,
+    TrackedFrameOut,
 )
 
 MAX_DETECTIONS_RETURNED = 500
@@ -533,6 +536,75 @@ async def process_scan_frames(
         if result.pen is not None
         else None,
         metrics=ScanMetricsOut(**asdict(result.metrics)),  # type: ignore[arg-type]
+        tracker=TRACKER_VERSION,
+        model=_scan_model(settings),
+        processing_ms=_elapsed_ms(started),
+    )
+
+
+# Ventana de una captura de Manga + RFID: pocos cuadros alrededor de la lectura de caravana.
+TRACK_MAX_FRAMES = 48
+
+
+@router.post("/scans/track", response_model=ScanTrackResponse)
+async def track_scan_frames(
+    settings: SettingsDep,
+    frames: Annotated[list[UploadFile], File()],
+) -> ScanTrackResponse:
+    """Detección (YOLOX) + seguimiento (ByteTrack) + calidad por cuadro. Solo percepción: no
+    reconoce animales ni decide a qué caravana corresponde un bovino."""
+    started = time.perf_counter()
+    if settings.detector != "yolox":
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "El seguimiento requiere YOLOX")
+    if len(frames) > TRACK_MAX_FRAMES:
+        raise HTTPException(status.HTTP_413_CONTENT_TOO_LARGE, "Demasiados cuadros")
+    try:
+        detector = get_detector(settings)
+    except ModelNotAvailableError as exc:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(exc)) from exc
+    decoded = [
+        _decode_frame(await f.read(settings.scan_max_frame_bytes + 1), settings) for f in frames
+    ]
+    classes = LIVESTOCK_CLASS_SETS[settings.detector_class_set]
+    no_tiling = TilingParams(tile_size=0)
+
+    def detect(image: np.ndarray) -> list[Detection]:
+        return detector.detect(
+            image,
+            score_threshold=settings.scan_score_threshold,
+            class_ids=classes,
+            tiling=no_tiling,
+        )[0]
+
+    try:
+        tracked, (width, height) = await run_in_threadpool(track_frames, decoded, detect)
+    except ValueError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
+    return ScanTrackResponse(
+        frames=[
+            TrackedFrameOut(
+                index=f.index,
+                detections=[
+                    TrackedBoxOut(
+                        x=int(b.x1),
+                        y=int(b.y1),
+                        width=int(b.x2 - b.x1),
+                        height=int(b.y2 - b.y1),
+                        score=round(b.score, 4),
+                        label=b.label,
+                        track_id=b.track_id,
+                        confirmed=b.confirmed,
+                    )
+                    for b in f.boxes[:MAX_DETECTIONS_RETURNED]
+                ],
+                sharpness=f.quality.sharpness,
+                brightness=f.quality.brightness,
+            )
+            for f in tracked
+        ],
+        width=width,
+        height=height,
+        score_threshold=settings.scan_score_threshold,
         tracker=TRACKER_VERSION,
         model=_scan_model(settings),
         processing_ms=_elapsed_ms(started),

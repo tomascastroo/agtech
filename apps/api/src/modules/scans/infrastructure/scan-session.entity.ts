@@ -8,6 +8,7 @@ import type {
   ScanQuality,
   ScanStatus,
 } from '../domain/scan.types.js';
+import type { CaptureZone } from '../domain/chute-matching.js';
 
 /** Sesión de escaneo de bovinos (id generado en el celular para reanudar sin duplicar). */
 @Entity('scan_sessions')
@@ -62,6 +63,10 @@ export class ScanSessionEntity {
 
   @Column({ type: 'jsonb' })
   line: ScanLine;
+
+  /** Manga + RFID: zona de captura (fracciones del cuadro). */
+  @Column({ type: 'jsonb', nullable: true })
+  captureZone: CaptureZone | null;
 
   @Column({ type: 'geometry', spatialFeatureType: 'Point', srid: 4326, nullable: true })
   location: GeoPoint | null;

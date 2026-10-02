@@ -10,6 +10,8 @@ import {
   type ObjectDetection,
   type ScanFramesInput,
   type ScanProcessing,
+  type TrackedFrames,
+  type TrackedFramesInput,
 } from '../domain/computer-vision.provider.js';
 
 const MODEL: ModelRef = { code: 'mock-cv', version: '0.1.0', simulated: true };
@@ -127,6 +129,37 @@ export class MockComputerVisionProvider extends ComputerVisionProvider {
         'Resultado SIMULADO (proveedor de visión de desarrollo): no analiza los cuadros.',
       ],
       scoreThreshold: 0.15,
+      tracker: 'mock-tracker/0.1.0',
+      model: MODEL,
+      processingMs: 1,
+    };
+  }
+
+  /**
+   * SIMULADO: un único bovino quieto en el centro de cada cuadro, siempre el mismo track. No
+   * analiza las imágenes: sirve para probar el flujo de Manga + RFID sin el servicio de visión.
+   */
+  async trackFrames(input: TrackedFramesInput): Promise<TrackedFrames> {
+    return {
+      width: 640,
+      height: 480,
+      frames: input.frames.map((f, i) => ({
+        index: f.index,
+        detections: [
+          {
+            x: 200,
+            y: 120,
+            width: 240,
+            height: 280,
+            score: 0.9,
+            label: 'cow',
+            trackId: 1,
+            confirmed: i > 0,
+          },
+        ],
+        sharpness: 300,
+        brightness: 120,
+      })),
       tracker: 'mock-tracker/0.1.0',
       model: MODEL,
       processingMs: 1,

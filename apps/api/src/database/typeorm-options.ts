@@ -8,6 +8,7 @@ import { RealVerificationSignals1791000000000 } from './migrations/1791000000000
 import { EvidenceQuality1794000000000 } from './migrations/1794000000000-evidence-quality.js';
 import { BovineScanner1795000000000 } from './migrations/1795000000000-bovine-scanner.js';
 import { LivestockScannerModes1796000000000 } from './migrations/1796000000000-livestock-scanner-modes.js';
+import { ChuteRfid1797000000000 } from './migrations/1797000000000-chute-rfid.js';
 import { SnakeNamingStrategy } from './snake-naming.strategy.js';
 
 export const MIGRATIONS = [
@@ -18,6 +19,7 @@ export const MIGRATIONS = [
   EvidenceQuality1794000000000,
   BovineScanner1795000000000,
   LivestockScannerModes1796000000000,
+  ChuteRfid1797000000000,
 ];
 
 export function typeOrmOptions(env: Env): DataSourceOptions {

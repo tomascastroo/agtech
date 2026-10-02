@@ -3,6 +3,8 @@ import { AlertEntity } from '../modules/alerts/infrastructure/alert.entity.js';
 import { AnimalIdentificationEntity } from '../modules/animals/infrastructure/animal-identification.entity.js';
 import { AnimalObservationEntity } from '../modules/animals/infrastructure/animal-observation.entity.js';
 import { ScanFrameEntity } from '../modules/scans/infrastructure/scan-frame.entity.js';
+import { ChuteCaptureEntity } from '../modules/scans/infrastructure/chute-capture.entity.js';
+import { BovineIndividualEntity } from '../modules/animals/infrastructure/bovine-individual.entity.js';
 import { ScanSessionEntity } from '../modules/scans/infrastructure/scan-session.entity.js';
 import { RfidObservationEntity } from '../modules/animals/infrastructure/rfid-observation.entity.js';
 import { AnimalEntity } from '../modules/animals/infrastructure/animal.entity.js';
@@ -80,6 +82,8 @@ export const ENTITIES = [
   RfidObservationEntity,
   ScanSessionEntity,
   ScanFrameEntity,
+  ChuteCaptureEntity,
+  BovineIndividualEntity,
   ExternalDataSnapshotEntity,
   AuditLogEntity,
 ];

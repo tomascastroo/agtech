@@ -296,3 +296,33 @@ class ScanProcessResponse(BaseModel):
     tracker: str
     model: ModelInfo
     processing_ms: int
+
+
+class TrackedBoxOut(BaseModel):
+    x: int
+    y: int
+    width: int
+    height: int
+    score: float
+    label: str
+    track_id: int | None
+    confirmed: bool
+
+
+class TrackedFrameOut(BaseModel):
+    index: int
+    detections: list[TrackedBoxOut]
+    sharpness: float
+    brightness: float
+
+
+class ScanTrackResponse(BaseModel):
+    """Detección + seguimiento por cuadro (sin decisiones de identidad)."""
+
+    frames: list[TrackedFrameOut]
+    width: int
+    height: int
+    score_threshold: float
+    tracker: str
+    model: ModelInfo
+    processing_ms: int

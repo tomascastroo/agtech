@@ -26,7 +26,7 @@ import numpy as np
 
 from .detection import Detection
 from .pen_count import PenCount, count_pen, frame_occlusion
-from .tracking import Box, LineSpec, ScanCount, TrackerParams, count_scan
+from .tracking import Box, ByteTracker, LineSpec, ScanCount, TrackerParams, count_scan
 
 ScanMode = Literal["FIXED", "SWEEP", "PEN", "PHOTO"]
 
@@ -309,3 +309,61 @@ def process_scan(
         pen=pen,
         metrics=metrics,
     )
+
+
+@dataclass(frozen=True)
+class TrackedBox:
+    """Detección de un cuadro con el track al que quedó asociada (None: no abrió ni siguió uno)."""
+
+    x1: float
+    y1: float
+    x2: float
+    y2: float
+    score: float
+    label: str
+    track_id: int | None
+    confirmed: bool
+
+
+@dataclass(frozen=True)
+class TrackedFrame:
+    index: int
+    boxes: list[TrackedBox]
+    quality: FrameQuality
+
+
+def track_frames(
+    frames: Sequence[np.ndarray],
+    detect: Callable[[np.ndarray], list[Detection]],
+    params: TrackerParams | None = None,
+) -> tuple[list[TrackedFrame], tuple[int, int]]:
+    """Solo percepción: detección + seguimiento (mismo ByteTracker) + calidad por cuadro.
+
+    No decide identidades ni asociaciones: el id de track solo dice "es el mismo bovino que en
+    el cuadro anterior de ESTA secuencia". Quien llama (la API, en el modo Manga + RFID) decide
+    con eso si una lectura de caravana corresponde a un único bovino estable.
+    """
+    if not frames:
+        raise ValueError("No hay cuadros")
+    height, width = frames[0].shape[:2]
+    tracker = ByteTracker((width, height), params)
+    out: list[TrackedFrame] = []
+    for index, frame in enumerate(frames):
+        if frame.shape[:2] != (height, width):
+            frame = cv2.resize(frame, (width, height))
+        detections = detect(frame)
+        boxes: list[Box] = [(d.x1, d.y1, d.x2, d.y2, d.score) for d in detections]
+        tracker.update(index, boxes)
+        # El tracker guarda la caja asociada tal cual: se recupera qué detección siguió cada track.
+        by_box = {t.box: t for t in tracker.tracks if t.last_frame == index}
+        tracked = []
+        for d, b in zip(detections, boxes, strict=True):
+            t = by_box.get(b)
+            tracked.append(
+                TrackedBox(
+                    d.x1, d.y1, d.x2, d.y2, d.score, d.label,
+                    t.id if t else None, bool(t and t.confirmed),
+                )
+            )  # fmt: skip
+        out.append(TrackedFrame(index, tracked, frame_quality(frame)))
+    return out, (width, height)

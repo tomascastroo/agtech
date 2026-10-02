@@ -19,6 +19,7 @@ import {
 import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
+  ArrayMinSize,
   IsArray,
   IsIn,
   IsInt,
@@ -52,7 +53,12 @@ import {
   type ScanFrameKind,
   type ScanMode,
 } from '../domain/scan.types.js';
+import { BovineIndividualsService } from '../application/bovine-individuals.service.js';
 import { ScansService } from '../application/scans.service.js';
+import {
+  CHUTE_RFID_SOURCES,
+  type ChuteRfidSource,
+} from '../infrastructure/chute-capture.entity.js';
 
 class ScanLineDto {
   @ApiProperty({ enum: ['vertical', 'horizontal'] })
@@ -64,6 +70,32 @@ class ScanLineDto {
   @Min(0.05)
   @Max(0.95)
   position: number;
+}
+
+class CaptureZoneDto {
+  @ApiProperty({ minimum: 0, maximum: 1 })
+  @IsNumber()
+  @Min(0)
+  @Max(1)
+  x1: number;
+
+  @ApiProperty({ minimum: 0, maximum: 1 })
+  @IsNumber()
+  @Min(0)
+  @Max(1)
+  y1: number;
+
+  @ApiProperty({ minimum: 0, maximum: 1 })
+  @IsNumber()
+  @Min(0)
+  @Max(1)
+  x2: number;
+
+  @ApiProperty({ minimum: 0, maximum: 1 })
+  @IsNumber()
+  @Min(0)
+  @Max(1)
+  y2: number;
 }
 
 export class CreateScanDto {
@@ -119,6 +151,16 @@ export class CreateScanDto {
   @Max(100000)
   accuracyM?: number;
 
+  @ApiPropertyOptional({
+    type: CaptureZoneDto,
+    description:
+      'Manga + RFID: zona de captura (proporciones del cuadro) donde debe estar el bovino',
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CaptureZoneDto)
+  captureZone?: CaptureZoneDto;
+
   @ApiPropertyOptional({ description: 'Navegador, backend de inferencia, modelo' })
   @IsOptional()
   @IsObject()
@@ -134,19 +176,83 @@ export class UploadFrameDto {
   @Type(() => Number)
   @IsInt()
   @Min(0)
-  @Max(SCAN_LIMITS.maxFrames)
+  @Max(SCAN_LIMITS.maxChuteFrames)
   index: number;
 
   @ApiProperty({ description: 'Milisegundos desde el inicio del escaneo' })
   @Type(() => Number)
   @IsInt()
   @Min(0)
-  @Max(SCAN_LIMITS.maxDurationS * 1000 + 60_000)
+  @Max(SCAN_LIMITS.maxChuteDurationS * 1000 + 60_000)
   capturedMs: number;
 
   @ApiProperty({ description: 'SHA-256 del JPEG, calculado en el celular' })
   @Matches(/^[0-9a-fA-F]{64}$/)
   sha256: string;
+}
+
+class ChuteReadDto {
+  @ApiProperty({
+    description: 'Caravana leída tal cual (el servidor la valida: una lectura dudosa no se asocia)',
+  })
+  @IsString()
+  @MaxLength(40)
+  electronicId: string;
+
+  @ApiProperty({ description: 'Milisegundos desde el inicio de la sesión (reloj del celular)' })
+  @IsInt()
+  @Min(0)
+  @Max(SCAN_LIMITS.maxChuteDurationS * 1000 + 60_000)
+  atMs: number;
+}
+
+/** Una captura de Manga + RFID: un animal, su(s) lectura(s) y los cuadros de la ventana. */
+export class ChuteCaptureDto {
+  @ApiProperty({ description: 'UUID generado en el celular (reenviar no duplica)' })
+  @IsUUID()
+  id: string;
+
+  @ApiProperty({ minimum: 1 })
+  @IsInt()
+  @Min(1)
+  @Max(SCAN_LIMITS.maxChuteCaptures)
+  sequence: number;
+
+  @ApiProperty({ enum: CHUTE_RFID_SOURCES })
+  @IsIn(CHUTE_RFID_SOURCES)
+  rfidSource: ChuteRfidSource;
+
+  @ApiPropertyOptional({ description: 'Lector RFID registrado (obligatorio si no es SIMULATED)' })
+  @IsOptional()
+  @IsUUID()
+  readerDeviceId?: string;
+
+  @ApiProperty({ type: [ChuteReadDto] })
+  @IsArray()
+  @ArrayMaxSize(SCAN_LIMITS.maxChuteReadsPerCapture)
+  @ValidateNested({ each: true })
+  @Type(() => ChuteReadDto)
+  reads: ChuteReadDto[];
+
+  @ApiProperty({ type: [Number], description: 'Índices (SAMPLE) de los cuadros de la ventana' })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(SCAN_LIMITS.maxFramesPerCapture)
+  @IsInt({ each: true })
+  @Min(0, { each: true })
+  @Max(SCAN_LIMITS.maxChuteFrames - 1, { each: true })
+  frameIndices: number[];
+
+  @ApiPropertyOptional({ description: 'Track del celular (solo puede bajar una confirmación)' })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  clientTrackId?: number;
+
+  @ApiPropertyOptional({ description: 'Resultado PRELIMINAR del celular (referencia, no oficial)' })
+  @IsOptional()
+  @IsObject()
+  clientResult?: Record<string, unknown>;
 }
 
 export class FinalizeScanDto {
@@ -157,14 +263,21 @@ export class FinalizeScanDto {
   @ApiProperty()
   @IsNumber()
   @Min(0)
-  @Max(SCAN_LIMITS.maxDurationS + 60)
+  @Max(SCAN_LIMITS.maxChuteDurationS + 60)
   durationS: number;
 
   @ApiProperty()
   @IsInt()
   @Min(1)
-  @Max(SCAN_LIMITS.maxFrames)
+  @Max(SCAN_LIMITS.maxChuteFrames)
   expectedFrames: number;
+
+  @ApiPropertyOptional({ description: 'Manga + RFID: cantidad de capturas (animales) registradas' })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(SCAN_LIMITS.maxChuteCaptures)
+  expectedCaptures?: number;
 
   @ApiProperty()
   @IsInt()
@@ -265,6 +378,20 @@ export class ProducerScansController {
     return this.scans.uploadFrame(user, id, scanId, file, dto);
   }
 
+  @Post(':scanId/captures')
+  @ApiOperation({
+    summary: 'Manga + RFID: registra una captura (animal + lectura RFID); idempotente por id',
+  })
+  registerCapture(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('scanId', ParseUUIDPipe) scanId: string,
+    @Body() dto: ChuteCaptureDto,
+    @ReqContext() context: RequestContext,
+  ) {
+    return this.scans.registerCapture(user, id, scanId, dto, context);
+  }
+
   @Post(':scanId/finalize')
   @ApiOperation({ summary: 'Cierra la subida y encola el conteo oficial en el servidor' })
   finalize(
@@ -291,7 +418,43 @@ export class ProducerScansController {
 @ApiTags('Escáner de bovinos')
 @Controller()
 export class ScansController {
-  constructor(private readonly scans: ScansService) {}
+  constructor(
+    private readonly scans: ScansService,
+    private readonly individuals: BovineIndividualsService,
+  ) {}
+
+  @Get('assets/:assetId/bovine-individuals')
+  @RequirePermissions(PERMISSIONS.EVIDENCE_READ)
+  @ApiOperation({ summary: 'Manga + RFID: bovinos identificados por caravana en el activo' })
+  bovineIndividuals(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('assetId', ParseUUIDPipe) assetId: string,
+  ) {
+    return this.individuals.listForAsset(user.organizationId, assetId);
+  }
+
+  @Get('assets/:assetId/bovine-individuals/dataset')
+  @RequirePermissions(PERMISSIONS.EVIDENCE_READ)
+  @ApiOperation({
+    summary:
+      'Dataset RFID + cuadros (metadatos y hashes) para investigación futura; sin embeddings',
+  })
+  bovineDataset(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('assetId', ParseUUIDPipe) assetId: string,
+  ) {
+    return this.individuals.dataset(user.organizationId, assetId);
+  }
+
+  @Get('bovine-individuals/:individualId')
+  @RequirePermissions(PERMISSIONS.EVIDENCE_READ)
+  @ApiOperation({ summary: 'Detalle de un bovino: capturas confirmadas y cuadros de respaldo' })
+  bovineIndividual(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('individualId', ParseUUIDPipe) individualId: string,
+  ) {
+    return this.individuals.detail(user.organizationId, individualId);
+  }
 
   @Get('assets/:assetId/scans')
   @RequirePermissions(PERMISSIONS.EVIDENCE_READ)

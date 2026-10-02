@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import type { Queue } from 'bullmq';
 import { DataSource, Repository } from 'typeorm';
+import type { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity.js';
 import type { AuthenticatedUser } from '../../../common/auth/authenticated-user.js';
 import type { RequestContext } from '../../../common/auth/decorators.js';
 import { sha256Hex } from '../../../common/crypto/hashing.js';
@@ -28,7 +29,14 @@ import {
   type ScanLine,
   type ScanMode,
   STILL_MODES,
+  isLowerBound,
 } from '../domain/scan.types.js';
+import type { CaptureZone } from '../domain/chute-matching.js';
+import type { ChuteSessionResult } from './chute-processing.service.js';
+import {
+  ChuteCaptureEntity,
+  type ChuteRfidSource,
+} from '../infrastructure/chute-capture.entity.js';
 import { ScanFrameEntity } from '../infrastructure/scan-frame.entity.js';
 import { ScanSessionEntity } from '../infrastructure/scan-session.entity.js';
 
@@ -44,6 +52,18 @@ export interface CreateScanCommand {
   longitude?: number;
   accuracyM?: number;
   device?: Record<string, unknown>;
+  captureZone?: CaptureZone;
+}
+
+export interface ChuteCaptureCommand {
+  id: string;
+  sequence: number;
+  rfidSource: ChuteRfidSource;
+  readerDeviceId?: string;
+  reads: { electronicId: string; atMs: number }[];
+  frameIndices: number[];
+  clientTrackId?: number;
+  clientResult?: Record<string, unknown>;
 }
 
 export interface UploadFrameCommand {
@@ -58,6 +78,7 @@ export interface FinalizeScanCommand {
   durationS: number;
   expectedFrames: number;
   expectedKeyFrames: number;
+  expectedCaptures?: number;
   clientResult: Record<string, unknown>;
   headingStartDeg?: number;
   sweptDeg?: number;
@@ -82,6 +103,8 @@ export class ScansService {
   constructor(
     @InjectRepository(ScanSessionEntity) private readonly sessions: Repository<ScanSessionEntity>,
     @InjectRepository(ScanFrameEntity) private readonly frames: Repository<ScanFrameEntity>,
+    @InjectRepository(ChuteCaptureEntity)
+    private readonly captures: Repository<ChuteCaptureEntity>,
     @InjectDataSource() private readonly dataSource: DataSource,
     @InjectQueue(QUEUES.SCANS) private readonly queue: Queue<ScanJobData>,
     private readonly requests: GuaranteeRequestsService,
@@ -111,6 +134,10 @@ export class ScansService {
         `Tasa de muestreo mínima: ${SCAN_LIMITS.minSampledFps} cuadros por segundo`,
       );
     }
+    const zone = command.mode === 'CHUTE' ? (command.captureZone ?? null) : null;
+    if (zone && (zone.x2 - zone.x1 < 0.2 || zone.y2 - zone.y1 < 0.2)) {
+      throw new ValidationFailedError('Zona de captura inválida: muy chica o invertida');
+    }
     const startedAt = new Date(command.startedAt);
     if (
       Number.isNaN(startedAt.getTime()) ||
@@ -139,6 +166,7 @@ export class ScansService {
             : null,
         locationAccuracyM: command.accuracyM ?? null,
         device: command.device ?? {},
+        captureZone: zone,
         warnings: [],
       }),
     );
@@ -167,13 +195,20 @@ export class ScansService {
     if (detectFileKind(file.buffer)?.mime !== 'image/jpeg') {
       throw new ValidationFailedError('El cuadro debe ser JPEG');
     }
+    const chute = session.mode === 'CHUTE';
     const limit =
       session.mode === 'PHOTO'
         ? SCAN_LIMITS.maxPhotos
         : command.kind === 'KEY'
           ? SCAN_LIMITS.maxKeyFrames
-          : SCAN_LIMITS.maxFrames;
+          : chute
+            ? SCAN_LIMITS.maxChuteFrames
+            : SCAN_LIMITS.maxFrames;
     if (command.index >= limit) throw new ValidationFailedError('Índice de cuadro fuera de rango');
+    const maxMs = (chute ? SCAN_LIMITS.maxChuteDurationS : SCAN_LIMITS.maxDurationS) * 1000;
+    if (command.capturedMs > maxMs + 60_000) {
+      throw new ValidationFailedError('Tiempo del cuadro fuera de rango');
+    }
     const sha256 = sha256Hex(file.buffer);
     if (sha256 !== command.sha256.toLowerCase()) {
       throw new ValidationFailedError('El hash del cuadro no coincide con su contenido');
@@ -244,6 +279,12 @@ export class ScansService {
       });
     }
     if (command.expectedFrames < 1) throw new ValidationFailedError('El escaneo no tiene cuadros');
+    const maxDuration =
+      session.mode === 'CHUTE' ? SCAN_LIMITS.maxChuteDurationS : SCAN_LIMITS.maxDurationS;
+    if (command.durationS > maxDuration + 60) {
+      throw new ValidationFailedError('Duración del escaneo fuera de rango');
+    }
+    if (session.mode === 'CHUTE') await this.checkChuteComplete(session, command, received.SAMPLE);
     await this.sessions.save(
       Object.assign(session, {
         status: 'PROCESSING' as const,
@@ -279,11 +320,139 @@ export class ScansService {
         frames: command.expectedFrames,
         keyFrames: command.expectedKeyFrames,
         deviceCount: command.clientResult.netCount ?? null,
+        captures: command.expectedCaptures ?? null,
       },
       context,
     });
     await this.enqueue(session);
     return this.view((await this.sessions.findOneBy({ id: session.id }))!);
+  }
+
+  /**
+   * Manga + RFID: registra una captura (un animal y su lectura RFID). Idempotente por id: reenviar
+   * la misma captura no hace nada; reenviarla con otros datos se rechaza. Lo que manda el celular
+   * es preliminar: la asociación oficial la decide el servidor al procesar la sesión.
+   */
+  async registerCapture(
+    user: AuthenticatedUser,
+    requestId: string,
+    scanId: string,
+    command: ChuteCaptureCommand,
+    context: RequestContext,
+  ) {
+    const session = await this.owned(user, requestId, scanId);
+    if (session.mode !== 'CHUTE') {
+      throw new ValidationFailedError('Las capturas con RFID son solo del modo Manga + RFID');
+    }
+    const frameIndices = [...new Set(command.frameIndices)].sort((a, b) => a - b);
+    if (frameIndices.length !== command.frameIndices.length) {
+      throw new ValidationFailedError('Índices de cuadro repetidos en la captura');
+    }
+    const reads = command.reads.map((r) => ({ electronicId: r.electronicId.trim(), atMs: r.atMs }));
+    const existing = await this.captures.findOneBy({ id: command.id });
+    if (existing) {
+      const same =
+        existing.scanSessionId === session.id &&
+        existing.sequence === command.sequence &&
+        existing.rfidSource === command.rfidSource &&
+        // jsonb reordena las claves: se comparan los valores.
+        JSON.stringify(existing.reads.map((r) => [r.electronicId, r.atMs])) ===
+          JSON.stringify(reads.map((r) => [r.electronicId, r.atMs])) &&
+        JSON.stringify(existing.frameIndices) === JSON.stringify(frameIndices);
+      if (!same) throw new ConflictError('Ya existe una captura distinta con ese identificador');
+      return this.captureView(existing);
+    }
+    if (session.status !== 'UPLOADING') {
+      throw new ConflictError('El escaneo ya fue enviado: no admite capturas nuevas');
+    }
+    const bySequence = await this.captures.findOneBy({
+      scanSessionId: session.id,
+      sequence: command.sequence,
+    });
+    if (bySequence) throw new ConflictError('Ya existe otra captura con ese número de orden');
+    const count = await this.captures.countBy({ scanSessionId: session.id });
+    if (count >= SCAN_LIMITS.maxChuteCaptures) {
+      throw new ValidationFailedError(`Máximo ${SCAN_LIMITS.maxChuteCaptures} animales por sesión`);
+    }
+    if (command.rfidSource === 'READER_BRIDGE') {
+      // Una lectura "real" exige un lector RFID registrado de la organización.
+      if (!command.readerDeviceId) {
+        throw new ValidationFailedError('Falta el lector RFID (o marcá la lectura como SIMULADA)');
+      }
+      const [reader] = (await this.dataSource.query(
+        `SELECT id FROM devices WHERE id = $1 AND organization_id = $2 AND type = 'RFID_READER'`,
+        [command.readerDeviceId, session.organizationId],
+      )) as { id: string }[];
+      if (!reader) {
+        throw new ValidationFailedError('El lector indicado no es un lector RFID registrado');
+      }
+    }
+    const capture = this.captures.create({
+      id: command.id,
+      scanSessionId: session.id,
+      organizationId: session.organizationId,
+      assetId: session.assetId,
+      establishmentId: session.establishmentId,
+      sequence: command.sequence,
+      rfidSource: command.rfidSource,
+      readerDeviceId: command.rfidSource === 'READER_BRIDGE' ? command.readerDeviceId! : null,
+      reads,
+      frameIndices,
+      clientTrackId: command.clientTrackId ?? null,
+      clientResult: command.clientResult ?? null,
+      status: 'PENDING',
+      createdBy: user.userId,
+    });
+    // Carrera entre dos envíos de la misma captura: la clave primaria evita duplicados.
+    await this.captures
+      .createQueryBuilder()
+      .insert()
+      .values(capture as QueryDeepPartialEntity<ChuteCaptureEntity>)
+      .orIgnore()
+      .execute();
+    await this.audit.record({
+      actor: { kind: 'user', user },
+      action: AUDIT_ACTIONS.CHUTE_CAPTURES_SUBMITTED,
+      resourceType: 'scan_session',
+      resourceId: session.id,
+      metadata: {
+        captureId: capture.id,
+        sequence: capture.sequence,
+        rfidSource: capture.rfidSource,
+        reads: reads.length,
+        frames: frameIndices.length,
+        clientStatus: (command.clientResult?.status as string | undefined) ?? null,
+      },
+      context,
+    });
+    return this.captureView((await this.captures.findOneBy({ id: capture.id }))!);
+  }
+
+  private async checkChuteComplete(
+    session: ScanSessionEntity,
+    command: FinalizeScanCommand,
+    receivedSample: Set<number>,
+  ) {
+    const rows = await this.captures.find({
+      where: { scanSessionId: session.id },
+      select: { id: true, frameIndices: true },
+    });
+    if (!rows.length) throw new ValidationFailedError('La sesión de manga no tiene capturas');
+    if (command.expectedCaptures === undefined || command.expectedCaptures !== rows.length) {
+      throw new ConflictError('Faltan capturas por subir', {
+        expectedCaptures: command.expectedCaptures ?? null,
+        receivedCaptures: rows.length,
+      });
+    }
+    const missing = [
+      ...new Set(rows.flatMap((r) => r.frameIndices.filter((i) => !receivedSample.has(i)))),
+    ];
+    if (missing.length) {
+      throw new ConflictError('Faltan cuadros de las capturas', {
+        missingSample: missing.slice(0, 200),
+        missingKey: [],
+      });
+    }
   }
 
   /** Reintenta un procesamiento fallido (los cuadros ya están en el servidor). */
@@ -364,6 +533,12 @@ export class ScansService {
   ) {
     const received = await this.receivedIndices(session.id);
     const server = session.serverResult;
+    const chute = server?.chute as
+      | Pick<
+          ChuteSessionResult,
+          'confirmed' | 'ambiguous' | 'insufficient' | 'identified' | 'rfidSimulated'
+        >
+      | undefined;
     const keyFrames = options.withKeyFrames ? await this.keyFrames(session) : undefined;
     return {
       id: session.id,
@@ -407,7 +582,16 @@ export class ScansService {
             limitations: server.limitations,
             model: server.model,
             tracker: server.tracker,
-            lowerBound: session.mode !== 'FIXED',
+            lowerBound: isLowerBound(session.mode, chute?.rfidSimulated),
+            chute: chute
+              ? {
+                  confirmed: chute.confirmed,
+                  ambiguous: chute.ambiguous,
+                  insufficient: chute.insufficient,
+                  identified: chute.identified,
+                  rfidSimulated: chute.rfidSimulated,
+                }
+              : null,
           }
         : null,
       quality: session.quality,
@@ -421,10 +605,56 @@ export class ScansService {
       error: session.error,
       processedAt: session.processedAt,
       keyFrames,
+      captureZone: session.captureZone,
+      captures: session.mode === 'CHUTE' ? await this.captureList(session.id) : undefined,
       serverDetail:
         options.withServerDetail && server
           ? { crossings: server.crossings, tracks: server.tracks }
           : undefined,
+    };
+  }
+
+  private async captureList(scanId: string) {
+    const rows = await this.captures.find({
+      where: { scanSessionId: scanId },
+      order: { sequence: 'ASC' },
+    });
+    const codes = await this.individualCodes(rows.map((r) => r.individualId));
+    return rows.map((r) => this.captureView(r, codes));
+  }
+
+  private async individualCodes(ids: (string | null)[]) {
+    const wanted = [...new Set(ids.filter((i): i is string => i !== null))];
+    if (!wanted.length) return new Map<string, string>();
+    const rows = (await this.dataSource.query(
+      `SELECT id, internal_code AS "internalCode" FROM bovine_individuals WHERE id = ANY($1)`,
+      [wanted],
+    )) as { id: string; internalCode: string }[];
+    return new Map(rows.map((r) => [r.id, r.internalCode]));
+  }
+
+  /**
+   * Una captura vista por el productor: el estado oficial lo pone el servidor (PENDING mientras
+   * no se procesó). La caravana asociada solo se informa si quedó CONFIRMADA.
+   */
+  private captureView(row: ChuteCaptureEntity, codes = new Map<string, string>()) {
+    return {
+      id: row.id,
+      sequence: row.sequence,
+      status: row.status,
+      reason: row.reason,
+      rfidSource: row.rfidSource,
+      simulated: row.rfidSource === 'SIMULATED',
+      reads: row.reads,
+      electronicId: row.status === 'CONFIRMED' ? row.electronicId : null,
+      individualId: row.individualId,
+      internalCode: row.individualId ? (codes.get(row.individualId) ?? null) : null,
+      evidenceId: row.evidenceId,
+      bestFrames: row.bestFrames.length,
+      frames: row.frameIndices.length,
+      clientStatus: (row.clientResult?.status as string | undefined) ?? null,
+      processedAt: row.processedAt,
+      createdAt: row.createdAt,
     };
   }
 

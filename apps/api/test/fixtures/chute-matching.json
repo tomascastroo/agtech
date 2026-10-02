@@ -1,0 +1,5923 @@
+{
+  "description": "Escenarios del modo Manga + RFID (sint\u00e9ticos). Misma decisi\u00f3n en la API (oficial) y en el celular (preliminar).",
+  "frameSize": {
+    "width": 640,
+    "height": 480
+  },
+  "zone": {
+    "x1": 0.1,
+    "y1": 0.05,
+    "x2": 0.9,
+    "y2": 0.98
+  },
+  "scenarios": {
+    "un_bovino_un_rfid": {
+      "reads": [
+        {
+          "eid": "032000000000001",
+          "atMs": 2000
+        }
+      ],
+      "frames": [
+        {
+          "index": 0,
+          "capturedMs": 0,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": false
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 1,
+          "capturedMs": 125,
+          "detections": [
+            {
+              "x": 201,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 2,
+          "capturedMs": 250,
+          "detections": [
+            {
+              "x": 202,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 3,
+          "capturedMs": 375,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 4,
+          "capturedMs": 500,
+          "detections": [
+            {
+              "x": 201,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 5,
+          "capturedMs": 625,
+          "detections": [
+            {
+              "x": 202,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 6,
+          "capturedMs": 750,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 7,
+          "capturedMs": 875,
+          "detections": [
+            {
+              "x": 201,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 8,
+          "capturedMs": 1000,
+          "detections": [
+            {
+              "x": 202,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 9,
+          "capturedMs": 1125,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 10,
+          "capturedMs": 1250,
+          "detections": [
+            {
+              "x": 201,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 11,
+          "capturedMs": 1375,
+          "detections": [
+            {
+              "x": 202,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 12,
+          "capturedMs": 1500,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 13,
+          "capturedMs": 1625,
+          "detections": [
+            {
+              "x": 201,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 14,
+          "capturedMs": 1750,
+          "detections": [
+            {
+              "x": 202,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 15,
+          "capturedMs": 1875,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 16,
+          "capturedMs": 2000,
+          "detections": [
+            {
+              "x": 201,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 17,
+          "capturedMs": 2125,
+          "detections": [
+            {
+              "x": 202,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 18,
+          "capturedMs": 2250,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 19,
+          "capturedMs": 2375,
+          "detections": [
+            {
+              "x": 201,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 20,
+          "capturedMs": 2500,
+          "detections": [
+            {
+              "x": 202,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 21,
+          "capturedMs": 2625,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 22,
+          "capturedMs": 2750,
+          "detections": [
+            {
+              "x": 201,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 23,
+          "capturedMs": 2875,
+          "detections": [
+            {
+              "x": 202,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 24,
+          "capturedMs": 3000,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        }
+      ],
+      "expected": {
+        "status": "CONFIRMED",
+        "reason": "ONE_STABLE_ANIMAL",
+        "trackId": 1
+      }
+    },
+    "cero_bovinos": {
+      "reads": [
+        {
+          "eid": "032000000000001",
+          "atMs": 2000
+        }
+      ],
+      "frames": [
+        {
+          "index": 0,
+          "capturedMs": 0,
+          "detections": [],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 1,
+          "capturedMs": 125,
+          "detections": [],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 2,
+          "capturedMs": 250,
+          "detections": [],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 3,
+          "capturedMs": 375,
+          "detections": [],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 4,
+          "capturedMs": 500,
+          "detections": [],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 5,
+          "capturedMs": 625,
+          "detections": [],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 6,
+          "capturedMs": 750,
+          "detections": [],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 7,
+          "capturedMs": 875,
+          "detections": [],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 8,
+          "capturedMs": 1000,
+          "detections": [],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 9,
+          "capturedMs": 1125,
+          "detections": [],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 10,
+          "capturedMs": 1250,
+          "detections": [],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 11,
+          "capturedMs": 1375,
+          "detections": [],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 12,
+          "capturedMs": 1500,
+          "detections": [],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 13,
+          "capturedMs": 1625,
+          "detections": [],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 14,
+          "capturedMs": 1750,
+          "detections": [],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 15,
+          "capturedMs": 1875,
+          "detections": [],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 16,
+          "capturedMs": 2000,
+          "detections": [],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 17,
+          "capturedMs": 2125,
+          "detections": [],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 18,
+          "capturedMs": 2250,
+          "detections": [],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 19,
+          "capturedMs": 2375,
+          "detections": [],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 20,
+          "capturedMs": 2500,
+          "detections": [],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 21,
+          "capturedMs": 2625,
+          "detections": [],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 22,
+          "capturedMs": 2750,
+          "detections": [],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 23,
+          "capturedMs": 2875,
+          "detections": [],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 24,
+          "capturedMs": 3000,
+          "detections": [],
+          "sharpness": 120,
+          "brightness": 120
+        }
+      ],
+      "expected": {
+        "status": "INSUFFICIENT_EVIDENCE",
+        "reason": "NO_ANIMAL"
+      }
+    },
+    "dos_bovinos_un_rfid": {
+      "reads": [
+        {
+          "eid": "032000000000001",
+          "atMs": 2000
+        }
+      ],
+      "frames": [
+        {
+          "index": 0,
+          "capturedMs": 0,
+          "detections": [
+            {
+              "x": 80,
+              "y": 120,
+              "width": 200,
+              "height": 260,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": false
+            },
+            {
+              "x": 360,
+              "y": 130,
+              "width": 200,
+              "height": 250,
+              "score": 0.9,
+              "trackId": 2,
+              "confirmed": false
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 1,
+          "capturedMs": 125,
+          "detections": [
+            {
+              "x": 80,
+              "y": 120,
+              "width": 200,
+              "height": 260,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            },
+            {
+              "x": 360,
+              "y": 130,
+              "width": 200,
+              "height": 250,
+              "score": 0.9,
+              "trackId": 2,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 2,
+          "capturedMs": 250,
+          "detections": [
+            {
+              "x": 80,
+              "y": 120,
+              "width": 200,
+              "height": 260,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            },
+            {
+              "x": 360,
+              "y": 130,
+              "width": 200,
+              "height": 250,
+              "score": 0.9,
+              "trackId": 2,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 3,
+          "capturedMs": 375,
+          "detections": [
+            {
+              "x": 80,
+              "y": 120,
+              "width": 200,
+              "height": 260,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            },
+            {
+              "x": 360,
+              "y": 130,
+              "width": 200,
+              "height": 250,
+              "score": 0.9,
+              "trackId": 2,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 4,
+          "capturedMs": 500,
+          "detections": [
+            {
+              "x": 80,
+              "y": 120,
+              "width": 200,
+              "height": 260,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            },
+            {
+              "x": 360,
+              "y": 130,
+              "width": 200,
+              "height": 250,
+              "score": 0.9,
+              "trackId": 2,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 5,
+          "capturedMs": 625,
+          "detections": [
+            {
+              "x": 80,
+              "y": 120,
+              "width": 200,
+              "height": 260,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            },
+            {
+              "x": 360,
+              "y": 130,
+              "width": 200,
+              "height": 250,
+              "score": 0.9,
+              "trackId": 2,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 6,
+          "capturedMs": 750,
+          "detections": [
+            {
+              "x": 80,
+              "y": 120,
+              "width": 200,
+              "height": 260,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            },
+            {
+              "x": 360,
+              "y": 130,
+              "width": 200,
+              "height": 250,
+              "score": 0.9,
+              "trackId": 2,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 7,
+          "capturedMs": 875,
+          "detections": [
+            {
+              "x": 80,
+              "y": 120,
+              "width": 200,
+              "height": 260,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            },
+            {
+              "x": 360,
+              "y": 130,
+              "width": 200,
+              "height": 250,
+              "score": 0.9,
+              "trackId": 2,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 8,
+          "capturedMs": 1000,
+          "detections": [
+            {
+              "x": 80,
+              "y": 120,
+              "width": 200,
+              "height": 260,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            },
+            {
+              "x": 360,
+              "y": 130,
+              "width": 200,
+              "height": 250,
+              "score": 0.9,
+              "trackId": 2,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 9,
+          "capturedMs": 1125,
+          "detections": [
+            {
+              "x": 80,
+              "y": 120,
+              "width": 200,
+              "height": 260,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            },
+            {
+              "x": 360,
+              "y": 130,
+              "width": 200,
+              "height": 250,
+              "score": 0.9,
+              "trackId": 2,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 10,
+          "capturedMs": 1250,
+          "detections": [
+            {
+              "x": 80,
+              "y": 120,
+              "width": 200,
+              "height": 260,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            },
+            {
+              "x": 360,
+              "y": 130,
+              "width": 200,
+              "height": 250,
+              "score": 0.9,
+              "trackId": 2,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 11,
+          "capturedMs": 1375,
+          "detections": [
+            {
+              "x": 80,
+              "y": 120,
+              "width": 200,
+              "height": 260,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            },
+            {
+              "x": 360,
+              "y": 130,
+              "width": 200,
+              "height": 250,
+              "score": 0.9,
+              "trackId": 2,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 12,
+          "capturedMs": 1500,
+          "detections": [
+            {
+              "x": 80,
+              "y": 120,
+              "width": 200,
+              "height": 260,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            },
+            {
+              "x": 360,
+              "y": 130,
+              "width": 200,
+              "height": 250,
+              "score": 0.9,
+              "trackId": 2,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 13,
+          "capturedMs": 1625,
+          "detections": [
+            {
+              "x": 80,
+              "y": 120,
+              "width": 200,
+              "height": 260,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            },
+            {
+              "x": 360,
+              "y": 130,
+              "width": 200,
+              "height": 250,
+              "score": 0.9,
+              "trackId": 2,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 14,
+          "capturedMs": 1750,
+          "detections": [
+            {
+              "x": 80,
+              "y": 120,
+              "width": 200,
+              "height": 260,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            },
+            {
+              "x": 360,
+              "y": 130,
+              "width": 200,
+              "height": 250,
+              "score": 0.9,
+              "trackId": 2,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 15,
+          "capturedMs": 1875,
+          "detections": [
+            {
+              "x": 80,
+              "y": 120,
+              "width": 200,
+              "height": 260,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            },
+            {
+              "x": 360,
+              "y": 130,
+              "width": 200,
+              "height": 250,
+              "score": 0.9,
+              "trackId": 2,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 16,
+          "capturedMs": 2000,
+          "detections": [
+            {
+              "x": 80,
+              "y": 120,
+              "width": 200,
+              "height": 260,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            },
+            {
+              "x": 360,
+              "y": 130,
+              "width": 200,
+              "height": 250,
+              "score": 0.9,
+              "trackId": 2,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 17,
+          "capturedMs": 2125,
+          "detections": [
+            {
+              "x": 80,
+              "y": 120,
+              "width": 200,
+              "height": 260,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            },
+            {
+              "x": 360,
+              "y": 130,
+              "width": 200,
+              "height": 250,
+              "score": 0.9,
+              "trackId": 2,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 18,
+          "capturedMs": 2250,
+          "detections": [
+            {
+              "x": 80,
+              "y": 120,
+              "width": 200,
+              "height": 260,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            },
+            {
+              "x": 360,
+              "y": 130,
+              "width": 200,
+              "height": 250,
+              "score": 0.9,
+              "trackId": 2,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 19,
+          "capturedMs": 2375,
+          "detections": [
+            {
+              "x": 80,
+              "y": 120,
+              "width": 200,
+              "height": 260,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            },
+            {
+              "x": 360,
+              "y": 130,
+              "width": 200,
+              "height": 250,
+              "score": 0.9,
+              "trackId": 2,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 20,
+          "capturedMs": 2500,
+          "detections": [
+            {
+              "x": 80,
+              "y": 120,
+              "width": 200,
+              "height": 260,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            },
+            {
+              "x": 360,
+              "y": 130,
+              "width": 200,
+              "height": 250,
+              "score": 0.9,
+              "trackId": 2,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 21,
+          "capturedMs": 2625,
+          "detections": [
+            {
+              "x": 80,
+              "y": 120,
+              "width": 200,
+              "height": 260,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            },
+            {
+              "x": 360,
+              "y": 130,
+              "width": 200,
+              "height": 250,
+              "score": 0.9,
+              "trackId": 2,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 22,
+          "capturedMs": 2750,
+          "detections": [
+            {
+              "x": 80,
+              "y": 120,
+              "width": 200,
+              "height": 260,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            },
+            {
+              "x": 360,
+              "y": 130,
+              "width": 200,
+              "height": 250,
+              "score": 0.9,
+              "trackId": 2,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 23,
+          "capturedMs": 2875,
+          "detections": [
+            {
+              "x": 80,
+              "y": 120,
+              "width": 200,
+              "height": 260,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            },
+            {
+              "x": 360,
+              "y": 130,
+              "width": 200,
+              "height": 250,
+              "score": 0.9,
+              "trackId": 2,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 24,
+          "capturedMs": 3000,
+          "detections": [
+            {
+              "x": 80,
+              "y": 120,
+              "width": 200,
+              "height": 260,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            },
+            {
+              "x": 360,
+              "y": 130,
+              "width": 200,
+              "height": 250,
+              "score": 0.9,
+              "trackId": 2,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        }
+      ],
+      "expected": {
+        "status": "AMBIGUOUS",
+        "reason": "MULTIPLE_ANIMALS"
+      }
+    },
+    "un_bovino_sin_rfid": {
+      "reads": [],
+      "frames": [
+        {
+          "index": 0,
+          "capturedMs": 0,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": false
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 1,
+          "capturedMs": 125,
+          "detections": [
+            {
+              "x": 201,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 2,
+          "capturedMs": 250,
+          "detections": [
+            {
+              "x": 202,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 3,
+          "capturedMs": 375,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 4,
+          "capturedMs": 500,
+          "detections": [
+            {
+              "x": 201,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 5,
+          "capturedMs": 625,
+          "detections": [
+            {
+              "x": 202,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 6,
+          "capturedMs": 750,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 7,
+          "capturedMs": 875,
+          "detections": [
+            {
+              "x": 201,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 8,
+          "capturedMs": 1000,
+          "detections": [
+            {
+              "x": 202,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 9,
+          "capturedMs": 1125,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 10,
+          "capturedMs": 1250,
+          "detections": [
+            {
+              "x": 201,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 11,
+          "capturedMs": 1375,
+          "detections": [
+            {
+              "x": 202,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 12,
+          "capturedMs": 1500,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 13,
+          "capturedMs": 1625,
+          "detections": [
+            {
+              "x": 201,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 14,
+          "capturedMs": 1750,
+          "detections": [
+            {
+              "x": 202,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 15,
+          "capturedMs": 1875,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 16,
+          "capturedMs": 2000,
+          "detections": [
+            {
+              "x": 201,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 17,
+          "capturedMs": 2125,
+          "detections": [
+            {
+              "x": 202,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 18,
+          "capturedMs": 2250,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 19,
+          "capturedMs": 2375,
+          "detections": [
+            {
+              "x": 201,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 20,
+          "capturedMs": 2500,
+          "detections": [
+            {
+              "x": 202,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 21,
+          "capturedMs": 2625,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 22,
+          "capturedMs": 2750,
+          "detections": [
+            {
+              "x": 201,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 23,
+          "capturedMs": 2875,
+          "detections": [
+            {
+              "x": 202,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 24,
+          "capturedMs": 3000,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        }
+      ],
+      "expected": {
+        "status": "INSUFFICIENT_EVIDENCE",
+        "reason": "NO_RFID"
+      }
+    },
+    "track_inestable": {
+      "reads": [
+        {
+          "eid": "032000000000001",
+          "atMs": 2000
+        }
+      ],
+      "frames": [
+        {
+          "index": 0,
+          "capturedMs": 0,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": false
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 1,
+          "capturedMs": 125,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 2,
+          "capturedMs": 250,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 2,
+              "confirmed": false
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 3,
+          "capturedMs": 375,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 2,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 4,
+          "capturedMs": 500,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 3,
+              "confirmed": false
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 5,
+          "capturedMs": 625,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 3,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 6,
+          "capturedMs": 750,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 4,
+              "confirmed": false
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 7,
+          "capturedMs": 875,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 4,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 8,
+          "capturedMs": 1000,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 5,
+              "confirmed": false
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 9,
+          "capturedMs": 1125,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 5,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 10,
+          "capturedMs": 1250,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 6,
+              "confirmed": false
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 11,
+          "capturedMs": 1375,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 6,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 12,
+          "capturedMs": 1500,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 7,
+              "confirmed": false
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 13,
+          "capturedMs": 1625,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 7,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 14,
+          "capturedMs": 1750,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 8,
+              "confirmed": false
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 15,
+          "capturedMs": 1875,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 8,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 16,
+          "capturedMs": 2000,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 9,
+              "confirmed": false
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 17,
+          "capturedMs": 2125,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 9,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 18,
+          "capturedMs": 2250,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 10,
+              "confirmed": false
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 19,
+          "capturedMs": 2375,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 10,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 20,
+          "capturedMs": 2500,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 11,
+              "confirmed": false
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 21,
+          "capturedMs": 2625,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 11,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 22,
+          "capturedMs": 2750,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 12,
+              "confirmed": false
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 23,
+          "capturedMs": 2875,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 12,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 24,
+          "capturedMs": 3000,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 13,
+              "confirmed": false
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        }
+      ],
+      "expected": {
+        "status": "INSUFFICIENT_EVIDENCE",
+        "reason": "UNSTABLE_TRACK"
+      }
+    },
+    "rfid_fuera_de_ventana": {
+      "reads": [
+        {
+          "eid": "032000000000001",
+          "atMs": 10000
+        }
+      ],
+      "frames": [
+        {
+          "index": 0,
+          "capturedMs": 0,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": false
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 1,
+          "capturedMs": 125,
+          "detections": [
+            {
+              "x": 201,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 2,
+          "capturedMs": 250,
+          "detections": [
+            {
+              "x": 202,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 3,
+          "capturedMs": 375,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 4,
+          "capturedMs": 500,
+          "detections": [
+            {
+              "x": 201,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 5,
+          "capturedMs": 625,
+          "detections": [
+            {
+              "x": 202,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 6,
+          "capturedMs": 750,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 7,
+          "capturedMs": 875,
+          "detections": [
+            {
+              "x": 201,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 8,
+          "capturedMs": 1000,
+          "detections": [
+            {
+              "x": 202,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 9,
+          "capturedMs": 1125,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 10,
+          "capturedMs": 1250,
+          "detections": [
+            {
+              "x": 201,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 11,
+          "capturedMs": 1375,
+          "detections": [
+            {
+              "x": 202,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 12,
+          "capturedMs": 1500,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 13,
+          "capturedMs": 1625,
+          "detections": [
+            {
+              "x": 201,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 14,
+          "capturedMs": 1750,
+          "detections": [
+            {
+              "x": 202,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 15,
+          "capturedMs": 1875,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 16,
+          "capturedMs": 2000,
+          "detections": [
+            {
+              "x": 201,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 17,
+          "capturedMs": 2125,
+          "detections": [
+            {
+              "x": 202,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 18,
+          "capturedMs": 2250,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 19,
+          "capturedMs": 2375,
+          "detections": [
+            {
+              "x": 201,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 20,
+          "capturedMs": 2500,
+          "detections": [
+            {
+              "x": 202,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 21,
+          "capturedMs": 2625,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 22,
+          "capturedMs": 2750,
+          "detections": [
+            {
+              "x": 201,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 23,
+          "capturedMs": 2875,
+          "detections": [
+            {
+              "x": 202,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 24,
+          "capturedMs": 3000,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        }
+      ],
+      "expected": {
+        "status": "INSUFFICIENT_EVIDENCE",
+        "reason": "RFID_OUT_OF_WINDOW"
+      }
+    },
+    "dos_rfid_un_bovino": {
+      "reads": [
+        {
+          "eid": "032000000000001",
+          "atMs": 2000
+        },
+        {
+          "eid": "032000000000002",
+          "atMs": 2300
+        }
+      ],
+      "frames": [
+        {
+          "index": 0,
+          "capturedMs": 0,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": false
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 1,
+          "capturedMs": 125,
+          "detections": [
+            {
+              "x": 201,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 2,
+          "capturedMs": 250,
+          "detections": [
+            {
+              "x": 202,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 3,
+          "capturedMs": 375,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 4,
+          "capturedMs": 500,
+          "detections": [
+            {
+              "x": 201,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 5,
+          "capturedMs": 625,
+          "detections": [
+            {
+              "x": 202,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 6,
+          "capturedMs": 750,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 7,
+          "capturedMs": 875,
+          "detections": [
+            {
+              "x": 201,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 8,
+          "capturedMs": 1000,
+          "detections": [
+            {
+              "x": 202,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 9,
+          "capturedMs": 1125,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 10,
+          "capturedMs": 1250,
+          "detections": [
+            {
+              "x": 201,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 11,
+          "capturedMs": 1375,
+          "detections": [
+            {
+              "x": 202,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 12,
+          "capturedMs": 1500,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 13,
+          "capturedMs": 1625,
+          "detections": [
+            {
+              "x": 201,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 14,
+          "capturedMs": 1750,
+          "detections": [
+            {
+              "x": 202,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 15,
+          "capturedMs": 1875,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 16,
+          "capturedMs": 2000,
+          "detections": [
+            {
+              "x": 201,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 17,
+          "capturedMs": 2125,
+          "detections": [
+            {
+              "x": 202,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 18,
+          "capturedMs": 2250,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 19,
+          "capturedMs": 2375,
+          "detections": [
+            {
+              "x": 201,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 20,
+          "capturedMs": 2500,
+          "detections": [
+            {
+              "x": 202,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 21,
+          "capturedMs": 2625,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 22,
+          "capturedMs": 2750,
+          "detections": [
+            {
+              "x": 201,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 23,
+          "capturedMs": 2875,
+          "detections": [
+            {
+              "x": 202,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 24,
+          "capturedMs": 3000,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        }
+      ],
+      "expected": {
+        "status": "AMBIGUOUS",
+        "reason": "MULTIPLE_RFID"
+      }
+    },
+    "rfid_invalido": {
+      "reads": [
+        {
+          "eid": null,
+          "atMs": 2000
+        }
+      ],
+      "frames": [
+        {
+          "index": 0,
+          "capturedMs": 0,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": false
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 1,
+          "capturedMs": 125,
+          "detections": [
+            {
+              "x": 201,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 2,
+          "capturedMs": 250,
+          "detections": [
+            {
+              "x": 202,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 3,
+          "capturedMs": 375,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 4,
+          "capturedMs": 500,
+          "detections": [
+            {
+              "x": 201,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 5,
+          "capturedMs": 625,
+          "detections": [
+            {
+              "x": 202,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 6,
+          "capturedMs": 750,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 7,
+          "capturedMs": 875,
+          "detections": [
+            {
+              "x": 201,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 8,
+          "capturedMs": 1000,
+          "detections": [
+            {
+              "x": 202,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 9,
+          "capturedMs": 1125,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 10,
+          "capturedMs": 1250,
+          "detections": [
+            {
+              "x": 201,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 11,
+          "capturedMs": 1375,
+          "detections": [
+            {
+              "x": 202,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 12,
+          "capturedMs": 1500,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 13,
+          "capturedMs": 1625,
+          "detections": [
+            {
+              "x": 201,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 14,
+          "capturedMs": 1750,
+          "detections": [
+            {
+              "x": 202,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 15,
+          "capturedMs": 1875,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 16,
+          "capturedMs": 2000,
+          "detections": [
+            {
+              "x": 201,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 17,
+          "capturedMs": 2125,
+          "detections": [
+            {
+              "x": 202,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 18,
+          "capturedMs": 2250,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 19,
+          "capturedMs": 2375,
+          "detections": [
+            {
+              "x": 201,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 20,
+          "capturedMs": 2500,
+          "detections": [
+            {
+              "x": 202,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 21,
+          "capturedMs": 2625,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 22,
+          "capturedMs": 2750,
+          "detections": [
+            {
+              "x": 201,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 23,
+          "capturedMs": 2875,
+          "detections": [
+            {
+              "x": 202,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 24,
+          "capturedMs": 3000,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        }
+      ],
+      "expected": {
+        "status": "INSUFFICIENT_EVIDENCE",
+        "reason": "INVALID_RFID"
+      }
+    },
+    "bovino_caminando": {
+      "reads": [
+        {
+          "eid": "032000000000001",
+          "atMs": 2000
+        }
+      ],
+      "frames": [
+        {
+          "index": 0,
+          "capturedMs": 0,
+          "detections": [
+            {
+              "x": 40,
+              "y": 120,
+              "width": 200,
+              "height": 260,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": false
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 1,
+          "capturedMs": 125,
+          "detections": [
+            {
+              "x": 54,
+              "y": 120,
+              "width": 200,
+              "height": 260,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 2,
+          "capturedMs": 250,
+          "detections": [
+            {
+              "x": 68,
+              "y": 120,
+              "width": 200,
+              "height": 260,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 3,
+          "capturedMs": 375,
+          "detections": [
+            {
+              "x": 82,
+              "y": 120,
+              "width": 200,
+              "height": 260,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 4,
+          "capturedMs": 500,
+          "detections": [
+            {
+              "x": 96,
+              "y": 120,
+              "width": 200,
+              "height": 260,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 5,
+          "capturedMs": 625,
+          "detections": [
+            {
+              "x": 110,
+              "y": 120,
+              "width": 200,
+              "height": 260,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 6,
+          "capturedMs": 750,
+          "detections": [
+            {
+              "x": 124,
+              "y": 120,
+              "width": 200,
+              "height": 260,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 7,
+          "capturedMs": 875,
+          "detections": [
+            {
+              "x": 138,
+              "y": 120,
+              "width": 200,
+              "height": 260,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 8,
+          "capturedMs": 1000,
+          "detections": [
+            {
+              "x": 152,
+              "y": 120,
+              "width": 200,
+              "height": 260,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 9,
+          "capturedMs": 1125,
+          "detections": [
+            {
+              "x": 166,
+              "y": 120,
+              "width": 200,
+              "height": 260,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 10,
+          "capturedMs": 1250,
+          "detections": [
+            {
+              "x": 180,
+              "y": 120,
+              "width": 200,
+              "height": 260,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 11,
+          "capturedMs": 1375,
+          "detections": [
+            {
+              "x": 194,
+              "y": 120,
+              "width": 200,
+              "height": 260,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 12,
+          "capturedMs": 1500,
+          "detections": [
+            {
+              "x": 208,
+              "y": 120,
+              "width": 200,
+              "height": 260,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 13,
+          "capturedMs": 1625,
+          "detections": [
+            {
+              "x": 222,
+              "y": 120,
+              "width": 200,
+              "height": 260,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 14,
+          "capturedMs": 1750,
+          "detections": [
+            {
+              "x": 236,
+              "y": 120,
+              "width": 200,
+              "height": 260,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 15,
+          "capturedMs": 1875,
+          "detections": [
+            {
+              "x": 250,
+              "y": 120,
+              "width": 200,
+              "height": 260,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 16,
+          "capturedMs": 2000,
+          "detections": [
+            {
+              "x": 264,
+              "y": 120,
+              "width": 200,
+              "height": 260,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 17,
+          "capturedMs": 2125,
+          "detections": [
+            {
+              "x": 278,
+              "y": 120,
+              "width": 200,
+              "height": 260,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 18,
+          "capturedMs": 2250,
+          "detections": [
+            {
+              "x": 292,
+              "y": 120,
+              "width": 200,
+              "height": 260,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 19,
+          "capturedMs": 2375,
+          "detections": [
+            {
+              "x": 306,
+              "y": 120,
+              "width": 200,
+              "height": 260,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 20,
+          "capturedMs": 2500,
+          "detections": [
+            {
+              "x": 320,
+              "y": 120,
+              "width": 200,
+              "height": 260,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 21,
+          "capturedMs": 2625,
+          "detections": [
+            {
+              "x": 334,
+              "y": 120,
+              "width": 200,
+              "height": 260,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 22,
+          "capturedMs": 2750,
+          "detections": [
+            {
+              "x": 348,
+              "y": 120,
+              "width": 200,
+              "height": 260,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 23,
+          "capturedMs": 2875,
+          "detections": [
+            {
+              "x": 362,
+              "y": 120,
+              "width": 200,
+              "height": 260,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 24,
+          "capturedMs": 3000,
+          "detections": [
+            {
+              "x": 376,
+              "y": 120,
+              "width": 200,
+              "height": 260,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        }
+      ],
+      "expected": {
+        "status": "INSUFFICIENT_EVIDENCE",
+        "reason": "ANIMAL_MOVING"
+      }
+    },
+    "bovino_tapado": {
+      "reads": [
+        {
+          "eid": "032000000000001",
+          "atMs": 2000
+        }
+      ],
+      "frames": [
+        {
+          "index": 0,
+          "capturedMs": 0,
+          "detections": [
+            {
+              "x": 70,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": false
+            },
+            {
+              "x": 0,
+              "y": 120,
+              "width": 150,
+              "height": 280,
+              "score": 0.8,
+              "trackId": 2,
+              "confirmed": false
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 1,
+          "capturedMs": 125,
+          "detections": [
+            {
+              "x": 70,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            },
+            {
+              "x": 0,
+              "y": 120,
+              "width": 150,
+              "height": 280,
+              "score": 0.8,
+              "trackId": 2,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 2,
+          "capturedMs": 250,
+          "detections": [
+            {
+              "x": 70,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            },
+            {
+              "x": 0,
+              "y": 120,
+              "width": 150,
+              "height": 280,
+              "score": 0.8,
+              "trackId": 2,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 3,
+          "capturedMs": 375,
+          "detections": [
+            {
+              "x": 70,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            },
+            {
+              "x": 0,
+              "y": 120,
+              "width": 150,
+              "height": 280,
+              "score": 0.8,
+              "trackId": 2,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 4,
+          "capturedMs": 500,
+          "detections": [
+            {
+              "x": 70,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            },
+            {
+              "x": 0,
+              "y": 120,
+              "width": 150,
+              "height": 280,
+              "score": 0.8,
+              "trackId": 2,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 5,
+          "capturedMs": 625,
+          "detections": [
+            {
+              "x": 70,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            },
+            {
+              "x": 0,
+              "y": 120,
+              "width": 150,
+              "height": 280,
+              "score": 0.8,
+              "trackId": 2,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 6,
+          "capturedMs": 750,
+          "detections": [
+            {
+              "x": 70,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            },
+            {
+              "x": 0,
+              "y": 120,
+              "width": 150,
+              "height": 280,
+              "score": 0.8,
+              "trackId": 2,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 7,
+          "capturedMs": 875,
+          "detections": [
+            {
+              "x": 70,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            },
+            {
+              "x": 0,
+              "y": 120,
+              "width": 150,
+              "height": 280,
+              "score": 0.8,
+              "trackId": 2,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 8,
+          "capturedMs": 1000,
+          "detections": [
+            {
+              "x": 70,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            },
+            {
+              "x": 0,
+              "y": 120,
+              "width": 150,
+              "height": 280,
+              "score": 0.8,
+              "trackId": 2,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 9,
+          "capturedMs": 1125,
+          "detections": [
+            {
+              "x": 70,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            },
+            {
+              "x": 0,
+              "y": 120,
+              "width": 150,
+              "height": 280,
+              "score": 0.8,
+              "trackId": 2,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 10,
+          "capturedMs": 1250,
+          "detections": [
+            {
+              "x": 70,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            },
+            {
+              "x": 0,
+              "y": 120,
+              "width": 150,
+              "height": 280,
+              "score": 0.8,
+              "trackId": 2,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 11,
+          "capturedMs": 1375,
+          "detections": [
+            {
+              "x": 70,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            },
+            {
+              "x": 0,
+              "y": 120,
+              "width": 150,
+              "height": 280,
+              "score": 0.8,
+              "trackId": 2,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 12,
+          "capturedMs": 1500,
+          "detections": [
+            {
+              "x": 70,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            },
+            {
+              "x": 0,
+              "y": 120,
+              "width": 150,
+              "height": 280,
+              "score": 0.8,
+              "trackId": 2,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 13,
+          "capturedMs": 1625,
+          "detections": [
+            {
+              "x": 70,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            },
+            {
+              "x": 0,
+              "y": 120,
+              "width": 150,
+              "height": 280,
+              "score": 0.8,
+              "trackId": 2,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 14,
+          "capturedMs": 1750,
+          "detections": [
+            {
+              "x": 70,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            },
+            {
+              "x": 0,
+              "y": 120,
+              "width": 150,
+              "height": 280,
+              "score": 0.8,
+              "trackId": 2,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 15,
+          "capturedMs": 1875,
+          "detections": [
+            {
+              "x": 70,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            },
+            {
+              "x": 0,
+              "y": 120,
+              "width": 150,
+              "height": 280,
+              "score": 0.8,
+              "trackId": 2,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 16,
+          "capturedMs": 2000,
+          "detections": [
+            {
+              "x": 70,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            },
+            {
+              "x": 0,
+              "y": 120,
+              "width": 150,
+              "height": 280,
+              "score": 0.8,
+              "trackId": 2,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 17,
+          "capturedMs": 2125,
+          "detections": [
+            {
+              "x": 70,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            },
+            {
+              "x": 0,
+              "y": 120,
+              "width": 150,
+              "height": 280,
+              "score": 0.8,
+              "trackId": 2,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 18,
+          "capturedMs": 2250,
+          "detections": [
+            {
+              "x": 70,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            },
+            {
+              "x": 0,
+              "y": 120,
+              "width": 150,
+              "height": 280,
+              "score": 0.8,
+              "trackId": 2,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 19,
+          "capturedMs": 2375,
+          "detections": [
+            {
+              "x": 70,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            },
+            {
+              "x": 0,
+              "y": 120,
+              "width": 150,
+              "height": 280,
+              "score": 0.8,
+              "trackId": 2,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 20,
+          "capturedMs": 2500,
+          "detections": [
+            {
+              "x": 70,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            },
+            {
+              "x": 0,
+              "y": 120,
+              "width": 150,
+              "height": 280,
+              "score": 0.8,
+              "trackId": 2,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 21,
+          "capturedMs": 2625,
+          "detections": [
+            {
+              "x": 70,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            },
+            {
+              "x": 0,
+              "y": 120,
+              "width": 150,
+              "height": 280,
+              "score": 0.8,
+              "trackId": 2,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 22,
+          "capturedMs": 2750,
+          "detections": [
+            {
+              "x": 70,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            },
+            {
+              "x": 0,
+              "y": 120,
+              "width": 150,
+              "height": 280,
+              "score": 0.8,
+              "trackId": 2,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 23,
+          "capturedMs": 2875,
+          "detections": [
+            {
+              "x": 70,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            },
+            {
+              "x": 0,
+              "y": 120,
+              "width": 150,
+              "height": 280,
+              "score": 0.8,
+              "trackId": 2,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 24,
+          "capturedMs": 3000,
+          "detections": [
+            {
+              "x": 70,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            },
+            {
+              "x": 0,
+              "y": 120,
+              "width": 150,
+              "height": 280,
+              "score": 0.8,
+              "trackId": 2,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        }
+      ],
+      "expected": {
+        "status": "INSUFFICIENT_EVIDENCE",
+        "reason": "OCCLUDED"
+      }
+    },
+    "bovino_lejano_fuera_de_zona": {
+      "reads": [
+        {
+          "eid": "032000000000001",
+          "atMs": 2000
+        }
+      ],
+      "frames": [
+        {
+          "index": 0,
+          "capturedMs": 0,
+          "detections": [
+            {
+              "x": 2,
+              "y": 10,
+              "width": 50,
+              "height": 40,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": false
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 1,
+          "capturedMs": 125,
+          "detections": [
+            {
+              "x": 2,
+              "y": 10,
+              "width": 50,
+              "height": 40,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 2,
+          "capturedMs": 250,
+          "detections": [
+            {
+              "x": 2,
+              "y": 10,
+              "width": 50,
+              "height": 40,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 3,
+          "capturedMs": 375,
+          "detections": [
+            {
+              "x": 2,
+              "y": 10,
+              "width": 50,
+              "height": 40,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 4,
+          "capturedMs": 500,
+          "detections": [
+            {
+              "x": 2,
+              "y": 10,
+              "width": 50,
+              "height": 40,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 5,
+          "capturedMs": 625,
+          "detections": [
+            {
+              "x": 2,
+              "y": 10,
+              "width": 50,
+              "height": 40,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 6,
+          "capturedMs": 750,
+          "detections": [
+            {
+              "x": 2,
+              "y": 10,
+              "width": 50,
+              "height": 40,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 7,
+          "capturedMs": 875,
+          "detections": [
+            {
+              "x": 2,
+              "y": 10,
+              "width": 50,
+              "height": 40,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 8,
+          "capturedMs": 1000,
+          "detections": [
+            {
+              "x": 2,
+              "y": 10,
+              "width": 50,
+              "height": 40,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 9,
+          "capturedMs": 1125,
+          "detections": [
+            {
+              "x": 2,
+              "y": 10,
+              "width": 50,
+              "height": 40,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 10,
+          "capturedMs": 1250,
+          "detections": [
+            {
+              "x": 2,
+              "y": 10,
+              "width": 50,
+              "height": 40,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 11,
+          "capturedMs": 1375,
+          "detections": [
+            {
+              "x": 2,
+              "y": 10,
+              "width": 50,
+              "height": 40,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 12,
+          "capturedMs": 1500,
+          "detections": [
+            {
+              "x": 2,
+              "y": 10,
+              "width": 50,
+              "height": 40,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 13,
+          "capturedMs": 1625,
+          "detections": [
+            {
+              "x": 2,
+              "y": 10,
+              "width": 50,
+              "height": 40,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 14,
+          "capturedMs": 1750,
+          "detections": [
+            {
+              "x": 2,
+              "y": 10,
+              "width": 50,
+              "height": 40,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 15,
+          "capturedMs": 1875,
+          "detections": [
+            {
+              "x": 2,
+              "y": 10,
+              "width": 50,
+              "height": 40,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 16,
+          "capturedMs": 2000,
+          "detections": [
+            {
+              "x": 2,
+              "y": 10,
+              "width": 50,
+              "height": 40,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 17,
+          "capturedMs": 2125,
+          "detections": [
+            {
+              "x": 2,
+              "y": 10,
+              "width": 50,
+              "height": 40,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 18,
+          "capturedMs": 2250,
+          "detections": [
+            {
+              "x": 2,
+              "y": 10,
+              "width": 50,
+              "height": 40,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 19,
+          "capturedMs": 2375,
+          "detections": [
+            {
+              "x": 2,
+              "y": 10,
+              "width": 50,
+              "height": 40,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 20,
+          "capturedMs": 2500,
+          "detections": [
+            {
+              "x": 2,
+              "y": 10,
+              "width": 50,
+              "height": 40,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 21,
+          "capturedMs": 2625,
+          "detections": [
+            {
+              "x": 2,
+              "y": 10,
+              "width": 50,
+              "height": 40,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 22,
+          "capturedMs": 2750,
+          "detections": [
+            {
+              "x": 2,
+              "y": 10,
+              "width": 50,
+              "height": 40,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 23,
+          "capturedMs": 2875,
+          "detections": [
+            {
+              "x": 2,
+              "y": 10,
+              "width": 50,
+              "height": 40,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 24,
+          "capturedMs": 3000,
+          "detections": [
+            {
+              "x": 2,
+              "y": 10,
+              "width": 50,
+              "height": 40,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        }
+      ],
+      "expected": {
+        "status": "INSUFFICIENT_EVIDENCE",
+        "reason": "NO_ANIMAL"
+      }
+    },
+    "cuadros_borrosos": {
+      "reads": [
+        {
+          "eid": "032000000000001",
+          "atMs": 2000
+        }
+      ],
+      "frames": [
+        {
+          "index": 0,
+          "capturedMs": 0,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": false
+            }
+          ],
+          "sharpness": 10,
+          "brightness": 120
+        },
+        {
+          "index": 1,
+          "capturedMs": 125,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 10,
+          "brightness": 120
+        },
+        {
+          "index": 2,
+          "capturedMs": 250,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 10,
+          "brightness": 120
+        },
+        {
+          "index": 3,
+          "capturedMs": 375,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 10,
+          "brightness": 120
+        },
+        {
+          "index": 4,
+          "capturedMs": 500,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 10,
+          "brightness": 120
+        },
+        {
+          "index": 5,
+          "capturedMs": 625,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 10,
+          "brightness": 120
+        },
+        {
+          "index": 6,
+          "capturedMs": 750,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 10,
+          "brightness": 120
+        },
+        {
+          "index": 7,
+          "capturedMs": 875,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 10,
+          "brightness": 120
+        },
+        {
+          "index": 8,
+          "capturedMs": 1000,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 10,
+          "brightness": 120
+        },
+        {
+          "index": 9,
+          "capturedMs": 1125,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 10,
+          "brightness": 120
+        },
+        {
+          "index": 10,
+          "capturedMs": 1250,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 10,
+          "brightness": 120
+        },
+        {
+          "index": 11,
+          "capturedMs": 1375,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 10,
+          "brightness": 120
+        },
+        {
+          "index": 12,
+          "capturedMs": 1500,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 10,
+          "brightness": 120
+        },
+        {
+          "index": 13,
+          "capturedMs": 1625,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 10,
+          "brightness": 120
+        },
+        {
+          "index": 14,
+          "capturedMs": 1750,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 10,
+          "brightness": 120
+        },
+        {
+          "index": 15,
+          "capturedMs": 1875,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 10,
+          "brightness": 120
+        },
+        {
+          "index": 16,
+          "capturedMs": 2000,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 10,
+          "brightness": 120
+        },
+        {
+          "index": 17,
+          "capturedMs": 2125,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 10,
+          "brightness": 120
+        },
+        {
+          "index": 18,
+          "capturedMs": 2250,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 10,
+          "brightness": 120
+        },
+        {
+          "index": 19,
+          "capturedMs": 2375,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 10,
+          "brightness": 120
+        },
+        {
+          "index": 20,
+          "capturedMs": 2500,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 10,
+          "brightness": 120
+        },
+        {
+          "index": 21,
+          "capturedMs": 2625,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 10,
+          "brightness": 120
+        },
+        {
+          "index": 22,
+          "capturedMs": 2750,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 10,
+          "brightness": 120
+        },
+        {
+          "index": 23,
+          "capturedMs": 2875,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 10,
+          "brightness": 120
+        },
+        {
+          "index": 24,
+          "capturedMs": 3000,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 10,
+          "brightness": 120
+        }
+      ],
+      "expected": {
+        "status": "INSUFFICIENT_EVIDENCE",
+        "reason": "LOW_QUALITY"
+      }
+    },
+    "lectura_con_desfase_de_reloj": {
+      "reads": [
+        {
+          "eid": "032000000000001",
+          "atMs": 2900
+        }
+      ],
+      "frames": [
+        {
+          "index": 0,
+          "capturedMs": 0,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": false
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 1,
+          "capturedMs": 125,
+          "detections": [
+            {
+              "x": 201,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 2,
+          "capturedMs": 250,
+          "detections": [
+            {
+              "x": 202,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 3,
+          "capturedMs": 375,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 4,
+          "capturedMs": 500,
+          "detections": [
+            {
+              "x": 201,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 5,
+          "capturedMs": 625,
+          "detections": [
+            {
+              "x": 202,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 6,
+          "capturedMs": 750,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 7,
+          "capturedMs": 875,
+          "detections": [
+            {
+              "x": 201,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 8,
+          "capturedMs": 1000,
+          "detections": [
+            {
+              "x": 202,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 9,
+          "capturedMs": 1125,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 10,
+          "capturedMs": 1250,
+          "detections": [
+            {
+              "x": 201,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 11,
+          "capturedMs": 1375,
+          "detections": [
+            {
+              "x": 202,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 12,
+          "capturedMs": 1500,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 13,
+          "capturedMs": 1625,
+          "detections": [
+            {
+              "x": 201,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 14,
+          "capturedMs": 1750,
+          "detections": [
+            {
+              "x": 202,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 15,
+          "capturedMs": 1875,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 16,
+          "capturedMs": 2000,
+          "detections": [
+            {
+              "x": 201,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 17,
+          "capturedMs": 2125,
+          "detections": [
+            {
+              "x": 202,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 18,
+          "capturedMs": 2250,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 19,
+          "capturedMs": 2375,
+          "detections": [
+            {
+              "x": 201,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 20,
+          "capturedMs": 2500,
+          "detections": [
+            {
+              "x": 202,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 21,
+          "capturedMs": 2625,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 22,
+          "capturedMs": 2750,
+          "detections": [
+            {
+              "x": 201,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 23,
+          "capturedMs": 2875,
+          "detections": [
+            {
+              "x": 202,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        },
+        {
+          "index": 24,
+          "capturedMs": 3000,
+          "detections": [
+            {
+              "x": 200,
+              "y": 120,
+              "width": 240,
+              "height": 280,
+              "score": 0.9,
+              "trackId": 1,
+              "confirmed": true
+            }
+          ],
+          "sharpness": 120,
+          "brightness": 120
+        }
+      ],
+      "expected": {
+        "status": "CONFIRMED",
+        "reason": "ONE_STABLE_ANIMAL",
+        "trackId": 1
+      }
+    }
+  }
+}

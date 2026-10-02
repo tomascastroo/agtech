@@ -150,6 +150,25 @@ export interface ScanProcessing {
   processingMs: number;
 }
 
+/** Detección + seguimiento por cuadro (Manga + RFID). Sin decisiones de identidad. */
+export interface TrackedFramesInput {
+  frames: { bytes: Buffer; index: number }[];
+}
+
+export interface TrackedFrames {
+  width: number;
+  height: number;
+  frames: {
+    index: number;
+    detections: (ScanBox & { trackId: number | null; confirmed: boolean })[];
+    sharpness: number;
+    brightness: number;
+  }[];
+  tracker: string;
+  model: ModelRef;
+  processingMs: number;
+}
+
 export interface CallContext {
   requestId?: string;
 }
@@ -171,5 +190,7 @@ export abstract class ComputerVisionProvider {
   ): Promise<ChangeDetection>;
   /** Conteo oficial de un escaneo: detección + seguimiento + conteo neto por línea. */
   abstract processScan(input: ScanFramesInput, context?: CallContext): Promise<ScanProcessing>;
+  /** Detección (YOLOX) + seguimiento (ByteTrack) + calidad por cuadro: solo percepción. */
+  abstract trackFrames(input: TrackedFramesInput, context?: CallContext): Promise<TrackedFrames>;
   abstract health(): Promise<{ ok: boolean; detail?: string }>;
 }

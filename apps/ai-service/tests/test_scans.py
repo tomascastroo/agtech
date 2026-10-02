@@ -149,3 +149,49 @@ def test_pen_scan_counts_still_animals_once(client, name: str):
     if name == "barrido-ida-vuelta-sintetico":
         assert body["pen"]["revisit_ratio"] > 0.3
     assert any("COTA INFERIOR" in limitation for limitation in body["limitations"])
+
+
+def test_track_frames_keeps_identity_within_a_sequence_without_deciding_identity():
+    """Solo percepción: el mismo bovino conserva el id de track en la secuencia; dos bovinos a la
+    vez tienen ids distintos; una detección espuria no queda asociada a un track confirmado."""
+    from agro_vision.domain.detection import Detection
+    from agro_vision.domain.scan_processing import track_frames
+
+    frames = [np.zeros((360, 640, 3), np.uint8) for _ in range(6)]
+
+    def detect_for(i: int):
+        boxes = [Detection(100 + i * 2, 100, 260 + i * 2, 220, 0.9, 19)]
+        if i >= 3:
+            boxes.append(Detection(400, 120, 540, 230, 0.85, 19))
+        return boxes
+
+    calls = iter(range(6))
+    tracked, size = track_frames(frames, lambda _img: detect_for(next(calls)))
+    assert size == (640, 360)
+    first_ids = {f.boxes[0].track_id for f in tracked}
+    assert len(first_ids) == 1 and None not in first_ids
+    assert tracked[1].boxes[0].confirmed  # min_hits = 2
+    second = {f.boxes[1].track_id for f in tracked[3:]}
+    assert len(second) == 1 and second.isdisjoint(first_ids)
+    assert all(f.quality.brightness == 0 for f in tracked)
+
+
+def test_track_endpoint_validates_frames(client):
+    assert client.post("/v1/scans/track", headers=HEADERS).status_code == 422
+
+
+@pytest.mark.skipif(not (WEIGHTS.exists() and VIDEO.exists()), reason="sin pesos YOLOX o video")
+def test_track_endpoint_returns_tracked_detections(client):
+    video = sample_frames(VIDEO.read_bytes(), target_fps=6, max_frames=1000, max_side_px=640)
+    files = [
+        ("frames", (f"{i}.jpg", cv2.imencode(".jpg", f)[1].tobytes(), "image/jpeg"))
+        for i, f in enumerate(video.frames[30:42])
+    ]
+    response = client.post("/v1/scans/track", files=files, headers=HEADERS)
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body["frames"]) == 12
+    tracked = [d for f in body["frames"] for d in f["detections"] if d["track_id"] is not None]
+    assert tracked, "debería seguir al menos un bovino"
+    assert body["tracker"].startswith("agro-bytetrack/")
+    assert "sharpness" in body["frames"][0]

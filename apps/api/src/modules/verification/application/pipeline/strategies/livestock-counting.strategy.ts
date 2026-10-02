@@ -113,7 +113,9 @@ export class LivestockCountingStrategy implements VerificationStrategy {
         .filter(
           (l) =>
             l.evidence?.type === 'SCAN' &&
-            profile.censusModes.includes(l.evidence.metadata?.mode as 'FIXED'),
+            profile.censusModes.includes(l.evidence.metadata?.mode as 'FIXED') &&
+            // Manga con lecturas simuladas: nunca es censo.
+            l.evidence.metadata?.lowerBound !== true,
         )
         .map((l) => l.evidenceId),
     );

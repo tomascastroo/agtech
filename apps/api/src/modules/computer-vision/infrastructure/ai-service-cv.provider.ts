@@ -12,6 +12,8 @@ import {
   type ObjectDetection,
   type ScanFramesInput,
   type ScanProcessing,
+  type TrackedFrames,
+  type TrackedFramesInput,
 } from '../domain/computer-vision.provider.js';
 
 interface RemoteScanBox {
@@ -21,6 +23,20 @@ interface RemoteScanBox {
   height: number;
   score: number;
   label: string;
+}
+
+interface RemoteTrack {
+  frames: {
+    index: number;
+    detections: (RemoteScanBox & { track_id: number | null; confirmed: boolean })[];
+    sharpness: number;
+    brightness: number;
+  }[];
+  width: number;
+  height: number;
+  tracker: string;
+  model: RemoteModel;
+  processing_ms: number;
 }
 
 interface RemoteScan {
@@ -317,6 +333,46 @@ export class AiServiceComputerVisionProvider extends ComputerVisionProvider {
       warnings: r.warnings,
       limitations: r.limitations,
       scoreThreshold: r.score_threshold,
+      tracker: r.tracker,
+      model: toModel(r.model),
+      processingMs: r.processing_ms,
+    };
+  }
+
+  async trackFrames(input: TrackedFramesInput, context?: CallContext): Promise<TrackedFrames> {
+    const form = new FormData();
+    for (const frame of input.frames) {
+      form.append(
+        'frames',
+        new Blob([new Uint8Array(frame.bytes)], { type: 'image/jpeg' }),
+        `${String(frame.index).padStart(5, '0')}.jpg`,
+      );
+    }
+    const r = await this.send<RemoteTrack>(
+      '/v1/scans/track',
+      form,
+      context,
+      this.config.env.AI_SERVICE_SCAN_TIMEOUT_MS,
+    );
+    // El servicio numera los cuadros 0..n-1 en el orden enviado: se vuelve a los índices propios.
+    return {
+      width: r.width,
+      height: r.height,
+      frames: r.frames.map((f) => ({
+        index: input.frames[f.index]!.index,
+        detections: f.detections.map((d) => ({
+          x: d.x,
+          y: d.y,
+          width: d.width,
+          height: d.height,
+          score: d.score,
+          label: d.label,
+          trackId: d.track_id,
+          confirmed: d.confirmed,
+        })),
+        sharpness: f.sharpness,
+        brightness: f.brightness,
+      })),
       tracker: r.tracker,
       model: toModel(r.model),
       processingMs: r.processing_ms,

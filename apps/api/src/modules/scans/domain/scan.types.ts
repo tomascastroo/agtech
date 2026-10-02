@@ -12,11 +12,15 @@
  *    COTA INFERIOR (no ve los animales tapados).
  *  - PHOTO (analizar foto): una o varias fotos del mismo grupo; animales únicos, solo se suman
  *    zonas de fotos que se solapan. COTA INFERIOR.
+ *  - CHUTE (Manga + RFID): escaneo INDIVIDUAL. Un bovino quieto en la manga y la lectura de su
+ *    caravana electrónica: se asocia RFID ↔ bovino observado (ver chute-matching.ts). La
+ *    identidad la da el RFID; YOLOX solo detecta y ByteTrack solo sigue. Sin reconocimiento
+ *    visual. El conteo es de caravanas distintas confirmadas (comparable si pasa todo el rodeo).
  *
  * El conteo del celular es preliminar; el oficial es el recalculado por el servidor.
  */
 
-export const SCAN_MODES = ['FIXED', 'SWEEP', 'PEN', 'PHOTO'] as const;
+export const SCAN_MODES = ['FIXED', 'SWEEP', 'PEN', 'PHOTO', 'CHUTE'] as const;
 export type ScanMode = (typeof SCAN_MODES)[number];
 
 /** Modos que cuentan animales quietos (únicos) en lugar de cruces de una línea. */
@@ -27,7 +31,18 @@ export const SCAN_MODE_LABELS: Record<ScanMode, string> = {
   SWEEP: 'Escáner móvil (barrido)',
   PEN: 'Escáner de corral',
   PHOTO: 'Análisis de fotos',
+  CHUTE: 'Manga + RFID (individual)',
 };
+/**
+ * ¿El conteo es cota inferior? Solo el paso completo (FIXED) y la manga con lecturas RFID reales
+ * son comparables con lo declarado. Manga con lecturas SIMULADAS (o sin dato): cota inferior.
+ */
+export function isLowerBound(mode: ScanMode, rfidSimulated?: boolean | null): boolean {
+  if (mode === 'FIXED') return false;
+  if (mode === 'CHUTE') return rfidSimulated !== false;
+  return true;
+}
+
 export const SCAN_STATUSES = ['UPLOADING', 'PROCESSING', 'COMPLETED', 'FAILED'] as const;
 export type ScanStatus = (typeof SCAN_STATUSES)[number];
 
@@ -66,6 +81,7 @@ export const GUIDANCE = {
   USE_PEN_MODE: 'Los animales están quietos: usá el escáner de corral',
   OVERLAP_PHOTOS: 'Tomá las fotos seguidas, con una parte en común entre una y otra',
   POINT_AT_HERD: 'No se vio ningún bovino: apuntá al rodeo',
+  ONE_ANIMAL_AT_A_TIME: 'Dejá un solo bovino en la zona de captura y leé su caravana',
 } as const;
 export type GuidanceCode = keyof typeof GUIDANCE;
 
@@ -78,6 +94,13 @@ export interface ScanLine {
 export const SCAN_LIMITS = {
   maxFrames: 1200,
   maxPhotos: 12,
+  /** Manga + RFID: animales por sesión y cuadros de la ventana de cada animal. */
+  maxChuteCaptures: 300,
+  maxFramesPerCapture: 24,
+  maxChuteFrames: 7200,
+  maxChuteReadsPerCapture: 8,
+  /** Una sesión de manga dura lo que tarda en pasar el rodeo (no el límite de un escaneo). */
+  maxChuteDurationS: 4 * 3600,
   maxKeyFrames: 12,
   maxFrameBytes: 1_500_000,
   maxDurationS: 300,
@@ -158,7 +181,7 @@ export interface QualityThresholds {
   /** Proporción de detecciones superpuestas a partir de la cual hay "demasiados ocultos". */
   occlusionLimit: number;
   /** Duración mínima de un escaneo con video, por modo (s). */
-  minDurationS: Record<Exclude<ScanMode, 'PHOTO'>, number>;
+  minDurationS: Record<Exclude<ScanMode, 'PHOTO' | 'CHUTE'>, number>;
 }
 
 export const DEFAULT_THRESHOLDS: QualityThresholds = {
@@ -193,7 +216,7 @@ export function assessScanQuality(input: QualityInput): QualityAssessment {
 
   if (input.mode === 'PHOTO') {
     if (input.frames < 1) insufficient.push('No hay fotos');
-  } else {
+  } else if (input.mode !== 'CHUTE') {
     const minDuration = t.minDurationS[input.mode];
     if (input.frames < 10 || input.durationS < minDuration) {
       insufficient.push(`Escaneo demasiado corto (mínimo ${minDuration} s)`);
@@ -298,6 +321,39 @@ export function assessScanQuality(input: QualityInput): QualityAssessment {
     quality,
     evidenceStatus: EVIDENCE_STATUS_BY_QUALITY[quality],
     reasons: [...insufficient, ...limited],
+    guidance: [...guidance].map((code) => ({ code, message: GUIDANCE[code] })),
+  };
+}
+
+/**
+ * Calidad de una sesión de Manga + RFID según cómo se resolvieron sus capturas: sin ninguna
+ * confirmada no hay evidencia; muchas dudosas la dejan NO CONCLUYENTE.
+ */
+export function assessChuteQuality(counts: {
+  confirmed: number;
+  ambiguous: number;
+  insufficient: number;
+}): QualityAssessment {
+  const total = counts.confirmed + counts.ambiguous + counts.insufficient;
+  const reasons: string[] = [];
+  const guidance = new Set<GuidanceCode>();
+  let quality: ScanQuality = 'COMPLETE';
+  if (counts.confirmed === 0) {
+    quality = 'INSUFFICIENT';
+    reasons.push('Ningún bovino quedó asociado a su caravana');
+    guidance.add('POINT_AT_HERD');
+  } else if (total > 0 && (counts.ambiguous + counts.insufficient) / total > 0.2) {
+    quality = 'LIMITED';
+    reasons.push(
+      `${counts.ambiguous + counts.insufficient} de ${total} lecturas no se pudieron asociar a un único bovino`,
+    );
+  }
+  if (counts.ambiguous > 0) guidance.add('ONE_ANIMAL_AT_A_TIME');
+  if (counts.insufficient > 0) guidance.add('HOLD_STILL');
+  return {
+    quality,
+    evidenceStatus: EVIDENCE_STATUS_BY_QUALITY[quality],
+    reasons,
     guidance: [...guidance].map((code) => ({ code, message: GUIDANCE[code] })),
   };
 }

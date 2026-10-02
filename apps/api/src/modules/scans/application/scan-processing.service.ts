@@ -11,7 +11,15 @@ import { EVIDENCE_SOURCE_CODES } from '../../evidence/domain/evidence.types.js';
 import { livestockProfile } from '../../assets/domain/livestock-profile.js';
 import { ObjectStorage } from '../../storage/object-storage.js';
 import { VerificationRequestService } from '../../verification/application/verification-request.service.js';
-import { assessScanQuality, STILL_MODES, type OfficialScanResult } from '../domain/scan.types.js';
+import { CHUTE_MATCHER_VERSION } from '../domain/chute-matching.js';
+import {
+  assessChuteQuality,
+  isLowerBound,
+  assessScanQuality,
+  STILL_MODES,
+  type OfficialScanResult,
+} from '../domain/scan.types.js';
+import { ChuteProcessingService } from './chute-processing.service.js';
 import { ScanFrameEntity } from '../infrastructure/scan-frame.entity.js';
 import { ScanSessionEntity } from '../infrastructure/scan-session.entity.js';
 
@@ -36,6 +44,7 @@ export class ScanProcessingService {
     private readonly recorder: EvidenceRecorder,
     private readonly verifications: VerificationRequestService,
     private readonly audit: AuditService,
+    private readonly chute: ChuteProcessingService,
   ) {}
 
   async process(scanId: string): Promise<void> {
@@ -54,6 +63,7 @@ export class ScanProcessingService {
       }
       return { bytes, index: row.frameIndex };
     };
+    if (session.mode === 'CHUTE') return this.processChute(session, rows, load);
     const samples = await mapLimit(
       rows.filter((r) => r.kind === 'SAMPLE'),
       8,
@@ -154,7 +164,7 @@ export class ScanProcessingService {
         mode: session.mode,
         officialCount: result.observed,
         confidence: result.confidence,
-        lowerBound: session.mode !== 'FIXED',
+        lowerBound: isLowerBound(session.mode),
         method: result.method,
         quality: quality.quality,
         evidenceStatus: quality.evidenceStatus,
@@ -203,6 +213,131 @@ export class ScanProcessingService {
         quality: quality.quality,
         evidenceId: evidence.id,
         simulated: result.model.simulated,
+      },
+    });
+    await this.reverify(session);
+  }
+
+  /**
+   * Manga + RFID: cada captura se resuelve en el servidor (ChuteProcessingService); la sesión
+   * registra una evidencia SCAN con el conteo de caravanas distintas confirmadas. Con lecturas
+   * SIMULADAS el conteo nunca es censo (cota inferior) y queda marcado como simulado.
+   */
+  private async processChute(
+    session: ScanSessionEntity,
+    rows: ScanFrameEntity[],
+    load: (row: ScanFrameEntity) => Promise<{ bytes: Buffer; index: number }>,
+  ): Promise<void> {
+    const result = await this.chute.resolve(session, rows, load);
+    const quality = assessChuteQuality(result);
+    const model = result.model ?? { code: 'yolox', version: 'n/a', simulated: false };
+    const warnings = [
+      ...new Set([
+        ...session.warnings,
+        ...quality.reasons,
+        ...(result.rfidSimulated ? ['Lecturas RFID SIMULADAS: no es una identificación real'] : []),
+      ]),
+    ];
+    const official: OfficialScanResult = {
+      observed: result.identified,
+      method: CHUTE_MATCHER_VERSION,
+      pen: null,
+      metrics: null,
+      guidance: quality.guidance,
+      netCount: result.identified,
+      positiveCrossings: 0,
+      negativeCrossings: 0,
+      maxSimultaneous: 1,
+      confirmedTracks: result.confirmed,
+      confidence: result.confirmed / Math.max(1, result.captures.length),
+      framesProcessed: result.framesProcessed,
+      blurryFrames: 0,
+      cameraPanPx: null,
+      warnings,
+      limitations: [
+        'Manga + RFID: la identidad la da la caravana electrónica. La cámara solo confirma que había UN bovino estable en la zona de captura al momento de la lectura; no reconoce animales por su aspecto.',
+        'Ante más de un bovino, un seguimiento inestable o lecturas superpuestas, la lectura queda sin asociar (no se inventa una identidad).',
+        'Comparable con lo declarado solo si todo el rodeo pasa por la manga y las lecturas son de un lector real.',
+      ],
+      model,
+      tracker: result.tracker ?? 'n/a',
+      processingMs: result.processingMs,
+    };
+    const manifest = {
+      kind: 'agrogarantias.chute-session',
+      version: 1,
+      scanId: session.id,
+      organizationId: session.organizationId,
+      assetId: session.assetId,
+      establishmentId: session.establishmentId,
+      guaranteeRequestId: session.guaranteeRequestId,
+      createdBy: session.createdBy,
+      startedAt: session.startedAt,
+      endedAt: session.endedAt,
+      captureZone: session.captureZone,
+      device: session.device,
+      captures: result.captures,
+      official: { ...official, chute: result },
+      quality: quality.quality,
+      warnings,
+    };
+    const evidence = await this.recorder.record({
+      organizationId: session.organizationId,
+      assetId: session.assetId,
+      establishmentId: session.establishmentId,
+      sourceCode: EVIDENCE_SOURCE_CODES.BOVINE_SCANNER,
+      type: 'SCAN',
+      capturedAt: session.startedAt,
+      location: session.location,
+      file: { bytes: Buffer.from(JSON.stringify(manifest)), mimeType: 'application/json' },
+      uploadedBy: session.createdBy,
+      metadata: {
+        scanSessionId: session.id,
+        mode: session.mode,
+        officialCount: result.identified,
+        confidence: official.confidence,
+        // Censo solo con lecturas reales; con lecturas simuladas, cota inferior.
+        lowerBound: isLowerBound('CHUTE', result.rfidSimulated),
+        method: CHUTE_MATCHER_VERSION,
+        quality: quality.quality,
+        evidenceStatus: quality.evidenceStatus,
+        stillAnimals: false,
+        identifiedByRfid: result.identified,
+        rfidSimulated: result.rfidSimulated,
+        frames: result.framesProcessed,
+        deviceCount: (session.clientResult?.netCount as number | undefined) ?? null,
+        model,
+        tracker: official.tracker,
+        simulated: model.simulated || result.rfidSimulated,
+        locationSource: session.location ? 'DEVICE_GPS' : 'NONE',
+        locationAccuracyM: session.locationAccuracyM,
+      },
+    });
+    await this.sessions.save(
+      Object.assign(session, {
+        status: 'COMPLETED' as const,
+        serverResult: { ...official, chute: result },
+        officialCount: result.identified,
+        quality: quality.quality,
+        warnings,
+        evidenceId: evidence.id,
+        processedAt: new Date(),
+        error: null,
+      }),
+    );
+    await this.audit.record({
+      actor: { kind: 'system', organizationId: session.organizationId, process: 'scan-worker' },
+      action: AUDIT_ACTIONS.SCAN_PROCESSED,
+      resourceType: 'scan_session',
+      resourceId: session.id,
+      metadata: {
+        mode: 'CHUTE',
+        identified: result.identified,
+        confirmed: result.confirmed,
+        ambiguous: result.ambiguous,
+        insufficient: result.insufficient,
+        rfidSimulated: result.rfidSimulated,
+        evidenceId: evidence.id,
       },
     });
     await this.reverify(session);

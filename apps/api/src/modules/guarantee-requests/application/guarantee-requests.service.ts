@@ -44,6 +44,7 @@ import { PasswordHasher } from '../../auth/application/password-hasher.js';
 import { livestockProfile } from '../../assets/domain/livestock-profile.js';
 import {
   EVIDENCE_STATUS_BY_QUALITY,
+  isLowerBound,
   SCAN_MODE_LABELS,
   STILL_MODES,
   type ScanMode,
@@ -737,6 +738,10 @@ export class GuaranteeRequestsService {
               (client_result->>'netCount')::int AS "deviceCount",
               server_result->'metrics'->>'coverageViews' AS "coverageViews",
               server_result->'guidance' AS guidance,
+              (server_result->'chute'->>'rfidSimulated')::boolean AS "rfidSimulated",
+              (server_result->'chute'->>'confirmed')::int AS "chuteConfirmed",
+              (server_result->'chute'->>'ambiguous')::int AS "chuteAmbiguous",
+              (server_result->'chute'->>'insufficient')::int AS "chuteInsufficient",
               jsonb_array_length(warnings) AS "warningCount", error
          FROM scan_sessions WHERE guarantee_request_id = $1 ORDER BY started_at DESC LIMIT 20`,
       [request.id],
@@ -963,7 +968,7 @@ export class GuaranteeRequestsService {
           coverageViews: scan.coverageViews === null ? null : Number(scan.coverageViews),
           guidance: scan.guidance ?? [],
           modeLabel: SCAN_MODE_LABELS[mode],
-          lowerBound: mode !== 'FIXED',
+          lowerBound: isLowerBound(mode, scan.rfidSimulated as boolean | null),
           stillAnimals: STILL_MODES.includes(mode),
           evidenceStatus: quality ? EVIDENCE_STATUS_BY_QUALITY[quality] : null,
         };

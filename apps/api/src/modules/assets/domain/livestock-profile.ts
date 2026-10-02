@@ -55,7 +55,7 @@ const PROFILES: Record<LivestockSystem, Omit<LivestockProfile, 'declaredSystem' 
     system: 'FEEDLOT',
     label: 'Feedlot',
     recommendedModes: ['PEN', 'FIXED', 'PHOTO'],
-    censusModes: ['FIXED'],
+    censusModes: ['FIXED', 'CHUTE'],
     guidance:
       'Escaneá cada corral con el escáner de corral, desde un lugar alto (comedero, pasarela). ' +
       'Si el corral tiene una manga o una puerta de paso, el escáner fijo permite un conteo ' +
@@ -70,7 +70,7 @@ const PROFILES: Record<LivestockSystem, Omit<LivestockProfile, 'declaredSystem' 
     system: 'CRIA',
     label: 'Cría',
     recommendedModes: ['FIXED', 'PEN', 'SWEEP', 'PHOTO'],
-    censusModes: ['FIXED'],
+    censusModes: ['FIXED', 'CHUTE'],
     guidance:
       'El conteo más confiable es el paso por la manga con el escáner fijo. En la aguada o en ' +
       'un agrupamiento usá el escáner de corral; en el potrero, el barrido.',
@@ -84,7 +84,7 @@ const PROFILES: Record<LivestockSystem, Omit<LivestockProfile, 'declaredSystem' 
     system: 'PASTOREO',
     label: 'Pastoreo',
     recommendedModes: ['SWEEP', 'PEN', 'PHOTO', 'FIXED'],
-    censusModes: ['FIXED'],
+    censusModes: ['FIXED', 'CHUTE'],
     guidance:
       'Los animales están dispersos: hacé barridos desde puntos altos o escaneá los grupos con ' +
       'el escáner de corral. Si se encierran en la manga, el escáner fijo da un conteo completo.',
