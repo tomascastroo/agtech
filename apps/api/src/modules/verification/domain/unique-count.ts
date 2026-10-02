@@ -18,6 +18,12 @@ export interface CountedImage {
   location: { latitude: number; longitude: number } | null;
   accuracyM: number | null;
   dhash: string | null;
+  /**
+   * Distancia mínima (m) para considerar esta captura de otra zona. Por defecto la regla general
+   * (300 m); en feedlot, los escaneos de corral usan una menor (corrales vecinos). Para un par se
+   * toma la MAYOR de las dos (la más conservadora).
+   */
+  distinctMinDistanceM?: number;
 }
 
 export interface OverlapGroup {
@@ -84,7 +90,11 @@ export function provablyDistinct(
   if (a.location && b.location) {
     const d = distanceM(a.location, b.location);
     const gapMin = Math.abs(a.capturedAt.getTime() - b.capturedAt.getTime()) / 60_000;
-    const threshold = DISTINCT_MIN_DISTANCE_M + (a.accuracyM ?? 0) + (b.accuracyM ?? 0);
+    const minDistance = Math.max(
+      a.distinctMinDistanceM ?? DISTINCT_MIN_DISTANCE_M,
+      b.distinctMinDistanceM ?? DISTINCT_MIN_DISTANCE_M,
+    );
+    const threshold = minDistance + (a.accuracyM ?? 0) + (b.accuracyM ?? 0);
     if (d > threshold && gapMin <= DISTINCT_MAX_TIME_GAP_MIN) {
       return { distinct: true, reason: `capturas a ${Math.round(d)} m entre sí` };
     }

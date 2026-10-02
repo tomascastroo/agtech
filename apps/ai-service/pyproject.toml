@@ -24,6 +24,12 @@ dev = [
   "ruff>=0.16.9,<0.17",
 ]
 
+[tool.uv]
+# rapidocr-onnxruntime depende de opencv-python (con GUI, requiere libxcb/libGL). Con las dos
+# variantes instaladas, cuál queda como cv2 depende del orden de instalación y la imagen de Docker
+# (sin librerías gráficas) puede no arrancar. Se excluye: opencv-python-headless provee el mismo cv2.
+override-dependencies = ["opencv-python; sys_platform == 'never'"]
+
 [build-system]
 requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"

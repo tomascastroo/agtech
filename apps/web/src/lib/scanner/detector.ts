@@ -57,7 +57,10 @@ function loadOrt(): Promise<OrtModule> {
  */
 export function prefersWasm(): boolean {
   if (typeof navigator === 'undefined') return false;
-  if (typeof location !== 'undefined' && new URLSearchParams(location.search).get('ia') === 'webgpu')
+  if (
+    typeof location !== 'undefined' &&
+    new URLSearchParams(location.search).get('ia') === 'webgpu'
+  )
     return false;
   const ua = navigator.userAgent;
   return /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);

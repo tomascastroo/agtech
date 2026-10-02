@@ -5,7 +5,7 @@
  */
 import type { LineSpec } from './tracker';
 
-export type ScanMode = 'FIXED' | 'SWEEP';
+export type ScanMode = 'FIXED' | 'SWEEP' | 'PEN' | 'PHOTO';
 export type FrameKind = 'SAMPLE' | 'KEY';
 
 /** Estado local de un escaneo (lo que ve el productor). */
@@ -29,6 +29,11 @@ export interface DeviceResult {
   model: string;
   tracker: string;
   preliminary: true;
+  /** Escáner de corral / fotos: animales únicos observados (preliminar). */
+  observed?: number;
+  coverageViews?: number;
+  mergedTracks?: number;
+  photos?: number;
 }
 
 export interface LocalScan {

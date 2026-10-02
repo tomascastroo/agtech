@@ -111,3 +111,41 @@ def test_sweep_scan_net_count_with_camera_motion(client, name: str, revisit: boo
     assert abs(body["camera_pan_px"] + 1760) < 60
     assert (body["positive_crossings"] > 0) == revisit
     assert any("COTA INFERIOR" in limitation for limitation in body["limitations"])
+
+
+@pytest.mark.skipif(
+    not (WEIGHTS.exists() and (SWEEPS / "barrido-ida-vuelta-sintetico.mp4").exists()),
+    reason="sin pesos YOLOX o videos de barrido",
+)
+@pytest.mark.parametrize("name", ["barrido-sintetico", "barrido-ida-vuelta-sintetico"])
+def test_pen_scan_counts_still_animals_once(client, name: str):
+    """Escáner de CORRAL sobre los mismos videos SINTÉTICOS (12 bovinos quietos): la cámara
+    recorre el grupo y, en el de ida y vuelta, vuelve sobre una zona ya vista. Los animales
+    re-vistos no se cuentan dos veces (unión de vistas en coordenadas del mundo)."""
+    video = sample_frames(
+        (SWEEPS / f"{name}.mp4").read_bytes(), target_fps=6, max_frames=1000, max_side_px=640
+    )
+    files = [
+        (
+            "frames",
+            (
+                f"{i:05d}.jpg",
+                cv2.imencode(".jpg", f, [cv2.IMWRITE_JPEG_QUALITY, 75])[1].tobytes(),
+                "image/jpeg",
+            ),
+        )
+        for i, f in enumerate(video.frames)
+    ]
+    response = client.post("/v1/scans/process", files=files, data={"mode": "PEN"}, headers=HEADERS)
+    assert response.status_code == 200
+    body = response.json()
+    assert body["method"].startswith("agro-pen-unique/")
+    assert body["observed"] == body["pen"]["observed"]
+    # Verdad de campo 12; tolerancia para pérdidas del detector (no es una métrica de precisión).
+    assert 10 <= body["observed"] <= 13
+    # Recorrido ≈ (3600 - 960) / 960 + 1 ≈ 3,75 vistas de ancho.
+    assert 3.2 <= body["pen"]["coverage_views"] <= 4.2
+    assert body["metrics"]["coverage_views"] == body["pen"]["coverage_views"]
+    if name == "barrido-ida-vuelta-sintetico":
+        assert body["pen"]["revisit_ratio"] > 0.3
+    assert any("COTA INFERIOR" in limitation for limitation in body["limitations"])

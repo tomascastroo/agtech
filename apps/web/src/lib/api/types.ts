@@ -607,6 +607,7 @@ export interface GuaranteeRequest {
   alerts?: { id: string; type: string; severity: string; title: string; status: string }[];
   crossSources?: CrossSource[];
   scans?: RequestScanSummary[];
+  livestockProfile?: LivestockProfile | null;
   invitation?: { url: string; expiresAt: string };
   producerStatus: ProducerStatus;
   progress: { key: string; label: string; state: 'DONE' | 'PENDING' | 'TODO' | 'IN_PROGRESS' }[];
@@ -717,9 +718,33 @@ export interface RfidReading {
 }
 
 /** Escaneo de bovinos asociado a una solicitud (resumen). */
+export type ScanModeCode = 'FIXED' | 'SWEEP' | 'PEN' | 'PHOTO';
+export type EvidenceStatusCode = 'VALIDATED' | 'INCONCLUSIVE' | 'INSUFFICIENT';
+export interface GuidanceItem {
+  code: string;
+  message: string;
+}
+
+/** Tipo de producción ganadera del rodeo (lo deriva la API del sistema productivo). */
+export interface LivestockProfile {
+  system: 'FEEDLOT' | 'CRIA' | 'PASTOREO';
+  label: string;
+  declaredSystem: string | null;
+  inferred: boolean;
+  recommendedModes: ScanModeCode[];
+  censusModes: ScanModeCode[];
+  guidance: string;
+  coverageNote: string;
+}
+
 export interface RequestScanSummary {
   id: string;
-  mode: 'FIXED' | 'SWEEP';
+  mode: ScanModeCode;
+  modeLabel: string;
+  stillAnimals: boolean;
+  evidenceStatus: EvidenceStatusCode | null;
+  guidance: GuidanceItem[];
+  coverageViews: number | null;
   status: 'UPLOADING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
   startedAt: string;
   durationS: number | null;
@@ -743,7 +768,11 @@ export interface ScanBox {
 /** Escaneo con resultado oficial, para la entidad. */
 export interface ScanDetail {
   id: string;
-  mode: 'FIXED' | 'SWEEP';
+  mode: ScanModeCode;
+  modeLabel: string;
+  evidenceStatus: EvidenceStatusCode | null;
+  evidenceStatusLabel: string | null;
+  guidance: GuidanceItem[];
   status: 'UPLOADING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
   startedAt: string;
   durationS: number | null;
@@ -758,6 +787,29 @@ export interface ScanDetail {
   deviceResult: { netCount?: number; backend?: string; model?: string } | null;
   official: {
     count: number | null;
+    method: string;
+    stillAnimals: boolean;
+    pen: {
+      observed: number;
+      tracksCounted: number;
+      mergedTracks: number;
+      maxSimultaneous: number;
+      coverageViews: number;
+      revisitRatio: number;
+      occlusionRatio: number;
+      edgeAnimals: number;
+    } | null;
+    metrics: {
+      frames: number;
+      blurryRatio: number;
+      underexposedRatio: number;
+      overexposedRatio: number;
+      fastMotionRatio: number;
+      occlusionRatio: number;
+      smallAnimalRatio: number;
+      coverageViews: number | null;
+      registeredPhotos: number | null;
+    } | null;
     positiveCrossings: number;
     negativeCrossings: number;
     maxSimultaneous: number;
@@ -781,4 +833,44 @@ export interface ScanDetail {
     url: string;
     detections: ScanBox[] | null;
   }[];
+}
+
+/** Historial del rodeo por verificación y cambios relevantes (monitoreo recurrente). */
+export interface LivestockHistory {
+  rows: {
+    runId: string;
+    date: string;
+    declared: number | null;
+    observed: number | null;
+    basis: 'CENSUS' | 'LOWER_BOUND' | null;
+    rfidIdentified: number | null;
+    rfidSimulated: number;
+    coverage: number | null;
+    status: 'VERIFIED' | 'OBSERVED' | 'REJECTED' | 'INCONCLUSIVE' | null;
+  }[];
+  changes: {
+    code: string;
+    severity: 'INFO' | 'WARNING' | 'CRITICAL';
+    fromRunId: string;
+    toRunId: string;
+    date: string;
+    message: string;
+  }[];
+  rfidWindowDays: number;
+}
+
+/** Conciliación visual + RFID (REAL y SIMULADO por separado). */
+export interface LivestockReconciliation {
+  method: 'TIME_MATCH' | 'COUNTS_ONLY' | 'NO_RFID' | 'NO_VISUAL';
+  observed: number | null;
+  observedBasis: 'CENSUS' | 'LOWER_BOUND' | null;
+  observedAt: string | null;
+  real: { tags: number; identified: number; unknown: number; otherEstablishment: number };
+  simulated: { tags: number; identified: number; unknown: number; otherEstablishment: number };
+  matches: number | null;
+  observedWithoutRfid: number | null;
+  rfidWithoutVisual: number | null;
+  totalsDifference: number | null;
+  notes: string[];
+  windowDays: number;
 }

@@ -4,14 +4,30 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import styles from '@/components/producer/producer.module.css';
 import { api } from '@/lib/api/client';
+import type { EvidenceStatusCode, GuidanceItem, LivestockProfile } from '@/lib/api/types';
 import { cacheRequest } from '@/lib/scanner/request-cache';
 import { scanStatus } from '@/lib/scanner/status';
 import { listScans, type LocalScan } from '@/lib/scanner/store';
 import { onScansChanged, syncPendingScans } from '@/lib/scanner/sync';
 
+export const MODE_LABELS: Record<LocalScan['mode'], string> = {
+  FIXED: 'Escáner fijo',
+  SWEEP: 'Barrido',
+  PEN: 'Escáner de corral',
+  PHOTO: 'Fotos',
+};
+
+const EVIDENCE_LABELS: Record<EvidenceStatusCode, string> = {
+  VALIDATED: 'Evidencia VALIDADA',
+  INCONCLUSIVE: 'Evidencia NO CONCLUYENTE (cuenta como mínimo)',
+  INSUFFICIENT: 'EVIDENCIA INSUFICIENTE (no se usa)',
+};
+
 interface ServerScan {
   id: string;
-  mode: 'FIXED' | 'SWEEP';
+  mode: LocalScan['mode'];
+  evidenceStatus: EvidenceStatusCode | null;
+  guidance: GuidanceItem[];
   status: 'UPLOADING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
   startedAt: string;
   durationS: number | null;
@@ -29,6 +45,8 @@ type Row = Pick<
 > & {
   startedAt: string;
   deviceCount: number | null;
+  evidenceStatus?: EvidenceStatusCode | null;
+  guidance?: GuidanceItem[];
 };
 
 const fromServer = (s: ServerScan): Row => ({
@@ -49,16 +67,26 @@ const fromServer = (s: ServerScan): Row => ({
     : null,
   error: s.error,
   deviceCount: s.deviceResult?.netCount ?? null,
+  evidenceStatus: s.evidenceStatus,
+  guidance: s.guidance,
 });
 
 /** Escaneos de la solicitud: los guardados en el teléfono y los ya recibidos por el servidor. */
-export function ScannerScans({ requestId, assetName }: { requestId: string; assetName: string }) {
+export function ScannerScans({
+  requestId,
+  assetName,
+  profile = null,
+}: {
+  requestId: string;
+  assetName: string;
+  profile?: LivestockProfile | null;
+}) {
   const [rows, setRows] = useState<Row[]>([]);
   const [online, setOnline] = useState(true);
 
   useEffect(() => {
-    cacheRequest({ id: requestId, assetName });
-  }, [requestId, assetName]);
+    cacheRequest({ id: requestId, assetName, profile });
+  }, [requestId, assetName, profile]);
 
   useEffect(() => {
     let alive = true;
@@ -97,10 +125,16 @@ export function ScannerScans({ requestId, assetName }: { requestId: string; asse
   return (
     <div className={styles.list}>
       <p className={styles.muted}>
-        Usá la cámara del celular como escáner: en una manga o tranquera (escáner fijo) o girando
-        despacio desde un punto (barrido). Funciona sin señal; el conteo oficial lo calcula el
-        servidor cuando el escaneo se sincroniza.
+        Usá la cámara del celular como escáner: en una manga o tranquera (escáner fijo), girando
+        despacio desde un punto (barrido), sobre animales quietos en un corral o aguada (escáner de
+        corral) o con fotos. Funciona sin señal; el conteo oficial lo calcula el servidor cuando el
+        escaneo se sincroniza.
       </p>
+      {profile ? (
+        <p className={styles.muted} data-testid="livestock-profile">
+          <strong>{profile.label}:</strong> {profile.guidance}
+        </p>
+      ) : null}
       <Link href={`/escaner/${requestId}`} className={styles.bigButton} data-testid="open-scanner">
         Escanear rodeo
       </Link>
@@ -110,7 +144,7 @@ export function ScannerScans({ requestId, assetName }: { requestId: string; asse
           <div key={row.id} className={styles.docRow} data-testid="scan-row">
             <span style={{ flex: 1 }}>
               <strong style={{ display: 'block' }}>
-                {row.mode === 'FIXED' ? 'Escáner fijo' : 'Barrido'} ·{' '}
+                {MODE_LABELS[row.mode]} ·{' '}
                 {new Date(row.startedAt).toLocaleString('es-AR', {
                   dateStyle: 'short',
                   timeStyle: 'short',
@@ -120,6 +154,24 @@ export function ScannerScans({ requestId, assetName }: { requestId: string; asse
                 {row.deviceCount !== null ? `Celular (preliminar): ${row.deviceCount} · ` : ''}
                 {status.detail}
               </span>
+              {row.evidenceStatus ? (
+                <span
+                  className={styles.muted}
+                  style={{ display: 'block' }}
+                  data-testid="scan-evidence"
+                >
+                  {EVIDENCE_LABELS[row.evidenceStatus]}
+                </span>
+              ) : null}
+              {row.guidance?.length ? (
+                <span
+                  className={styles.muted}
+                  style={{ display: 'block' }}
+                  data-testid="scan-guidance"
+                >
+                  Para el próximo escaneo: {row.guidance.map((g) => g.message).join(' · ')}
+                </span>
+              ) : null}
             </span>
             <span className={styles.chip} data-testid="scan-status">
               {status.label}

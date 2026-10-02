@@ -71,7 +71,7 @@ export interface ChangeDetection {
 export interface ScanFramesInput {
   frames: { bytes: Buffer; index: number }[];
   keyFrames: { bytes: Buffer; index: number }[];
-  mode: 'FIXED' | 'SWEEP';
+  mode: 'FIXED' | 'SWEEP' | 'PEN' | 'PHOTO';
   line: { orientation: 'vertical' | 'horizontal'; position: number };
 }
 
@@ -80,7 +80,41 @@ export interface ScanBox extends BoundingBox {
   label: string;
 }
 
+/** Animales quietos (escáner de corral / fotos): únicos con unión conservadora de vistas. */
+export interface ScanPenResult {
+  observed: number;
+  uniqueGroups: number;
+  tracksCounted: number;
+  mergedTracks: number;
+  maxSimultaneous: number;
+  coverageViews: number;
+  revisitRatio: number;
+  occlusionRatio: number;
+  smallAnimalRatio: number;
+  edgeAnimals: number;
+  method: string;
+}
+
+/** Magnitudes medidas sobre los cuadros (proporciones); la API decide la calidad con ellas. */
+export interface ScanMetrics {
+  frames: number;
+  blurryRatio: number;
+  underexposedRatio: number;
+  overexposedRatio: number;
+  fastMotionRatio: number;
+  occlusionRatio: number;
+  smallAnimalRatio: number;
+  coverageViews: number | null;
+  edgeAnimals: number | null;
+  registeredPhotos: number | null;
+}
+
 export interface ScanProcessing {
+  /** Conteo oficial del modo: neto por línea (FIXED/SWEEP) o animales únicos (PEN/PHOTO). */
+  observed: number;
+  method: string;
+  pen: ScanPenResult | null;
+  metrics: ScanMetrics;
   netCount: number;
   positiveCrossings: number;
   negativeCrossings: number;

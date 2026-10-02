@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import type { Anomaly } from '../../../domain/verification.types.js';
 import type { VerificationEvidenceEntity } from '../../../infrastructure/verification-evidence.entity.js';
+import {
+  livestockProfile,
+  type LivestockProfile,
+} from '../../../../assets/domain/livestock-profile.js';
 import { inferLocationSource } from '../../../../evidence/domain/capture-location.js';
 import { type CountedImage, estimateUniqueAnimals } from '../../../domain/unique-count.js';
 import { CameraCaptureService } from '../camera-capture.service.js';
@@ -20,11 +24,16 @@ import {
   quality,
 } from './evidence-stats.js';
 
+/** Código numérico del tipo de producción en la métrica `production_system` (detalle en details). */
+const LIVESTOCK_SYSTEM_CODE = { FEEDLOT: 1, CRIA: 2, PASTOREO: 3 } as const;
+
 /** Solo GPS del teléfono o EXIF sirven para afirmar que dos fotos son de lugares distintos. */
 const DISTINGUISHING_SOURCES = new Set(['DEVICE_GPS', 'EXIF']);
 
-function countedImage(link: VerificationEvidenceEntity): CountedImage {
+function countedImage(link: VerificationEvidenceEntity, profile: LivestockProfile): CountedImage {
   const ev = link.evidence;
+  // Feedlot: dos escaneos de corral con GPS a más de N m son corrales distintos y se suman.
+  const penScan = ev?.type === 'SCAN' && ev.metadata?.mode === 'PEN';
   const source = ev ? inferLocationSource(ev) : 'NONE';
   const coords = ev?.location?.coordinates;
   const accuracy = ev?.metadata?.['locationAccuracyM'];
@@ -39,6 +48,9 @@ function countedImage(link: VerificationEvidenceEntity): CountedImage {
         : null,
     accuracyM: typeof accuracy === 'number' ? accuracy : null,
     dhash: quality(link).dhash ?? null,
+    ...(penScan && profile.distinctZoneMinDistanceM !== null
+      ? { distinctMinDistanceM: profile.distinctZoneMinDistanceM }
+      : {}),
   };
 }
 
@@ -79,7 +91,10 @@ export class LivestockCountingStrategy implements VerificationStrategy {
     const cameraLinks = used.filter((l) => l.evidence?.deviceId);
     const expectedDevices = this.capture.cameraInstallations(ctx).length;
 
-    const unique = used.length ? estimateUniqueAnimals(used.map(countedImage)) : null;
+    const profile = livestockProfile(ctx.metadata);
+    const unique = used.length
+      ? estimateUniqueAnimals(used.map((l) => countedImage(l, profile)))
+      : null;
     const detected = unique ? unique.uniqueEstimate : null;
     const detectionsSum = unique ? unique.detectionsSum : 0;
     const confidence =
@@ -90,11 +105,16 @@ export class LivestockCountingStrategy implements VerificationStrategy {
           ? Math.min(...used.map((l) => l.confidence ?? 0))
           : null;
 
-    // Base del conteo: solo un escaneo FIJO (paso controlado) es comparable con lo declarado;
-    // fotos, cámaras y barridos móviles muestran una parte del rodeo (cota inferior).
+    // Base del conteo: solo los modos de censo del tipo de producción (el paso controlado por la
+    // manga) son comparables con lo declarado; fotos, cámaras, barridos y corrales muestran una
+    // parte del rodeo (cota inferior).
     const fixedScans = new Set(
       used
-        .filter((l) => l.evidence?.type === 'SCAN' && l.evidence.metadata?.mode === 'FIXED')
+        .filter(
+          (l) =>
+            l.evidence?.type === 'SCAN' &&
+            profile.censusModes.includes(l.evidence.metadata?.mode as 'FIXED'),
+        )
         .map((l) => l.evidenceId),
     );
     const countBasis: 'CENSUS' | 'LOWER_BOUND' =
@@ -123,6 +143,31 @@ export class LivestockCountingStrategy implements VerificationStrategy {
     }
     const lowQuality = lowQualityAnomaly(links);
     if (lowQuality) anomalies.push(lowQuality);
+    const scanStatuses = links
+      .filter((l) => l.evidence?.type === 'SCAN')
+      .map((l) => {
+        const status = l.evidence!.metadata?.evidenceStatus;
+        return typeof status === 'string' ? status : '';
+      });
+    const insufficientScans = scanStatuses.filter((s) => s === 'INSUFFICIENT').length;
+    if (insufficientScans > 0) {
+      anomalies.push({
+        code: 'INSUFFICIENT_SCAN_EVIDENCE',
+        severity: 'INFO',
+        message:
+          `${insufficientScans} escaneo(s) con evidencia insuficiente no se usaron en el conteo ` +
+          '(no implica faltante: el productor puede repetirlos siguiendo las instrucciones).',
+        details: { insufficientScans },
+      });
+    }
+    if (profile.system === 'PASTOREO' && countBasis === 'LOWER_BOUND' && detected !== null) {
+      anomalies.push({
+        code: 'LIMITED_COVERAGE_GRAZING',
+        severity: 'INFO',
+        message: profile.coverageNote,
+        details: { system: profile.system },
+      });
+    }
     if (expectedDevices > cameraLinks.length) {
       anomalies.push({
         code: 'DEVICE_NO_SIGNAL',
@@ -217,9 +262,35 @@ export class LivestockCountingStrategy implements VerificationStrategy {
             explanation:
               countBasis === 'CENSUS'
                 ? 'Conteo en paso controlado: comparable con lo declarado'
-                : 'Fotos, cámaras o barrido: cuentan la parte observada del rodeo (cota inferior)',
+                : 'Fotos, cámaras, barridos o corrales: cuentan la parte observada del rodeo (cota inferior)',
           },
         },
+        {
+          key: 'production_system',
+          value: LIVESTOCK_SYSTEM_CODE[profile.system],
+          source: 'asset',
+          details: {
+            system: profile.system,
+            label: profile.label,
+            declaredSystem: profile.declaredSystem,
+            inferred: profile.inferred,
+            coverageNote: profile.coverageNote,
+          },
+        },
+        ...(scanStatuses.length
+          ? [
+              {
+                key: 'scan_evidence_status',
+                value: scanStatuses.filter((s) => s === 'VALIDATED').length,
+                source: 'bovine_scanner',
+                details: {
+                  validated: scanStatuses.filter((s) => s === 'VALIDATED').length,
+                  inconclusive: scanStatuses.filter((s) => s === 'INCONCLUSIVE').length,
+                  insufficient: insufficientScans,
+                },
+              },
+            ]
+          : []),
         ...(detected !== null && declared > 0
           ? [
               {

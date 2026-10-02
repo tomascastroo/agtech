@@ -16,11 +16,21 @@ const STATUS = {
   FAILED: { label: 'Error de procesamiento', tone: 'critical' },
 } as const;
 
-const QUALITY = {
-  COMPLETE: { label: 'Escaneo completo', tone: 'success' },
-  LIMITED: { label: 'Escaneo limitado', tone: 'warning' },
-  INSUFFICIENT: { label: 'Escaneo insuficiente', tone: 'critical' },
+/** Estado de la evidencia: una evidencia parcial nunca es un rechazo. */
+export const EVIDENCE_STATUS = {
+  VALIDATED: { label: 'VALIDADO', tone: 'success' },
+  INCONCLUSIVE: { label: 'NO CONCLUYENTE', tone: 'warning' },
+  INSUFFICIENT: { label: 'EVIDENCIA INSUFICIENTE', tone: 'critical' },
 } as const;
+
+const OFFICIAL_TEXT: Record<ScanDetail['mode'], string> = {
+  FIXED: 'bovinos que cruzaron la línea — comparable con lo declarado si pasó todo el rodeo',
+  SWEEP: 'bovinos observados — cota inferior (barrido de una parte del rodeo)',
+  PEN: 'bovinos observados (animales únicos) — cota inferior: los tapados por otros no se ven',
+  PHOTO: 'bovinos en las fotos (animales únicos) — cota inferior',
+};
+
+const pct = (ratio: number) => `${formatNumber(ratio * 100)} %`;
 
 /**
  * Escaneos de bovinos del activo para la entidad: el conteo OFICIAL (recalculado en el servidor)
@@ -59,13 +69,15 @@ function ScanCard({ scan }: { scan: ScanDetail }) {
   return (
     <div className={styles.stackTight} data-testid="scan-card">
       <div className={styles.inline}>
-        <strong>
-          {scan.mode === 'FIXED' ? 'Escáner fijo (paso controlado)' : 'Barrido móvil'}
-        </strong>
+        <strong>{scan.modeLabel}</strong>
         <span className={styles.muted}>{formatDateTime(scan.startedAt)}</span>
         <Badge tone={STATUS[scan.status].tone}>{STATUS[scan.status].label}</Badge>
-        {scan.quality ? (
-          <Badge tone={QUALITY[scan.quality].tone}>{QUALITY[scan.quality].label}</Badge>
+        {scan.evidenceStatus ? (
+          <span data-testid="scan-evidence-status">
+            <Badge tone={EVIDENCE_STATUS[scan.evidenceStatus].tone}>
+              {EVIDENCE_STATUS[scan.evidenceStatus].label}
+            </Badge>
+          </span>
         ) : null}
         {official?.model.simulated ? <Badge tone="warning">SIMULADO</Badge> : null}
       </div>
@@ -74,10 +86,7 @@ function ScanCard({ scan }: { scan: ScanDetail }) {
         <dd data-testid="scan-official">
           {official?.count !== null && official?.count !== undefined ? (
             <>
-              <strong>{formatNumber(official.count)}</strong>{' '}
-              {official.lowerBound
-                ? 'bovinos observados — cota inferior (barrido de una parte del rodeo)'
-                : 'bovinos que cruzaron la línea — comparable con lo declarado si pasó todo el rodeo'}
+              <strong>{formatNumber(official.count)}</strong> {OFFICIAL_TEXT[scan.mode]}
             </>
           ) : (
             '—'
@@ -89,7 +98,41 @@ function ScanCard({ scan }: { scan: ScanDetail }) {
             ? `${formatNumber(deviceCount)} (preliminar, no se usa en la verificación)`
             : '—'}
         </dd>
-        {official ? (
+        {official?.pen ? (
+          <>
+            <dt>Animales únicos</dt>
+            <dd data-testid="scan-pen">
+              {official.pen.tracksCounted} seguidos · {official.pen.mergedTracks} reapariciones
+              unidas (no se cuentan dos veces) · máx. {official.pen.maxSimultaneous} a la vez
+            </dd>
+            <dt>Cobertura</dt>
+            <dd>
+              {formatNumber(official.pen.coverageViews, 1)} vistas de ancho
+              {official.pen.revisitRatio > 0 ? ` · revisita ${pct(official.pen.revisitRatio)}` : ''}
+              {official.pen.edgeAnimals > 0
+                ? ` · ${official.pen.edgeAnimals} animales en el borde (el grupo puede seguir)`
+                : ''}
+              {official.metrics?.registeredPhotos !== null &&
+              official.metrics?.registeredPhotos !== undefined
+                ? ` · ${official.metrics.registeredPhotos} de ${official.metrics.frames} fotos unidas por solapamiento`
+                : ''}
+            </dd>
+          </>
+        ) : null}
+        {official?.metrics ? (
+          <>
+            <dt>Calidad medida</dt>
+            <dd data-testid="scan-metrics">
+              desenfoque {pct(official.metrics.blurryRatio)} · poca luz{' '}
+              {pct(official.metrics.underexposedRatio)} · contraluz{' '}
+              {pct(official.metrics.overexposedRatio)} · movimiento{' '}
+              {pct(official.metrics.fastMotionRatio)} · oclusión{' '}
+              {pct(official.metrics.occlusionRatio)} · animales chicos{' '}
+              {pct(official.metrics.smallAnimalRatio)}
+            </dd>
+          </>
+        ) : null}
+        {official && !official.stillAnimals ? (
           <>
             <dt>Cruces de línea</dt>
             <dd>
@@ -97,6 +140,10 @@ function ScanCard({ scan }: { scan: ScanDetail }) {
               {official.confirmedTracks} animales seguidos · máx. {official.maxSimultaneous} en un
               cuadro
             </dd>
+          </>
+        ) : null}
+        {official ? (
+          <>
             <dt>Procesamiento</dt>
             <dd>
               {official.framesProcessed} cuadros ({formatNumber(scan.sampledFps, 1)}/s),{' '}
@@ -115,13 +162,19 @@ function ScanCard({ scan }: { scan: ScanDetail }) {
           {scan.maxDisplacementM !== null
             ? ` · desplazamiento ${Math.round(scan.maxDisplacementM)} m`
             : ''}
-          {scan.mode === 'SWEEP' &&
+          {(scan.mode === 'SWEEP' || scan.mode === 'PEN') &&
           scan.heading?.sweptDeg !== null &&
           scan.heading?.sweptDeg !== undefined
             ? ` · arco barrido ${Math.round(scan.heading.sweptDeg)}°`
             : ''}
         </dd>
       </dl>
+      {scan.guidance.length ? (
+        <div className={styles.muted} data-testid="scan-guidance">
+          <strong>Instrucciones para el productor:</strong>{' '}
+          {scan.guidance.map((g) => g.message).join(' · ')}
+        </div>
+      ) : null}
       {scan.warnings.length ? (
         <ul className={styles.muted} data-testid="scan-warnings">
           {scan.warnings.map((w) => (

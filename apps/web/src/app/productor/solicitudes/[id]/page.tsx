@@ -97,7 +97,11 @@ export default function ProducerRequestPage() {
             done={(r.scans ?? []).some((s) => s.status === 'COMPLETED')}
             subtitle="Conteo con la cámara del celular"
           >
-            <ScannerScans requestId={r.id} assetName={r.asset.name} />
+            <ScannerScans
+              requestId={r.id}
+              assetName={r.asset.name}
+              profile={r.livestockProfile ?? null}
+            />
           </Section>
 
           <Section

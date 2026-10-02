@@ -55,4 +55,20 @@ describe('Animales únicos entre varias imágenes', () => {
     ]);
     expect(later.uniqueEstimate).toBe(30);
   });
+
+  it('feedlot: corrales escaneados a 60 m se suman; con la regla general (300 m), no', () => {
+    const pen = (id: string, count: number, latitude: number, extra: Partial<CountedImage> = {}) =>
+      img(id, count, {
+        location: { latitude, longitude: -59.153 },
+        accuracyM: 5,
+        ...extra,
+      });
+    // ~60 m de separación en latitud.
+    const corral1 = pen('c1', 120, -36.79, { distinctMinDistanceM: 40 });
+    const corral2 = pen('c2', 110, -36.79054, { distinctMinDistanceM: 40 });
+    expect(estimateUniqueAnimals([corral1, corral2]).uniqueEstimate).toBe(230);
+    // Si una de las dos capturas no es un escaneo de corral de feedlot, rige la más conservadora.
+    const photo = pen('p', 110, -36.79054);
+    expect(estimateUniqueAnimals([corral1, photo]).uniqueEstimate).toBe(120);
+  });
 });

@@ -43,7 +43,7 @@ export default function ScannerPage() {
     })
       .then((r) => {
         if (!r.asset) throw new Error('Primero declará el rodeo en la solicitud');
-        const value = { id: r.id, assetName: r.asset.name };
+        const value = { id: r.id, assetName: r.asset.name, profile: r.livestockProfile ?? null };
         cacheRequest(value);
         setRequest(value);
       })
@@ -59,5 +59,11 @@ export default function ScannerPage() {
 
   if (error) return <p style={{ padding: 16 }}>{error}</p>;
   if (!request) return <Loading />;
-  return <BovineScanner requestId={request.id} assetName={request.assetName} />;
+  return (
+    <BovineScanner
+      requestId={request.id}
+      assetName={request.assetName}
+      profile={request.profile ?? null}
+    />
+  );
 }

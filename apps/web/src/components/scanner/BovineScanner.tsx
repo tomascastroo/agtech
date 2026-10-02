@@ -3,14 +3,24 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { OrtYoloxDetector, prefersWasm, type InferenceBackend } from '@/lib/scanner/detector';
+import { MAX_PHOTOS, PhotoSessionEngine, type PhotoShot } from '@/lib/scanner/photo-session';
 import { HeadingTracker } from '@/lib/scanner/sensors';
 import { MAX_DURATION_S, ScanSessionEngine, type LiveState } from '@/lib/scanner/session';
 import { scanStatus } from '@/lib/scanner/status';
 import { getScan, type LocalScan, type ScanMode } from '@/lib/scanner/store';
 import { onScansChanged, syncPendingScans } from '@/lib/scanner/sync';
+import type { Box } from '@/lib/scanner/tracker';
 import styles from './scanner.module.css';
 
-type Phase = 'setup' | 'loading' | 'scanning' | 'finishing' | 'summary';
+type Phase = 'setup' | 'loading' | 'scanning' | 'photo' | 'finishing' | 'summary';
+
+/** Tipo de producción del rodeo (lo informa la API): ordena y recomienda los modos. */
+export interface ScannerProfile {
+  system: 'FEEDLOT' | 'CRIA' | 'PASTOREO';
+  label: string;
+  recommendedModes: ScanMode[];
+  guidance: string;
+}
 
 function useOnline(): boolean {
   const [online, setOnline] = useState(true);
@@ -27,32 +37,58 @@ function useOnline(): boolean {
   return online;
 }
 
-const MODES: { mode: ScanMode; title: string; text: string }[] = [
+export const MODES: { mode: ScanMode; title: string; text: string; result: string }[] = [
   {
     mode: 'FIXED',
     title: 'Escáner fijo (manga / tranquera)',
-    text: 'Apoyá el celular quieto frente a un punto de paso. Cuenta cada animal que cruza la línea. Es el conteo comparable con lo declarado si pasa todo el rodeo.',
+    text: 'Apoyá el celular quieto frente a un punto de paso. Cuenta cada animal que cruza la línea.',
+    result: 'Comparable con lo declarado si pasa todo el rodeo.',
   },
   {
     mode: 'SWEEP',
     title: 'Escáner móvil (barrido)',
-    text: 'Quedate quieto en un punto y girá despacio de izquierda a derecha sobre el rodeo. Empezá apuntando a un costado del rodeo. Cuenta lo que se ve: es una cota inferior, no el stock total.',
+    text: 'Quedate quieto en un punto y girá despacio de izquierda a derecha sobre el rodeo. Empezá apuntando a un costado del rodeo.',
+    result: 'Cuenta lo que se ve: cota inferior, no el stock total.',
+  },
+  {
+    mode: 'PEN',
+    title: 'Escáner de corral (animales quietos)',
+    text: 'Para corrales, aguadas o agrupamientos: apuntá al grupo y, si no entra en cuadro, mové la cámara despacio para cubrir las otras zonas. Cada animal se cuenta una vez aunque lo vuelvas a filmar.',
+    result: 'Bovinos observados: cota inferior (los tapados por otros no se ven).',
+  },
+  {
+    mode: 'PHOTO',
+    title: 'Analizar foto',
+    text: `Sacá una o varias fotos del mismo grupo (hasta ${MAX_PHOTOS}). Para cubrir un grupo grande, sacalas seguidas y con una parte en común.`,
+    result: 'Bovinos en las fotos: cota inferior.',
   },
 ];
 
-/** Escáner de Bovinos: cámara del celular + YOLOX en el dispositivo + conteo por línea. */
-export function BovineScanner({ requestId, assetName }: { requestId: string; assetName: string }) {
+/** Escáner de Bovinos: cámara del celular + YOLOX en el dispositivo + conteo según el modo. */
+export function BovineScanner({
+  requestId,
+  assetName,
+  profile = null,
+}: {
+  requestId: string;
+  assetName: string;
+  profile?: ScannerProfile | null;
+}) {
   const online = useOnline();
   const [phase, setPhase] = useState<Phase>('setup');
-  const [mode, setMode] = useState<ScanMode>('FIXED');
+  const [mode, setMode] = useState<ScanMode>(profile?.recommendedModes[0] ?? 'FIXED');
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [backend, setBackend] = useState<InferenceBackend | null>(null);
   const [live, setLive] = useState<LiveState | null>(null);
+  const [shots, setShots] = useState<PhotoShot[]>([]);
+  const [shooting, setShooting] = useState(false);
+  const [kind, setKind] = useState<'video' | 'photo' | null>(null);
   const [result, setResult] = useState<LocalScan | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<ScanSessionEngine | null>(null);
+  const photoRef = useRef<PhotoSessionEngine | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
   const stopCamera = useCallback(() => {
@@ -66,6 +102,8 @@ export function BovineScanner({ requestId, assetName }: { requestId: string; ass
       // lugar de dejar el muestreo corriendo sin cámara.
       void engineRef.current?.finish();
       engineRef.current = null;
+      if (photoRef.current?.shots.length) void photoRef.current.finish();
+      photoRef.current = null;
       stopCamera();
     },
     [stopCamera],
@@ -89,12 +127,14 @@ export function BovineScanner({ requestId, assetName }: { requestId: string; ass
     setError(null);
     setPhase('loading');
     try {
-      // Giroscopio/brújula: velocidad de giro (barrido) o quietud del celular (fijo).
-      await HeadingTracker.requestPermission();
+      if (mode !== 'PHOTO') {
+        // Giroscopio/brújula: velocidad de giro (barrido/corral) o quietud del celular (fijo).
+        await HeadingTracker.requestPermission();
+      }
       setMessage('Abriendo la cámara…');
-      // iPhone: 640×480 alcanza (el detector usa 416 px y el servidor 640 px) y reduce mucho la
-      // memoria de los cuadros que se copian por segundo.
-      const lowMemory = prefersWasm();
+      // iPhone con video continuo: 640×480 alcanza (el detector usa 416 px y el servidor 640 px)
+      // y reduce la memoria. Las fotos son de a una: resolución mayor.
+      const lowMemory = prefersWasm() && mode !== 'PHOTO';
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: false,
         video: {
@@ -111,6 +151,15 @@ export function BovineScanner({ requestId, assetName }: { requestId: string; ass
         await new Promise((r) => video.addEventListener('loadedmetadata', r, { once: true }));
       const detector = await OrtYoloxDetector.create(setMessage);
       setBackend(detector.backend);
+      if (mode === 'PHOTO') {
+        const photo = new PhotoSessionEngine(video, detector, { id: requestId, assetName });
+        photoRef.current = photo;
+        await photo.start();
+        setKind('photo');
+        setMessage(null);
+        setPhase('photo');
+        return;
+      }
       const engine = new ScanSessionEngine(
         video,
         detector,
@@ -118,11 +167,12 @@ export function BovineScanner({ requestId, assetName }: { requestId: string; ass
         { id: requestId, assetName },
         (state) => {
           setLive(state);
-          draw(canvasRef.current, video, state);
+          draw(canvasRef.current, video, state, mode);
         },
       );
       engineRef.current = engine;
       await engine.start();
+      setKind('video');
       setMessage(null);
       setPhase('scanning');
     } catch (e) {
@@ -136,12 +186,28 @@ export function BovineScanner({ requestId, assetName }: { requestId: string; ass
     }
   };
 
+  const takePhoto = async () => {
+    const photo = photoRef.current;
+    if (!photo || shooting) return;
+    setShooting(true);
+    try {
+      const shot = await photo.capture();
+      setShots((s) => [...s, shot]);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setShooting(false);
+    }
+  };
+
   const finish = useCallback(async () => {
     const engine = engineRef.current;
-    if (!engine) return;
+    const photo = photoRef.current;
+    if (!engine && !photo) return;
     setPhase('finishing');
-    const scan = await engine.finish();
+    const scan = engine ? await engine.finish() : await photo!.finish();
     engineRef.current = null;
+    photoRef.current = null;
     stopCamera();
     setResult(scan);
     setPhase('summary');
@@ -161,6 +227,12 @@ export function BovineScanner({ requestId, assetName }: { requestId: string; ass
         : status?.tone === 'offline' || (!status && !online)
           ? styles.chipOffline
           : styles.chipOnline;
+  const still = mode === 'PEN' || mode === 'PHOTO';
+  const ordered = profile
+    ? [...MODES].sort(
+        (a, b) => rank(profile.recommendedModes, a.mode) - rank(profile.recommendedModes, b.mode),
+      )
+    : MODES;
 
   return (
     <div className={styles.screen} data-testid="bovine-scanner">
@@ -180,7 +252,12 @@ export function BovineScanner({ requestId, assetName }: { requestId: string; ass
 
       {phase === 'setup' || phase === 'loading' ? (
         <div className={styles.setup}>
-          {MODES.map((m) => (
+          {profile ? (
+            <div className={styles.profile} data-testid="scanner-profile">
+              <b>{profile.label}:</b> {profile.guidance}
+            </div>
+          ) : null}
+          {ordered.map((m) => (
             <button
               key={m.mode}
               type="button"
@@ -189,14 +266,22 @@ export function BovineScanner({ requestId, assetName }: { requestId: string; ass
               aria-pressed={mode === m.mode}
               disabled={phase === 'loading'}
             >
-              <strong>{m.title}</strong>
+              <strong>
+                {m.title}
+                {profile?.recommendedModes[0] === m.mode ? (
+                  <span className={styles.badge}>Recomendado</span>
+                ) : null}
+              </strong>
               <span className={styles.small}>{m.text}</span>
+              <span className={styles.small} style={{ display: 'block', marginTop: 4 }}>
+                <b>Resultado:</b> {m.result}
+              </span>
             </button>
           ))}
           <p className={styles.note}>
             El número que ves en pantalla es <b>preliminar</b> (calculado en tu celular). El conteo
-            oficial lo recalcula AgroGarantías en el servidor con los cuadros del escaneo. No se
-            graba el video: se guardan cuadros muestreados. Funciona sin señal y se sincroniza solo.
+            oficial lo recalcula AgroGarantías en el servidor. No se graba el video: se guardan
+            cuadros muestreados o las fotos. Funciona sin señal y se sincroniza solo.
           </p>
           {error ? <p className={styles.error}>{error}</p> : null}
           <button
@@ -205,7 +290,11 @@ export function BovineScanner({ requestId, assetName }: { requestId: string; ass
             onClick={() => void start()}
             disabled={phase === 'loading'}
           >
-            {phase === 'loading' ? (message ?? 'Preparando…') : 'Iniciar escaneo'}
+            {phase === 'loading'
+              ? (message ?? 'Preparando…')
+              : mode === 'PHOTO'
+                ? 'Abrir cámara'
+                : 'Iniciar escaneo'}
           </button>
         </div>
       ) : null}
@@ -218,25 +307,39 @@ export function BovineScanner({ requestId, assetName }: { requestId: string; ass
           <video ref={videoRef} className={styles.video} playsInline muted aria-label="Cámara" />
           <canvas ref={canvasRef} className={styles.overlay} />
         </div>
-        {live?.warning ? (
-          <div className={styles.warning} role="alert">
-            {live.warning}
+        {live?.guidance.length ? (
+          <div className={styles.guidanceList} role="alert" data-testid="scanner-guidance">
+            {live.guidance.slice(0, 2).map((g, i) => (
+              <div key={g.code} className={i === 0 ? styles.warning : styles.warningSoft}>
+                {g.message}
+              </div>
+            ))}
           </div>
         ) : null}
       </div>
 
-      {phase === 'scanning' || phase === 'finishing' ? (
+      {phase === 'scanning' || (phase === 'finishing' && kind === 'video') ? (
         <div className={styles.panel}>
           <div className={styles.counterRow}>
             <div>
               <div className={styles.counter} data-testid="scanner-count">
-                {live?.netCount ?? 0}
+                {(still ? live?.observed : live?.netCount) ?? 0}
               </div>
-              <div className={styles.counterLabel}>bovinos contados (preliminar)</div>
+              <div className={styles.counterLabel}>
+                {still
+                  ? 'bovinos observados (preliminar, cota inferior)'
+                  : 'bovinos contados (preliminar)'}
+              </div>
             </div>
-            <div className={styles.newBadge} data-testid="scanner-new">
-              +{live?.newLast10s ?? 0} nuevos
-            </div>
+            {still ? (
+              <div className={styles.newBadge} data-testid="scanner-coverage">
+                {(live?.coverageViews ?? 1).toFixed(1)} vistas
+              </div>
+            ) : (
+              <div className={styles.newBadge} data-testid="scanner-new">
+                +{live?.newLast10s ?? 0} nuevos
+              </div>
+            )}
           </div>
           <div className={styles.stats}>
             <span>En cuadro: {live?.visible ?? 0}</span>
@@ -249,10 +352,10 @@ export function BovineScanner({ requestId, assetName }: { requestId: string; ass
               {(live?.inferenceFps ?? 0).toFixed(1)}/s
             </span>
           </div>
-          {mode === 'SWEEP' ? (
+          {mode === 'SWEEP' || mode === 'PEN' ? (
             <div>
               <div className={styles.small}>
-                Arco barrido:{' '}
+                {mode === 'PEN' ? 'Giro medido: ' : 'Arco barrido: '}
                 {live?.sweptDeg !== null && live?.sweptDeg !== undefined
                   ? `${Math.round(live.sweptDeg)}°`
                   : 'sin brújula'}
@@ -276,17 +379,74 @@ export function BovineScanner({ requestId, assetName }: { requestId: string; ass
         </div>
       ) : null}
 
+      {phase === 'photo' || (phase === 'finishing' && kind === 'photo') ? (
+        <div className={styles.panel} data-testid="scanner-photos">
+          {shots.length ? (
+            <>
+              <div className={styles.counterRow}>
+                <div>
+                  <div className={styles.counter} data-testid="scanner-count">
+                    {shots[shots.length - 1]!.count}
+                  </div>
+                  <div className={styles.counterLabel}>bovinos en la última foto (preliminar)</div>
+                </div>
+                <div className={styles.newBadge}>
+                  {shots.length} foto{shots.length === 1 ? '' : 's'}
+                </div>
+              </div>
+              <div className={styles.shots}>
+                {shots.map((s) => (
+                  <div className={styles.shot} key={s.index}>
+                    <ShotPreview shot={s} />
+                    <span className={styles.shotCount}>{s.count}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <p className={styles.small}>
+              Encuadrá el grupo y tocá <b>Tomar foto</b>. Se analiza en el celular y se guarda con
+              fecha, hora y ubicación.
+            </p>
+          )}
+          {error ? <p className={styles.error}>{error}</p> : null}
+          <div className={styles.buttonRow}>
+            <button
+              type="button"
+              className={styles.primary}
+              onClick={() => void takePhoto()}
+              disabled={shooting || phase === 'finishing' || shots.length >= MAX_PHOTOS}
+            >
+              {shooting ? 'Analizando…' : shots.length ? 'Otra foto' : 'Tomar foto'}
+            </button>
+            <button
+              type="button"
+              className={styles.secondary}
+              onClick={() => void finish()}
+              disabled={!shots.length || phase === 'finishing'}
+            >
+              {phase === 'finishing' ? 'Guardando…' : 'FINALIZAR'}
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       {phase === 'summary' && result ? (
         <div className={styles.setup} data-testid="scanner-summary">
           <div className={styles.counter}>{result.deviceResult?.netCount ?? 0}</div>
           <div className={styles.counterLabel}>
-            bovinos contados en el celular (preliminar,{' '}
-            {result.mode === 'SWEEP' ? 'barrido: cota inferior' : 'paso controlado'})
+            {result.mode === 'PHOTO'
+              ? 'bovinos en las fotos (preliminar, máximo por foto)'
+              : result.mode === 'PEN'
+                ? 'bovinos observados en el celular (preliminar, cota inferior)'
+                : `bovinos contados en el celular (preliminar, ${result.mode === 'SWEEP' ? 'barrido: cota inferior' : 'paso controlado'})`}
           </div>
           <div className={styles.stats}>
             <span>Duración: {Math.round(result.durationS)} s</span>
             <span>
-              Cuadros: {result.frameCount} + {result.keyFrameCount} representativos
+              {result.mode === 'PHOTO'
+                ? `Fotos: ${result.frameCount}`
+                : `Cuadros: ${result.frameCount} + ${result.keyFrameCount} representativos`}
             </span>
             <span>
               GPS:{' '}
@@ -318,8 +478,45 @@ export function BovineScanner({ requestId, assetName }: { requestId: string; ass
   );
 }
 
-/** Dibuja cajas, IDs y la línea de conteo sobre el video (coordenadas del cuadro). */
-function draw(canvas: HTMLCanvasElement | null, video: HTMLVideoElement, state: LiveState) {
+function rank(order: ScanMode[], mode: ScanMode): number {
+  const i = order.indexOf(mode);
+  return i === -1 ? order.length : i;
+}
+
+/** Miniatura de una foto con las cajas detectadas en el celular. */
+function ShotPreview({ shot }: { shot: PhotoShot }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const canvas = ref.current;
+    if (!canvas) return;
+    const img = new Image();
+    img.onload = () => {
+      canvas.width = shot.width;
+      canvas.height = shot.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.drawImage(img, 0, 0);
+      drawBoxes(ctx, shot.boxes, shot.width);
+    };
+    img.src = shot.previewUrl;
+  }, [shot]);
+  return <canvas ref={ref} aria-label={`Foto ${shot.index + 1}: ${shot.count} bovinos`} />;
+}
+
+function drawBoxes(ctx: CanvasRenderingContext2D, boxes: readonly Box[], width: number) {
+  const unit = Math.max(2, width / 320);
+  ctx.strokeStyle = '#38d27a';
+  ctx.lineWidth = unit;
+  for (const [x1, y1, x2, y2] of boxes) ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+}
+
+/** Dibuja cajas, IDs y (en paso/barrido) la línea de conteo sobre el video. */
+function draw(
+  canvas: HTMLCanvasElement | null,
+  video: HTMLVideoElement,
+  state: LiveState,
+  mode: ScanMode,
+) {
   if (!canvas) return;
   if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
     canvas.width = video.videoWidth;
@@ -329,14 +526,16 @@ function draw(canvas: HTMLCanvasElement | null, video: HTMLVideoElement, state: 
   if (!ctx) return;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   const unit = Math.max(2, canvas.width / 320);
-  ctx.setLineDash([unit * 4, unit * 3]);
-  ctx.strokeStyle = 'rgba(255,255,255,0.9)';
-  ctx.lineWidth = unit;
-  ctx.beginPath();
-  ctx.moveTo(state.linePx, 0);
-  ctx.lineTo(state.linePx, canvas.height);
-  ctx.stroke();
-  ctx.setLineDash([]);
+  if (mode === 'FIXED' || mode === 'SWEEP') {
+    ctx.setLineDash([unit * 4, unit * 3]);
+    ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+    ctx.lineWidth = unit;
+    ctx.beginPath();
+    ctx.moveTo(state.linePx, 0);
+    ctx.lineTo(state.linePx, canvas.height);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
   ctx.font = `bold ${unit * 7}px sans-serif`;
   for (const track of state.tracks) {
     const [x1, y1, x2, y2] = track.box;

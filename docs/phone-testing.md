@@ -92,6 +92,27 @@ Si no tenés vacas cerca, apuntá la cámara a la pantalla de la computadora con
 prueba `infra/seed-assets/videos/paso-manga-sintetico.mp4` en pantalla completa, y usá el
 escáner fijo.
 
+### Los otros modos
+
+- **Escáner de corral (animales quietos):**
+  1. Poné en pantalla `infra/seed-assets/videos/barrido-sintetico.mp4`, que muestra 12 animales
+     quietos.
+  2. Elegí **Escáner de corral**.
+  3. Apuntá al grupo y, si no entra entero, mové el celular despacio. Volver sobre una zona no
+     duplica.
+  4. El contador muestra **bovinos observados** y las **vistas** cubiertas.
+- **Analizar foto:**
+  1. Elegí **Analizar foto** y luego **Abrir cámara**.
+  2. Tocá **Tomar foto**: se ven las cajas y el conteo de cada foto.
+  3. Tocá **Otra foto** para sumar zonas del grupo. Cada foto tiene que compartir una parte con
+     la anterior.
+  4. Tocá **FINALIZAR**.
+- **Recomendado:** si el rodeo es de feedlot, el escáner marca **Recomendado** en el escáner de
+  corral; en cría, en el fijo; en pastoreo, en el barrido.
+- **Mensajes en rojo** ("Mové más lento", "Acercate", "Hay demasiados animales ocultos", "Falta
+  cubrir otra zona"): son instrucciones en vivo. El resultado del servidor las repite para el
+  próximo escaneo.
+
 ## Permisos que hay que aceptar
 
 | Permiso | Para qué | Si lo rechazás |

@@ -8,9 +8,10 @@ import { AUDIT_ACTIONS } from '../../audit/application/audit.types.js';
 import { ComputerVisionProvider } from '../../computer-vision/domain/computer-vision.provider.js';
 import { EvidenceRecorder } from '../../evidence/application/evidence-recorder.js';
 import { EVIDENCE_SOURCE_CODES } from '../../evidence/domain/evidence.types.js';
+import { livestockProfile } from '../../assets/domain/livestock-profile.js';
 import { ObjectStorage } from '../../storage/object-storage.js';
 import { VerificationRequestService } from '../../verification/application/verification-request.service.js';
-import { assessScanQuality, type OfficialScanResult } from '../domain/scan.types.js';
+import { assessScanQuality, STILL_MODES, type OfficialScanResult } from '../domain/scan.types.js';
 import { ScanFrameEntity } from '../infrastructure/scan-frame.entity.js';
 import { ScanSessionEntity } from '../infrastructure/scan-session.entity.js';
 
@@ -70,7 +71,23 @@ export class ScanProcessingService {
       mode: session.mode,
       line: session.line,
     });
+    const quality = assessScanQuality({
+      mode: session.mode,
+      durationS: session.durationS ?? 0,
+      frames: result.framesProcessed,
+      sampledFps: session.sampledFps,
+      official: result,
+      metrics: result.metrics,
+      maxDisplacementM: session.maxDisplacementM,
+      sweptDegrees: session.heading?.sweptDeg ?? null,
+      thresholds: await this.thresholds(session),
+    });
     const official: OfficialScanResult = {
+      observed: result.observed,
+      method: result.method,
+      pen: result.pen,
+      metrics: result.metrics,
+      guidance: quality.guidance,
       netCount: result.netCount,
       positiveCrossings: result.positiveCrossings,
       negativeCrossings: result.negativeCrossings,
@@ -86,15 +103,6 @@ export class ScanProcessingService {
       tracker: result.tracker,
       processingMs: result.processingMs,
     };
-    const quality = assessScanQuality({
-      mode: session.mode,
-      durationS: session.durationS ?? 0,
-      frames: result.framesProcessed,
-      sampledFps: session.sampledFps,
-      official,
-      maxDisplacementM: session.maxDisplacementM,
-      sweptDegrees: session.heading?.sweptDeg ?? null,
-    });
     const warnings = [...new Set([...session.warnings, ...result.warnings, ...quality.reasons])];
 
     const manifest = {
@@ -127,6 +135,8 @@ export class ScanProcessingService {
       deviceResult: session.clientResult,
       official: { ...official, crossings: result.crossings, tracks: result.tracks },
       quality: quality.quality,
+      evidenceStatus: quality.evidenceStatus,
+      guidance: quality.guidance,
       warnings,
     };
     const evidence = await this.recorder.record({
@@ -142,11 +152,13 @@ export class ScanProcessingService {
       metadata: {
         scanSessionId: session.id,
         mode: session.mode,
-        officialCount: result.netCount,
+        officialCount: result.observed,
         confidence: result.confidence,
-        lowerBound: session.mode === 'SWEEP',
-        method: 'LINE_CROSSING_NET',
+        lowerBound: session.mode !== 'FIXED',
+        method: result.method,
         quality: quality.quality,
+        evidenceStatus: quality.evidenceStatus,
+        stillAnimals: STILL_MODES.includes(session.mode),
         durationS: session.durationS,
         frames: result.framesProcessed,
         deviceCount: session.clientResult?.netCount ?? null,
@@ -170,7 +182,7 @@ export class ScanProcessingService {
             detections: f.detections.slice(0, MAX_DETECTIONS_PER_FRAME),
           })),
         },
-        officialCount: result.netCount,
+        officialCount: result.observed,
         quality: quality.quality,
         warnings,
         evidenceId: evidence.id,
@@ -184,7 +196,9 @@ export class ScanProcessingService {
       resourceType: 'scan_session',
       resourceId: session.id,
       metadata: {
-        officialCount: result.netCount,
+        officialCount: result.observed,
+        mode: session.mode,
+        evidenceStatus: quality.evidenceStatus,
         deviceCount: session.clientResult?.netCount ?? null,
         quality: quality.quality,
         evidenceId: evidence.id,
@@ -192,6 +206,15 @@ export class ScanProcessingService {
       },
     });
     await this.reverify(session);
+  }
+
+  /** Umbrales de calidad según el tipo de producción del rodeo (feedlot, cría, pastoreo). */
+  private async thresholds(session: ScanSessionEntity) {
+    const [row] = (await this.dataSource.query(
+      `SELECT data FROM asset_metadata WHERE asset_id = $1 ORDER BY version DESC LIMIT 1`,
+      [session.assetId],
+    )) as { data: Record<string, unknown> }[];
+    return livestockProfile(row?.data ?? null).quality;
   }
 
   async fail(scanId: string, reason: string): Promise<void> {

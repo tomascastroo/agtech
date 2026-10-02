@@ -64,6 +64,8 @@ from .schemas import (
     ScanBoxOut,
     ScanCrossingOut,
     ScanFrameOut,
+    ScanMetricsOut,
+    ScanPenOut,
     ScanProcessResponse,
     ScanTrackOut,
     SceneOut,
@@ -402,6 +404,22 @@ SCAN_LIMITATIONS = {
         "Si el operador camina durante el barrido aparece paralaje y el conteo pierde validez.",
         "Parámetros de detección y seguimiento no calibrados con escaneos de campo.",
     ],
+    "PEN": [
+        "Escáner de corral: cuenta los animales QUIETOS visibles (corral, aguada, agrupamiento) "
+        "como animales únicos; un animal que reaparece en el mismo lugar se cuenta una vez. Es "
+        "una COTA INFERIOR: los animales tapados por otros o fuera de lo recorrido no se ven.",
+        "Une vistas solo por posición tras compensar el movimiento de la cámara (sin "
+        "re-identificación por apariencia): animales que se desplazan mucho entre vistas pueden "
+        "contarse dos veces, y dos animales que ocupan el mismo lugar en momentos distintos, una.",
+        "Parámetros de detección, seguimiento y unión no calibrados con escaneos de campo.",
+    ],
+    "PHOTO": [
+        "Fotos del mismo grupo: cuenta animales únicos. Solo se suman zonas de fotos que se "
+        "solapan entre sí (registradas por coincidencia de puntos); fotos que no se pueden unir "
+        "no se suman (se toma el máximo) para no contar dos veces. Es una COTA INFERIOR.",
+        "Los animales ocultos detrás de otros no se cuentan.",
+        "Parámetros de detección no calibrados con fotos de campo.",
+    ],
 }
 
 
@@ -443,11 +461,12 @@ async def process_scan_frames(
     settings: SettingsDep,
     frames: Annotated[list[UploadFile], File()],
     key_frames: Annotated[list[UploadFile] | None, File()] = None,
-    mode: Annotated[str, Form(pattern="^(FIXED|SWEEP)$")] = "FIXED",
+    mode: Annotated[str, Form(pattern="^(FIXED|SWEEP|PEN|PHOTO)$")] = "FIXED",
     line_orientation: Annotated[str, Form(pattern="^(vertical|horizontal)$")] = "vertical",
     line_position: Annotated[float, Form(ge=0.05, le=0.95)] = 0.5,
 ) -> ScanProcessResponse:
-    """Conteo oficial: cuadros (en orden) → YOLOX → compensación de cámara → tracker → línea."""
+    """Conteo oficial: cuadros (en orden) → YOLOX → compensación de cámara → tracker → conteo
+    por línea (FIXED/SWEEP) o animales únicos (PEN/PHOTO), con métricas de calidad."""
     started = time.perf_counter()
     if settings.detector != "yolox":
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "El escáner requiere YOLOX")
@@ -465,14 +484,15 @@ async def process_scan_frames(
         for f in key_frames or []
     ]
     classes = LIVESTOCK_CLASS_SETS[settings.detector_class_set]
-    no_tiling = TilingParams(tile_size=0)
+    # Fotos: pocas y de mayor resolución → teselado (animales chicos), como el conteo por imagen.
+    tiling = TilingParams() if mode == "PHOTO" else TilingParams(tile_size=0)
 
     def detect(image: np.ndarray) -> list[Detection]:
         return detector.detect(
             image,
             score_threshold=settings.scan_score_threshold,
             class_ids=classes,
-            tiling=no_tiling,
+            tiling=tiling,
         )[0]
 
     line = LineSpec(orientation=line_orientation, position=line_position)  # type: ignore[arg-type]
@@ -489,7 +509,7 @@ async def process_scan_frames(
         negative_crossings=count.negative_crossings,
         max_simultaneous=count.max_simultaneous,
         confirmed_tracks=count.confirmed_tracks,
-        confidence=count.confidence,
+        confidence=result.pen.confidence if result.pen is not None else count.confidence,
         frames_processed=count.frames,
         width=result.frame_size[0],
         height=result.frame_size[1],
@@ -507,6 +527,12 @@ async def process_scan_frames(
         warnings=result.warnings,
         limitations=SCAN_LIMITATIONS[mode],
         score_threshold=settings.scan_score_threshold,
+        observed=result.observed,
+        method=result.pen.method if result.pen is not None else "LINE_CROSSING_NET",
+        pen=ScanPenOut(**{k: v for k, v in asdict(result.pen).items() if k != "confidence"})
+        if result.pen is not None
+        else None,
+        metrics=ScanMetricsOut(**asdict(result.metrics)),  # type: ignore[arg-type]
         tracker=TRACKER_VERSION,
         model=_scan_model(settings),
         processing_ms=_elapsed_ms(started),

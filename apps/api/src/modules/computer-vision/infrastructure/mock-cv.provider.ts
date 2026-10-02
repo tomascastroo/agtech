@@ -71,7 +71,37 @@ export class MockComputerVisionProvider extends ComputerVisionProvider {
   async processScan(input: ScanFramesInput): Promise<ScanProcessing> {
     const digest = sha256Hex(Buffer.concat(input.frames.map((f) => f.bytes)));
     const count = 5 + (parseInt(digest.slice(0, 6), 16) % 20);
+    const still = input.mode === 'PEN' || input.mode === 'PHOTO';
     return {
+      observed: count,
+      method: still ? 'mock-pen/0.1.0' : 'LINE_CROSSING_NET',
+      pen: still
+        ? {
+            observed: count,
+            uniqueGroups: count,
+            tracksCounted: count,
+            mergedTracks: 0,
+            maxSimultaneous: Math.min(count, 6),
+            coverageViews: 1,
+            revisitRatio: 0,
+            occlusionRatio: 0,
+            smallAnimalRatio: 0,
+            edgeAnimals: 0,
+            method: 'mock-pen/0.1.0',
+          }
+        : null,
+      metrics: {
+        frames: input.frames.length,
+        blurryRatio: 0,
+        underexposedRatio: 0,
+        overexposedRatio: 0,
+        fastMotionRatio: 0,
+        occlusionRatio: 0,
+        smallAnimalRatio: 0,
+        coverageViews: still ? 1 : null,
+        edgeAnimals: still ? 0 : null,
+        registeredPhotos: input.mode === 'PHOTO' ? input.frames.length : null,
+      },
       netCount: count,
       positiveCrossings: count,
       negativeCrossings: 0,

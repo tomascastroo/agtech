@@ -25,6 +25,7 @@ import {
   type RequestContext,
 } from '../../../common/auth/decorators.js';
 import { PERMISSIONS } from '../../../common/auth/permissions.js';
+import { LivestockMonitoringService } from '../application/livestock-monitoring.service.js';
 import { RfidService } from '../application/rfid.service.js';
 
 export class RfidReadingDto {
@@ -79,7 +80,10 @@ export class IngestRfidDto {
 @ApiTags('Identificación individual')
 @Controller()
 export class RfidController {
-  constructor(private readonly rfid: RfidService) {}
+  constructor(
+    private readonly rfid: RfidService,
+    private readonly livestock: LivestockMonitoringService,
+  ) {}
 
   @Post('assets/:assetId/rfid/observations')
   @RequirePermissions(PERMISSIONS.DEVICES_WRITE)
@@ -111,5 +115,31 @@ export class RfidController {
   @ApiOperation({ summary: 'Últimas lecturas RFID del activo y resumen de 30 días' })
   latest(@CurrentUser() user: AuthenticatedUser, @Param('assetId', ParseUUIDPipe) assetId: string) {
     return this.rfid.latest(user.organizationId, assetId);
+  }
+
+  @Get('assets/:assetId/livestock/reconciliation')
+  @RequirePermissions(PERMISSIONS.ASSETS_READ)
+  @ApiOperation({
+    summary:
+      'Visual + RFID: observados, identificados por RFID, coincidencias (solo con paso por manga y lector simultáneo), REAL y SIMULADO por separado',
+  })
+  reconciliation(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('assetId', ParseUUIDPipe) assetId: string,
+  ) {
+    return this.livestock.reconciliation(user.organizationId, assetId);
+  }
+
+  @Get('assets/:assetId/livestock/history')
+  @RequirePermissions(PERMISSIONS.ASSETS_READ)
+  @ApiOperation({
+    summary:
+      'Historial del rodeo por verificación (declarados, observados, RFID, cobertura, estado) y cambios relevantes',
+  })
+  history(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('assetId', ParseUUIDPipe) assetId: string,
+  ) {
+    return this.livestock.history(user.organizationId, assetId);
   }
 }

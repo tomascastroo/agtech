@@ -224,4 +224,207 @@ describe('Escáner de Bovinos', () => {
     );
     expect(basis.details.basis).toBe('CENSUS');
   });
+
+  it('monitoreo: historial por verificación y conciliación visual + RFID (REAL y SIMULADO aparte)', async () => {
+    const history = await as(ctx, maria)
+      .get(`/api/assets/${assetId}/livestock/history`)
+      .expect(200);
+    expect(history.body.rows.length).toBeGreaterThanOrEqual(1);
+    expect(history.body.rows[0]).toMatchObject({ declared: 30, basis: 'CENSUS' });
+    expect(Array.isArray(history.body.changes)).toBe(true);
+
+    // Sin lecturas: no se inventan coincidencias.
+    const none = await as(ctx, maria)
+      .get(`/api/assets/${assetId}/livestock/reconciliation`)
+      .expect(200);
+    expect(none.body).toMatchObject({ method: 'NO_RFID', matches: null });
+
+    // Lecturas SIMULADAS (demo): se informan aparte y no se concilian.
+    await as(ctx, maria).post(`/api/assets/${assetId}/rfid/simulate`).expect(201);
+    const simulated = await as(ctx, maria)
+      .get(`/api/assets/${assetId}/livestock/reconciliation`)
+      .expect(200);
+    expect(simulated.body.method).toBe('NO_RFID');
+    expect(simulated.body.simulated.tags).toBeGreaterThan(0);
+    expect(simulated.body.real.tags).toBe(0);
+
+    // Lectura REAL desde el puente del lector: sin paso simultáneo por la manga, solo totales.
+    await as(ctx, maria)
+      .post(`/api/assets/${assetId}/rfid/observations`)
+      .send({
+        readings: [{ electronicId: '032 0000 1245 9999', observedAt: new Date().toISOString() }],
+      })
+      .expect(201);
+    const real = await as(ctx, maria)
+      .get(`/api/assets/${assetId}/livestock/reconciliation`)
+      .expect(200);
+    expect(real.body.method).toBe('COUNTS_ONLY');
+    expect(real.body.real.tags).toBe(1);
+    expect(real.body.matches).toBeNull();
+    expect(real.body.totalsDifference).toBe(real.body.observed - real.body.real.identified);
+
+    // Aislamiento entre organizaciones y productor sin acceso a la vista de la entidad.
+    const other = await login(ctx, USERS.otherOrg);
+    await as(ctx, other).get(`/api/assets/${assetId}/livestock/history`).expect(404);
+    await as(ctx, other).get(`/api/assets/${assetId}/livestock/reconciliation`).expect(404);
+    await as(ctx, producer).get(`/api/assets/${assetId}/livestock/history`).expect(403);
+  });
+});
+
+/**
+ * Escáner de corral (animales quietos) y análisis de fotos: mismo flujo (sesión, cuadros con
+ * hash, conteo oficial en el worker, evidencia SCAN), con conteo de animales únicos, cota inferior
+ * y estado de la evidencia con instrucciones para el productor.
+ */
+describe('Escáner de corral y análisis de fotos', () => {
+  let ctx: TestContext;
+  let maria: Session;
+  let producer: Session;
+  let requestId: string;
+  const frames: Buffer[] = [];
+  const base = () => `/api/producer/me/requests/${requestId}`;
+
+  async function scan(mode: 'PEN' | 'PHOTO', count: number) {
+    const id = randomUUID();
+    await as(ctx, producer)
+      .post(`${base()}/scans`)
+      .send({
+        id,
+        mode,
+        startedAt: new Date().toISOString(),
+        sampledFps: mode === 'PHOTO' ? 0 : 6,
+        frameWidth: 640,
+        frameHeight: 400,
+        line: { orientation: 'vertical', position: 0.5 },
+        device: { backend: 'wasm' },
+      })
+      .expect(201);
+    for (let i = 0; i < count; i++) {
+      const body = frames[i % frames.length]!;
+      for (const kind of mode === 'PHOTO' ? (['SAMPLE', 'KEY'] as const) : (['SAMPLE'] as const))
+        await as(ctx, producer)
+          .post(`${base()}/scans/${id}/frames`)
+          .field('kind', kind)
+          .field('index', String(i))
+          .field('capturedMs', String(i * 167))
+          .field('sha256', sha(body))
+          .attach('file', body, { filename: `${i}.jpg`, contentType: 'image/jpeg' })
+          .expect(201);
+    }
+    await as(ctx, producer)
+      .post(`${base()}/scans/${id}/finalize`)
+      .send({
+        endedAt: new Date().toISOString(),
+        durationS: mode === 'PHOTO' ? 0 : 20,
+        expectedFrames: count,
+        expectedKeyFrames: mode === 'PHOTO' ? count : 0,
+        clientResult: { netCount: 7, observed: 7, preliminary: true },
+      })
+      .expect(201);
+    return waitFor(async () => {
+      const r = await as(ctx, producer).get(`${base()}/scans/${id}`).expect(200);
+      return r.body.status === 'COMPLETED' ? r.body : null;
+    });
+  }
+
+  beforeAll(async () => {
+    await resetAndSeed();
+    ctx = await startTestApp({ withWorker: true });
+    maria = await login(ctx, USERS.maria);
+    const created = await as(ctx, maria)
+      .post('/api/guarantee-requests')
+      .send({
+        producerName: 'Feedlot Don Mario S.A.',
+        producerTaxId: '30-71548963-1',
+        assetTypeCode: 'BOVINOS',
+      })
+      .expect(201);
+    requestId = created.body.id;
+    const token = String(created.body.invitation.url).split('/solicitud/')[1]!;
+    await ctx
+      .http()
+      .post(`/api/producer/requests/${token}/accept`)
+      .send({ email: 'corral@donmario.com.ar', password: 'Corral-2026-seguro' })
+      .expect(201);
+    producer = await login(ctx, 'corral@donmario.com.ar', 'Corral-2026-seguro');
+    await as(ctx, producer)
+      .post(`${base()}/establishment`)
+      .send({
+        name: 'Feedlot Don Mario',
+        holderName: 'Feedlot Don Mario S.A.',
+        holderTaxId: '30-71548963-1',
+        renspa: '06.687.0.01542/00',
+        establishmentType: 'FEEDLOT',
+        tenure: 'OWNED',
+        province: 'Buenos Aires',
+        location: { latitude: -36.7905, longitude: -59.153 },
+      })
+      .expect(201);
+    await as(ctx, producer)
+      .post(`${base()}/asset`)
+      .send({
+        name: 'Corrales de engorde',
+        declaredQuantity: 400,
+        metadata: { sistema_productivo: 'Feedlot', raza_predominante: 'Aberdeen Angus' },
+      })
+      .expect(201);
+    for (let n = 1; n <= 6; n++) frames.push(await readFile(CAMERA(n)));
+  });
+  afterAll(() => ctx.close());
+
+  it('el modo foto no exige tasa de muestreo, los modos con video sí', async () => {
+    await as(ctx, producer)
+      .post(`${base()}/scans`)
+      .send({
+        id: randomUUID(),
+        mode: 'PEN',
+        startedAt: new Date().toISOString(),
+        sampledFps: 0,
+        frameWidth: 640,
+        frameHeight: 400,
+        line: { orientation: 'vertical', position: 0.5 },
+      })
+      .expect(422);
+  });
+
+  it('escáner de corral: animales únicos, cota inferior y estado de la evidencia', async () => {
+    const done = await scan('PEN', 60);
+    expect(done.mode).toBe('PEN');
+    expect(done.modeLabel).toBe('Escáner de corral');
+    expect(done.official.stillAnimals).toBe(true);
+    expect(done.official.lowerBound).toBe(true);
+    expect(done.official.pen.observed).toBe(done.official.count);
+    expect(done.official.count).not.toBe(7); // nunca el del celular
+    expect(['VALIDATED', 'INCONCLUSIVE', 'INSUFFICIENT']).toContain(done.evidenceStatus);
+    expect(done.evidenceStatusLabel).toBeTruthy();
+    const [evidence] = await ctx.dataSource.query(`SELECT metadata FROM evidence WHERE id = $1`, [
+      done.evidenceId,
+    ]);
+    expect(evidence.metadata).toMatchObject({
+      mode: 'PEN',
+      lowerBound: true,
+      stillAnimals: true,
+      officialCount: done.official.count,
+    });
+  });
+
+  it('análisis de fotos: varias fotos en una sesión, procesadas oficialmente', async () => {
+    const done = await scan('PHOTO', 3);
+    expect(done.modeLabel).toBe('Análisis de fotos');
+    expect(done.official.metrics.registeredPhotos).toBe(3);
+    expect(done.keyFrames).toBeUndefined();
+    const detail = await as(ctx, maria).get(`/api/scans/${done.id}`).expect(200);
+    expect(detail.body.keyFrames).toHaveLength(3);
+    const request = await as(ctx, maria).get(`/api/guarantee-requests/${requestId}`).expect(200);
+    const modes = (request.body.scans as { mode: string; lowerBound: boolean }[]).map((s) => [
+      s.mode,
+      s.lowerBound,
+    ]);
+    expect(modes).toEqual(
+      expect.arrayContaining([
+        ['PEN', true],
+        ['PHOTO', true],
+      ]),
+    );
+  });
 });

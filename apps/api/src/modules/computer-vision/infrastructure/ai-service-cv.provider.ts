@@ -24,6 +24,33 @@ interface RemoteScanBox {
 }
 
 interface RemoteScan {
+  observed: number;
+  method: string;
+  pen: {
+    observed: number;
+    unique_groups: number;
+    tracks_counted: number;
+    merged_tracks: number;
+    max_simultaneous: number;
+    coverage_views: number;
+    revisit_ratio: number;
+    occlusion_ratio: number;
+    small_animal_ratio: number;
+    edge_animals: number;
+    method: string;
+  } | null;
+  metrics: {
+    frames: number;
+    blurry_ratio: number;
+    underexposed_ratio: number;
+    overexposed_ratio: number;
+    fast_motion_ratio: number;
+    occlusion_ratio: number;
+    small_animal_ratio: number;
+    coverage_views: number | null;
+    edge_animals: number | null;
+    registered_photos: number | null;
+  };
   net_count: number;
   positive_crossings: number;
   negative_crossings: number;
@@ -225,7 +252,37 @@ export class AiServiceComputerVisionProvider extends ComputerVisionProvider {
       context,
       this.config.env.AI_SERVICE_SCAN_TIMEOUT_MS,
     );
+    const m = r.metrics;
     return {
+      observed: r.observed,
+      method: r.method,
+      pen: r.pen
+        ? {
+            observed: r.pen.observed,
+            uniqueGroups: r.pen.unique_groups,
+            tracksCounted: r.pen.tracks_counted,
+            mergedTracks: r.pen.merged_tracks,
+            maxSimultaneous: r.pen.max_simultaneous,
+            coverageViews: r.pen.coverage_views,
+            revisitRatio: r.pen.revisit_ratio,
+            occlusionRatio: r.pen.occlusion_ratio,
+            smallAnimalRatio: r.pen.small_animal_ratio,
+            edgeAnimals: r.pen.edge_animals,
+            method: r.pen.method,
+          }
+        : null,
+      metrics: {
+        frames: m.frames,
+        blurryRatio: m.blurry_ratio,
+        underexposedRatio: m.underexposed_ratio,
+        overexposedRatio: m.overexposed_ratio,
+        fastMotionRatio: m.fast_motion_ratio,
+        occlusionRatio: m.occlusion_ratio,
+        smallAnimalRatio: m.small_animal_ratio,
+        coverageViews: m.coverage_views,
+        edgeAnimals: m.edge_animals,
+        registeredPhotos: m.registered_photos,
+      },
       netCount: r.net_count,
       positiveCrossings: r.positive_crossings,
       negativeCrossings: r.negative_crossings,

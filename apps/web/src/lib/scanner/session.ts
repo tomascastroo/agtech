@@ -8,6 +8,9 @@
  */
 import type { OrtYoloxDetector } from './detector';
 import { prefersWasm, SCANNER_MODEL } from './detector';
+import { GUIDANCE, liveGuidance, type GuidanceCode } from './guidance';
+import { estimateShift, meanBrightness, thumbnailSize, toGray, type Thumbnail } from './motion';
+import { frameOcclusion, PEN_METHOD, PenCounter } from './pen';
 import { GpsTracker, HeadingTracker, keepScreenOn } from './sensors';
 import {
   activeScans,
@@ -20,7 +23,15 @@ import {
   type LocalScan,
   type ScanMode,
 } from './store';
-import { ByteTracker, DEFAULT_LINE, TRACKER_VERSION, type Box, type LineSpec } from './tracker';
+import {
+  ByteTracker,
+  DEFAULT_LINE,
+  DEFAULT_TRACKER_PARAMS,
+  TRACKER_VERSION,
+  type Box,
+  type LineSpec,
+  type Shift,
+} from './tracker';
 
 export const SAMPLE_FPS = 6;
 export const SAMPLE_WIDTH = 640;
@@ -57,6 +68,24 @@ export interface LiveState {
   sweptDeg: number | null;
   turnRate: number;
   warning: string | null;
+  /** Instrucciones vigentes para el productor (la primera es `warning`). */
+  guidance: { code: GuidanceCode; message: string }[];
+  /** Escáner de corral: animales únicos observados y cobertura (vistas de ancho). */
+  observed: number | null;
+  coverageViews: number | null;
+}
+
+/** Ventana (ms) sobre la que se calculan las instrucciones en vivo. */
+const GUIDANCE_WINDOW_MS = 2_000;
+
+interface WindowSample {
+  at: number;
+  shift: number;
+  brightness: number | null;
+  heights: number[];
+  overlapped: number;
+  strong: number;
+  edge: number;
 }
 
 export class ScanSessionEngine {
@@ -88,6 +117,11 @@ export class ScanSessionEngine {
   private readonly startMs = performance.now();
   private readonly minDetectionGapMs = prefersWasm() ? 1000 / LOW_MEMORY_MAX_INFERENCE_FPS : 0;
   private lastDetectionAt = 0;
+  /** Escáner de corral: conteo de animales únicos con compensación de la cámara. */
+  private readonly pen: PenCounter | null;
+  private readonly motionCanvas: HTMLCanvasElement;
+  private prevThumb: Thumbnail | null = null;
+  private recent: WindowSample[] = [];
 
   constructor(
     private readonly video: HTMLVideoElement,
@@ -97,7 +131,11 @@ export class ScanSessionEngine {
     private readonly onUpdate: (state: LiveState) => void,
   ) {
     this.line = { ...DEFAULT_LINE, orientation: 'vertical', position: 0.5 };
-    this.tracker = new ByteTracker([video.videoWidth, video.videoHeight], {}, this.line);
+    const size = [video.videoWidth, video.videoHeight] as const;
+    this.pen = mode === 'PEN' ? new PenCounter(size) : null;
+    this.tracker = this.pen?.tracker ?? new ByteTracker(size, {}, this.line);
+    const [tw, th] = thumbnailSize(video.videoWidth, video.videoHeight);
+    this.motionCanvas = Object.assign(document.createElement('canvas'), { width: tw, height: th });
     const scale = Math.min(1, SAMPLE_WIDTH / video.videoWidth);
     this.sampleCanvas = Object.assign(document.createElement('canvas'), {
       width: Math.round(video.videoWidth * scale),
@@ -152,7 +190,10 @@ export class ScanSessionEngine {
           this.video.videoHeight,
         );
         const before = this.tracker.netCount;
-        this.tracker.update(this.frameIndex++, boxes);
+        const shift = this.measure(boxes);
+        if (this.pen) this.pen.update(boxes, shift);
+        else this.tracker.update(this.frameIndex, boxes);
+        this.frameIndex++;
         this.detections += 1;
         this.lastBoxes = boxes;
         this.maxVisible = Math.max(this.maxVisible, boxes.length);
@@ -171,20 +212,82 @@ export class ScanSessionEngine {
     this.scheduleDetection();
   }
 
-  private currentWarning(): string | null {
-    if (this.mode === 'SWEEP' && this.heading.turnRate > FAST_TURN_DEG_S)
-      return 'Girá más despacio';
-    if (this.mode === 'SWEEP' && this.gps.maxDisplacementM > 15)
-      return 'Quedate quieto: el barrido se hace desde un punto';
-    if (this.mode === 'FIXED' && this.heading.turnRate > 20) return 'Mantené el celular quieto';
-    return null;
+  /**
+   * Movimiento de la cámara (miniatura), brillo, tamaño y oclusión de los animales del cuadro
+   * actual. Devuelve el desplazamiento del contenido en px del video.
+   */
+  private measure(boxes: Box[]): Shift {
+    const { width: tw, height: th } = this.motionCanvas;
+    const ctx = this.motionCanvas.getContext('2d', { willReadFrequently: true });
+    let shift: Shift = [0, 0];
+    let brightness: number | null = null;
+    if (ctx) {
+      ctx.drawImage(this.video, 0, 0, tw, th);
+      const thumb = toGray(ctx.getImageData(0, 0, tw, th).data, tw, th);
+      brightness = meanBrightness(thumb);
+      const sx = tw / this.video.videoWidth;
+      const sy = th / this.video.videoHeight;
+      if (this.prevThumb) {
+        const exclude = this.lastBoxes.map(
+          (b) => [b[0] * sx, b[1] * sy, b[2] * sx, b[3] * sy] as const,
+        );
+        const s = estimateShift(this.prevThumb, thumb, exclude);
+        if (s) shift = [s[0] / sx, s[1] / sy];
+      }
+      this.prevThumb = thumb;
+    }
+    const high = DEFAULT_TRACKER_PARAMS.highThreshold;
+    const strong = boxes.filter((b) => b[4] >= high);
+    const [overlapped] = frameOcclusion(boxes, high);
+    const w = this.video.videoWidth;
+    const now = performance.now();
+    this.recent = [
+      ...this.recent.filter((r) => now - r.at <= GUIDANCE_WINDOW_MS),
+      {
+        at: now,
+        shift: shift[0],
+        brightness,
+        heights: strong.map((b) => b[3] - b[1]),
+        overlapped,
+        strong: strong.length,
+        edge: strong.filter((b) => b[0] < 0.02 * w || b[2] > 0.98 * w).length,
+      },
+    ];
+    return shift;
+  }
+
+  private currentGuidance(): GuidanceCode[] {
+    if (this.mode === 'PHOTO') return [];
+    const r = this.recent;
+    const spanS = r.length > 1 ? (r[r.length - 1]!.at - r[0]!.at) / 1000 : 0;
+    const brightness = r.map((x) => x.brightness).filter((b): b is number => b !== null);
+    return liveGuidance(this.mode, {
+      frameWidth: this.video.videoWidth,
+      frameHeight: this.video.videoHeight,
+      shifts: r.slice(1).map((x) => x.shift),
+      detectionsPerSecond: spanS > 0 ? (r.length - 1) / spanS : 0,
+      brightness: brightness.length
+        ? brightness.reduce((a, b) => a + b, 0) / brightness.length
+        : null,
+      boxHeights: r.flatMap((x) => x.heights),
+      overlapped: r.reduce((a, x) => a + x.overlapped, 0),
+      strongBoxes: r.reduce((a, x) => a + x.strong, 0),
+      edgeBoxes: r.reduce((a, x) => a + x.edge, 0),
+      turnRate: this.heading.turnRate,
+      gpsDisplacementM: this.gps.maxDisplacementM,
+      elapsedS: this.elapsedMs() / 1000,
+    });
   }
 
   private publish() {
     const now = performance.now();
     this.crossingTimes = this.crossingTimes.filter((t) => now - t <= 10_000);
-    const warning = this.currentWarning();
-    if (warning === 'Girá más despacio') this.warnings.add('Hubo tramos de giro demasiado rápido');
+    const guidance = this.currentGuidance();
+    if (guidance.includes('MOVE_SLOWER'))
+      this.warnings.add('Hubo tramos de movimiento demasiado rápido');
+    if (guidance.includes('HOLD_STILL'))
+      this.warnings.add('El celular se movió durante el escaneo');
+    const pen = this.pen?.summary() ?? null;
     this.onUpdate({
       elapsedS: this.elapsedMs() / 1000,
       netCount: this.tracker.netCount,
@@ -199,7 +302,10 @@ export class ScanSessionEngine {
       samples: this.samples,
       sweptDeg: this.heading.sweptDeg,
       turnRate: this.heading.turnRate,
-      warning,
+      warning: guidance.length ? GUIDANCE[guidance[0]!] : null,
+      guidance: guidance.map((code) => ({ code, message: GUIDANCE[code] })),
+      observed: pen?.observed ?? null,
+      coverageViews: pen?.coverageViews ?? null,
     });
   }
 
@@ -275,8 +381,16 @@ export class ScanSessionEngine {
 
   private deviceResult(): DeviceResult {
     const elapsedS = this.elapsedMs() / 1000;
+    const pen = this.pen?.summary() ?? null;
     return {
-      netCount: this.tracker.netCount,
+      ...(pen
+        ? {
+            observed: pen.observed,
+            coverageViews: pen.coverageViews,
+            mergedTracks: pen.mergedTracks,
+          }
+        : {}),
+      netCount: pen ? pen.observed : this.tracker.netCount,
       positiveCrossings: this.tracker.positiveCrossings,
       negativeCrossings: this.tracker.negativeCrossings,
       confirmedTracks: this.tracker.confirmedTracks().length,
@@ -285,7 +399,7 @@ export class ScanSessionEngine {
       inferenceFps: Math.round((this.detections / Math.max(elapsedS, 0.001)) * 10) / 10,
       backend: this.detector.backend,
       model: `${SCANNER_MODEL.name}@${SCANNER_MODEL.version}`,
-      tracker: TRACKER_VERSION,
+      tracker: pen ? `${TRACKER_VERSION}+${PEN_METHOD}` : TRACKER_VERSION,
       preliminary: true,
     };
   }
@@ -312,7 +426,7 @@ export class ScanSessionEngine {
       locationEnd: this.gps.last,
       maxDisplacementM: this.gps.start ? Math.round(this.gps.maxDisplacementM * 10) / 10 : null,
       heading:
-        this.mode === 'SWEEP'
+        this.mode === 'SWEEP' || this.mode === 'PEN'
           ? {
               startDeg: this.heading.startDeg,
               sweptDeg: this.heading.sweptDeg,

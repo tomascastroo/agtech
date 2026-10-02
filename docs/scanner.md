@@ -10,8 +10,10 @@ resultado oficial.
 
 | Modo | Uso | Qué cuenta | Cómo lo usa la verificación |
 |---|---|---|---|
-| **Escáner fijo** (`FIXED`) | Celular quieto frente a una manga, tranquera o puerta de corral | Animales que cruzan la línea vertical (conteo neto) | **Comparable** con lo declarado (supone que pasa todo el rodeo) |
-| **Escáner móvil** (`SWEEP`) | Operador quieto que gira despacio sobre el rodeo | Animales que cruzan la línea central mientras la cámara gira (conteo neto) | **Cota inferior**: si da menos que lo declarado, la verificación es *no concluyente* (cobertura parcial), no *rechazada* |
+| **Escáner fijo / paso** (`FIXED`) | Celular quieto frente a una manga, tranquera o puerta de corral | Animales que cruzan la línea vertical (conteo neto) | **Comparable** con lo declarado (supone que pasa todo el rodeo) |
+| **Escáner móvil / barrido** (`SWEEP`) | Operador quieto que gira despacio sobre el rodeo | Animales que cruzan la línea central mientras la cámara gira (conteo neto) | **Cota inferior**: si da menos que lo declarado, la verificación es *no concluyente* (cobertura parcial), no *rechazada* |
+| **Escáner de corral** (`PEN`) | Animales **quietos**: corral, aguada, agrupamiento. Se apunta al grupo y, si no entra, se recorre despacio | **Animales únicos** observados (sin línea): un animal que se vuelve a ver se cuenta una vez | **Cota inferior** (los tapados por otros no se ven) |
+| **Analizar foto** (`PHOTO`) | Una o varias fotos del mismo grupo (hasta 12) | **Animales únicos**: solo se suman zonas de fotos que se solapan | **Cota inferior** |
 
 Avisos en vivo:
 - **"Girá más despacio"**: velocidad de giro por encima de 45°/s, medida con giroscopio o brújula.
@@ -85,6 +87,116 @@ Qué se guarda y qué no:
   - reusar un refresh token rotado hace menos de 60 s (dos pestañas, o una recarga tras un
     cierre) se trata como carrera y no revoca la sesión. Pasado ese tiempo, sí se trata como robo.
 
+### Escáner de corral (animales quietos)
+
+Mismo pipeline que los otros modos (cuadros muestreados → servidor), con otro conteo
+(`ai-service/domain/pen_count.py`; versión preliminar en el celular: `web/lib/scanner/pen.ts`):
+
+1. **Seguimiento con compensación de cámara.** YOLOX por cuadro, más el desplazamiento global de la
+   cámara (flujo óptico + RANSAC, **sin los puntos de los animales**, como BoT-SORT) y el mismo
+   tracker. En el celular el desplazamiento se estima con miniaturas de 96 px (SAD), sin
+   giroscopio.
+2. **Coordenadas del mundo.** Cada track confirmado (≥ 3 apariciones) se ubica restando el
+   desplazamiento acumulado de la cámara; se toma la mediana.
+3. **Unión conservadora de vistas.** Dos tracks que **nunca** estuvieron a la vez en cuadro y
+   ocupan el mismo lugar del mundo (IoU ≥ 0,3 o centros cercanos) son el mismo animal visto de
+   nuevo (al volver con la cámara o tras una oclusión) y cuentan una vez. Dos tracks vistos a la
+   vez son siempre distintos.
+4. **Observados** = grupos tras la unión. Nunca se suman detecciones por cuadro.
+5. **Qué se mide además:** cobertura (vistas de ancho recorridas), revisita, oclusión (cajas
+   superpuestas), animales chicos y animales en el borde de lo cubierto (el grupo sigue afuera).
+
+### Analizar foto
+
+- **Captura:** la cámara del celular (no la galería), para que la fecha, la hora y el GPS sean
+  los de la toma.
+- **En el teléfono:** cada foto se analiza en el teléfono (cajas y conteo preliminar) y se
+  guarda en IndexedDB con SHA-256. Funciona sin señal.
+- **Sincronización:** se sincroniza como una sesión `PHOTO`. Cada foto es a la vez el cuadro
+  a contar y el representativo que ve el banco.
+- **En el servidor:**
+  - YOLOX-S con teselado (animales chicos);
+  - las fotos se registran entre sí (ORB + RANSAC);
+  - una cadena de fotos solapadas se une como un recorrido de cámara;
+  - fotos que no se pueden unir **no se suman**: se toma el máximo.
+- **Conteo preliminar en el teléfono:** el máximo por foto.
+
+### Calidad de la evidencia (todos los modos)
+
+El servidor mide sobre los cuadros (proporciones, sin juicio), y la API decide
+(`scans/domain/scan.types.ts → assessScanQuality`):
+
+| Estado | Cuándo | Efecto |
+|---|---|---|
+| **VALIDADO** | sin problemas medidos | se usa |
+| **NO CONCLUYENTE** | desenfoque o exposición en más del 30 % de los cuadros, movimiento rápido, animales chicos, oclusión sobre el umbral, animales en el borde, fotos sin solapar, arco corto, operador que se movió, cruces de ida y vuelta en el escáner fijo | se usa como **cota inferior**, con las razones a la vista |
+| **EVIDENCIA INSUFICIENTE** | muy corta (fijo 3 s; barrido y corral 5 s), sin animales, o más del 60 % de los cuadros inutilizables | **no se usa** (anomalía INFO, no implica faltante) |
+
+Una evidencia parcial **nunca** se convierte sola en un rechazo.
+
+Cada problema trae una instrucción concreta. En vivo, en el celular (ventana de 2 s), y en el
+resultado del servidor para el próximo escaneo:
+- **"Mové más lento"**
+- **"Mantené el celular quieto"**
+- **"Acercate"**
+- **"Hay demasiados animales ocultos"**
+- **"Falta cubrir otra zona"** (solo con la cámara quieta y animales en el borde)
+- **"Buscá más luz"**
+- **"Evitá el contraluz"**
+- **"Escaneá más tiempo"**
+- **"Quedate en un punto"**
+- **"Usá el escáner de corral"**
+- **"Tomá las fotos seguidas"**
+
+### Tipo de producción (`assets/domain/livestock-profile.ts`)
+
+Se deriva del `sistema_productivo` declarado:
+- Feedlot → **FEEDLOT**
+- Cría, Tambo y Ciclo completo → **CRÍA**
+- Recría e Invernada → **PASTOREO**
+
+No se agregan campos a la declaración.
+
+| | Feedlot | Cría | Pastoreo |
+|---|---|---|---|
+| Modo recomendado | Corral (por corral) → fijo → fotos | Fijo (manga) → corral (aguada) → barrido | Barrido → corral → fotos |
+| Censo (comparable con lo declarado) | Solo paso por la manga | Solo paso por la manga | Solo paso por la manga |
+| Oclusión tolerada | 50 % (alta concentración esperable) | 35 % | 35 % |
+| Zonas distintas | Escaneos de corral con GPS a más de 40 m (+ precisión) se suman: son corrales distintos | Regla general (300 m) | Regla general (300 m); además anomalía INFO: *no se afirma el stock total desde una vista* |
+
+### Visual + RFID
+
+`GET /assets/:id/livestock/reconciliation`. Compara los bovinos observados (último conteo
+oficial) con las caravanas leídas en los últimos 30 días:
+- **Coincidencias individuales:** solo si hay un escaneo fijo en la manga y lecturas REALES de
+  un lector en ese mismo paso. Cada cruce de la línea se empareja con una caravana leída a ±3 s
+  (`TIME_MATCH`). Así se obtienen las coincidencias, los observados sin RFID y las caravanas sin
+  detección visual.
+- **Sin ese paso simultáneo:** solo se comparan totales (`COUNTS_ONLY`) y las coincidencias
+  figuran como *no determinables*. No se inventan.
+- **Lecturas SIMULADAS** (demo): se informan aparte y nunca se concilian.
+- **Lector físico:** no hay integración con hardware. Las lecturas reales llegan por el puente
+  del lector (`POST /assets/:id/rfid/observations`).
+
+### Monitoreo recurrente
+
+`GET /assets/:id/livestock/history` devuelve una fila por verificación: **Fecha | Declarados |
+Observados (manga o mínimo) | RFID | Cobertura | Estado**. Además detecta cambios relevantes
+entre una verificación y la anterior (`verification/domain/livestock-history.ts`):
+
+| Cambio | Severidad |
+|---|---|
+| Caída entre dos conteos en manga | ATENCIÓN (≥ 10 %), CRÍTICO (≥ 25 %) |
+| Menos animales con cota inferior | INFO ("no prueba un faltante") |
+| Más animales | INFO |
+| Cambio de lo declarado | INFO |
+| Menos caravanas RFID (≥ 10 %) | ATENCIÓN |
+| Caída de la cobertura | INFO |
+| Estado que empeora | ATENCIÓN, o CRÍTICO si pasa a rechazado |
+| Estado que mejora | INFO |
+
+El banco lo ve en el detalle de la solicitud y en *Activo → Identificación individual*.
+
 ### El tracker
 
 Es el mismo algoritmo en Python (`ai-service/domain/tracking.py`) y en TypeScript
@@ -135,6 +247,11 @@ y `generate_sweep_video.py`. Validan el pipeline, **no** la precisión en campo,
 | Barrido con vuelta atrás, servidor (JPEG 75) | 12 | 12 (+4/−16: la revisita se descontó) |
 | Barrido con vuelta atrás, servidor (JPEG 95) | 12 | 13 (un cruce de más por pérdida de identidad) |
 | 7 escenarios del fixture de detecciones (Python y TS) | — | 7/7 exactos e idénticos en ambos lenguajes |
+| **Corral**, servidor, barrido simple (animales quietos, 3,75 vistas) | 12 | 13 |
+| **Corral**, servidor, barrido con vuelta atrás (revisita 58 %) | 12 | 13 (7 reapariciones unidas: la revisita no duplica) |
+| **Corral** sobre la manga (animales caminando: fuera de su uso) | 14 | 7 (une animales que pasan por el mismo lugar: por eso el corral es para animales quietos) |
+| **Corral** de punta a punta en Chromium con cámara falsa (el video se repite y "salta") | 12 | celular 15, servidor 16, NO CONCLUYENTE |
+| Escáner fijo: cuadros marcados "cámara movida" en la manga (cámara quieta) | 0 % | 66 % antes de excluir los animales del flujo óptico, 3,5 % después |
 
 Las pérdidas en la manga vienen de animales que el detector no ve en suficientes cuadros. No
 hay calibración con video real de mangas argentinas.
@@ -184,8 +301,13 @@ Requisitos del navegador:
 ffmpeg -i infra/seed-assets/videos/paso-manga-sintetico.mp4 \
   -vf "tpad=start_duration=4:start_mode=clone:stop_duration=3:stop_mode=clone" \
   -pix_fmt yuv420p /tmp/manga-camera.y4m
+# Animales quietos (corral y fotos):
+ffmpeg -i infra/seed-assets/videos/barrido-ida-vuelta-sintetico.mp4 \
+  -vf "tpad=start_duration=3:start_mode=clone:stop_duration=3:stop_mode=clone" \
+  -pix_fmt yuv420p /tmp/corral-camera.y4m
 cd apps/web
-SCANNER_FAKE_CAMERA=/tmp/manga-camera.y4m SEED_DEMO_PASSWORD=... npx playwright test e2e/04-bovine-scanner.spec.ts
+SCANNER_FAKE_CAMERA=/tmp/manga-camera.y4m SCANNER_FAKE_CAMERA_STILL=/tmp/corral-camera.y4m \
+  SEED_DEMO_PASSWORD=... npx playwright test e2e/04-bovine-scanner.spec.ts e2e/05-livestock-modes.spec.ts
 ```
 
 ## Costos
@@ -207,7 +329,17 @@ SCANNER_FAKE_CAMERA=/tmp/manga-camera.y4m SEED_DEMO_PASSWORD=... npx playwright 
 - **Sin re-identificación por apariencia.** Un animal oculto mucho tiempo que reaparece y
   vuelve a cruzar puede contarse dos veces.
 - **El barrido es siempre cota inferior.** No estima el stock de un campo de pastoreo.
+- **Corral:**
+  - une vistas solo por posición, sin apariencia;
+  - animales que se mueven mucho entre vistas pueden contarse dos veces;
+  - dos animales distintos que ocupan el mismo lugar en momentos distintos se cuentan una vez;
+  - los animales tapados no se ven.
+- **Fotos:** sin solapamiento detectable no se suman (se toma el máximo).
+- **Umbrales sin calibrar con escaneos reales:** calidad, oclusión, unión de vistas y 40 m en
+  feedlot.
 - **El celular no compensa el movimiento de cámara** (el servidor sí). Su conteo en barrido es
   menos confiable y solo sirve como referencia en pantalla.
-- **Escáner + RFID** (cruzar cada cruce con una lectura de caravana): no está implementado.
-  Requiere un lector físico y sincronizar sus relojes con el celular.
+- **Escáner + RFID:**
+  - la coincidencia por tiempo está implementada y probada con datos de prueba;
+  - falta un lector físico y su puente;
+  - los relojes del lector y del celular tienen que estar sincronizados (±3 s).

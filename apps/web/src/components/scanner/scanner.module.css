@@ -225,3 +225,81 @@
 .error {
   color: #ffb4ab;
 }
+
+.badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #1f6f43;
+  color: #fff;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  vertical-align: middle;
+}
+
+.guidanceList {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: grid;
+  gap: 6px;
+  width: min(92%, 420px);
+}
+
+.guidanceList .warning {
+  position: static;
+  transform: none;
+}
+
+.warningSoft {
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: rgba(138, 90, 0, 0.92);
+  font-weight: 600;
+  font-size: var(--text-sm);
+}
+
+.shots {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+}
+
+.shot {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.shot canvas {
+  display: block;
+  width: 110px;
+  height: auto;
+  border-radius: 8px;
+}
+
+.shotCount {
+  position: absolute;
+  left: 4px;
+  bottom: 4px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.7);
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+
+.buttonRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.profile {
+  border: 1px solid rgba(126, 226, 168, 0.4);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: var(--text-sm);
+  color: #d6e6dc;
+}

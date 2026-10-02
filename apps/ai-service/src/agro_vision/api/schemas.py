@@ -222,6 +222,48 @@ class ScanFrameOut(BaseModel):
     camera_shift: tuple[float, float] | None
 
 
+class ScanPenTrackOut(BaseModel):
+    id: int
+    hits: int
+    first_frame: int
+    last_frame: int
+    world_box: tuple[float, float, float, float]
+    mean_score: float
+    group: int
+
+
+class ScanPenOut(BaseModel):
+    """Animales quietos (escáner de corral / fotos): únicos con unión conservadora de vistas."""
+
+    observed: int
+    unique_groups: int
+    tracks_counted: int
+    merged_tracks: int
+    max_simultaneous: int
+    coverage_views: float
+    revisit_ratio: float
+    occlusion_ratio: float
+    small_animal_ratio: float
+    edge_animals: int
+    method: str
+    tracks: list[ScanPenTrackOut]
+
+
+class ScanMetricsOut(BaseModel):
+    """Magnitudes medidas (proporciones de cuadros o de detecciones); sin juicio de calidad."""
+
+    frames: int
+    blurry_ratio: float
+    underexposed_ratio: float
+    overexposed_ratio: float
+    fast_motion_ratio: float
+    occlusion_ratio: float
+    small_animal_ratio: float
+    coverage_views: float | None
+    edge_animals: int | None
+    registered_photos: int | None
+
+
 class ScanProcessResponse(BaseModel):
     """Conteo OFICIAL de un escaneo de bovinos (reprocesado en el servidor)."""
 
@@ -246,6 +288,11 @@ class ScanProcessResponse(BaseModel):
     warnings: list[str]
     limitations: list[str]
     score_threshold: float
+    # Conteo oficial del modo y método: neto por línea (FIXED/SWEEP) o únicos (PEN/PHOTO).
+    observed: int
+    method: str
+    pen: ScanPenOut | None = None
+    metrics: ScanMetricsOut
     tracker: str
     model: ModelInfo
     processing_ms: int

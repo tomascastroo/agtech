@@ -1,7 +1,11 @@
 /** Datos mínimos de la solicitud para abrir el escáner sin señal (se guardan al verla en línea). */
+import type { LivestockProfile } from '@/lib/api/types';
+
 export interface CachedRequest {
   id: string;
   assetName: string;
+  /** Tipo de producción (recomienda el modo del escáner); null si no es ganadería. */
+  profile?: LivestockProfile | null;
 }
 
 const key = (id: string) => `agro-scanner-request:${id}`;

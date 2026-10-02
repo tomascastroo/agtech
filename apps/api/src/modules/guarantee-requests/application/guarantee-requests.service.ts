@@ -41,6 +41,14 @@ import {
   type InformationRequestKind,
 } from '../infrastructure/information-request.entity.js';
 import { PasswordHasher } from '../../auth/application/password-hasher.js';
+import { livestockProfile } from '../../assets/domain/livestock-profile.js';
+import {
+  EVIDENCE_STATUS_BY_QUALITY,
+  SCAN_MODE_LABELS,
+  STILL_MODES,
+  type ScanMode,
+  type ScanQuality,
+} from '../../scans/domain/scan.types.js';
 
 /** Documentos del titular o del inmueble: se registran a nivel establecimiento. */
 const ESTABLISHMENT_LEVEL_DOCUMENTS = new Set([
@@ -670,7 +678,9 @@ export class GuaranteeRequestsService {
       request.assetId
         ? q(
             `SELECT id, name, declared_quantity::float AS "declaredQuantity", unit, status,
-                      ST_AsGeoJSON(location)::json AS location, area IS NOT NULL AS "hasArea"
+                      ST_AsGeoJSON(location)::json AS location, area IS NOT NULL AS "hasArea",
+                      (SELECT data FROM asset_metadata m WHERE m.asset_id = assets.id
+                        ORDER BY version DESC LIMIT 1) AS metadata
                FROM assets WHERE id = $1`,
             [request.assetId],
           )
@@ -725,6 +735,8 @@ export class GuaranteeRequestsService {
       `SELECT id, mode, status, started_at AS "startedAt", duration_s::float AS "durationS",
               official_count AS "officialCount", quality,
               (client_result->>'netCount')::int AS "deviceCount",
+              server_result->'metrics'->>'coverageViews' AS "coverageViews",
+              server_result->'guidance' AS guidance,
               jsonb_array_length(warnings) AS "warningCount", error
          FROM scan_sessions WHERE guarantee_request_id = $1 ORDER BY started_at DESC LIMIT 20`,
       [request.id],
@@ -922,7 +934,12 @@ export class GuaranteeRequestsService {
       submittedAt: request.submittedAt,
       createdAt: request.createdAt,
       establishment: establishment ?? null,
-      asset: asset ?? null,
+      asset: asset ? ({ ...asset, metadata: undefined } as typeof asset) : null,
+      // Ganadería: tipo de producción y métodos recomendados (feedlot / cría / pastoreo).
+      livestockProfile:
+        request.assetTypeCode === 'BOVINOS' && asset
+          ? livestockProfile((asset.metadata as Record<string, unknown> | null) ?? null)
+          : null,
       evidenceCount: c.evidence,
       documentCount: c.documents,
       requiredDocuments,
@@ -938,7 +955,19 @@ export class GuaranteeRequestsService {
           : null,
       alerts: options.forProducer ? undefined : alerts,
       crossSources: sources,
-      scans: scans.map((scan) => ({ ...scan, lowerBound: scan.mode === 'SWEEP' })),
+      scans: scans.map((scan) => {
+        const mode = scan.mode as ScanMode;
+        const quality = scan.quality as ScanQuality | null;
+        return {
+          ...scan,
+          coverageViews: scan.coverageViews === null ? null : Number(scan.coverageViews),
+          guidance: scan.guidance ?? [],
+          modeLabel: SCAN_MODE_LABELS[mode],
+          lowerBound: mode !== 'FIXED',
+          stillAnimals: STILL_MODES.includes(mode),
+          evidenceStatus: quality ? EVIDENCE_STATUS_BY_QUALITY[quality] : null,
+        };
+      }),
     };
   }
 

@@ -79,9 +79,9 @@ export class CreateScanDto {
   @IsISO8601()
   startedAt: string;
 
-  @ApiProperty()
+  @ApiProperty({ description: 'Cuadros por segundo muestreados (0 en el modo PHOTO)' })
   @IsNumber()
-  @Min(SCAN_LIMITS.minSampledFps)
+  @Min(0)
   @Max(SCAN_LIMITS.maxSampledFps)
   sampledFps: number;
 

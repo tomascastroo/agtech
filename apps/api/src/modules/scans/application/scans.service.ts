@@ -20,10 +20,14 @@ import { GuaranteeRequestsService } from '../../guarantee-requests/application/g
 import { ObjectStorage } from '../../storage/object-storage.js';
 import { storageKeys } from '../../storage/storage-keys.js';
 import {
+  EVIDENCE_STATUS_BY_QUALITY,
+  EVIDENCE_STATUS_LABELS,
   SCAN_LIMITS,
+  SCAN_MODE_LABELS,
   type ScanFrameKind,
   type ScanLine,
   type ScanMode,
+  STILL_MODES,
 } from '../domain/scan.types.js';
 import { ScanFrameEntity } from '../infrastructure/scan-frame.entity.js';
 import { ScanSessionEntity } from '../infrastructure/scan-session.entity.js';
@@ -102,6 +106,11 @@ export class ScansService {
       }
       return this.view(existing);
     }
+    if (command.mode !== 'PHOTO' && command.sampledFps < SCAN_LIMITS.minSampledFps) {
+      throw new ValidationFailedError(
+        `Tasa de muestreo mínima: ${SCAN_LIMITS.minSampledFps} cuadros por segundo`,
+      );
+    }
     const startedAt = new Date(command.startedAt);
     if (
       Number.isNaN(startedAt.getTime()) ||
@@ -158,7 +167,12 @@ export class ScansService {
     if (detectFileKind(file.buffer)?.mime !== 'image/jpeg') {
       throw new ValidationFailedError('El cuadro debe ser JPEG');
     }
-    const limit = command.kind === 'KEY' ? SCAN_LIMITS.maxKeyFrames : SCAN_LIMITS.maxFrames;
+    const limit =
+      session.mode === 'PHOTO'
+        ? SCAN_LIMITS.maxPhotos
+        : command.kind === 'KEY'
+          ? SCAN_LIMITS.maxKeyFrames
+          : SCAN_LIMITS.maxFrames;
     if (command.index >= limit) throw new ValidationFailedError('Índice de cuadro fuera de rango');
     const sha256 = sha256Hex(file.buffer);
     if (sha256 !== command.sha256.toLowerCase()) {
@@ -374,9 +388,14 @@ export class ScansService {
       expected: { frames: session.expectedFrames, keyFrames: session.expectedKeyFrames },
       // Conteo del celular: preliminar, nunca es el resultado oficial.
       deviceResult: session.clientResult,
+      modeLabel: SCAN_MODE_LABELS[session.mode],
       official: server
         ? {
             count: session.officialCount,
+            method: server.method ?? 'LINE_CROSSING_NET',
+            stillAnimals: STILL_MODES.includes(session.mode),
+            pen: server.pen ?? null,
+            metrics: server.metrics ?? null,
             positiveCrossings: server.positiveCrossings,
             negativeCrossings: server.negativeCrossings,
             maxSimultaneous: server.maxSimultaneous,
@@ -388,10 +407,15 @@ export class ScansService {
             limitations: server.limitations,
             model: server.model,
             tracker: server.tracker,
-            lowerBound: session.mode === 'SWEEP',
+            lowerBound: session.mode !== 'FIXED',
           }
         : null,
       quality: session.quality,
+      evidenceStatus: session.quality ? EVIDENCE_STATUS_BY_QUALITY[session.quality] : null,
+      evidenceStatusLabel: session.quality
+        ? EVIDENCE_STATUS_LABELS[EVIDENCE_STATUS_BY_QUALITY[session.quality]]
+        : null,
+      guidance: server?.guidance ?? [],
       warnings: session.warnings,
       evidenceId: session.evidenceId,
       error: session.error,
