@@ -9,6 +9,9 @@ export const storageKeys = {
     `org/${orgId}/documents/${randomUUID()}.${extension}`,
   evidence: (orgId: string, assetId: string, extension: string) =>
     `org/${orgId}/assets/${assetId}/evidence/${randomUUID()}.${extension}`,
+  scanFrame: (orgId: string, scanId: string, kind: string, index: number) =>
+    `org/${orgId}/scans/${scanId}/${kind.toLowerCase()}/${String(index).padStart(5, '0')}.jpg`,
+  scanManifest: (orgId: string, scanId: string) => `org/${orgId}/scans/${scanId}/manifest.json`,
   report: (orgId: string, reportId: string, version: number, extension: string) =>
     `org/${orgId}/reports/${reportId}/v${version}.${extension}`,
   satellitePreview: (orgId: string, name: string, extension = 'jpg') =>

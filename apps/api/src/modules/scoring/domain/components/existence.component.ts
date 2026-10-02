@@ -32,6 +32,22 @@ export class ExistenceComponent implements ScoreComponent {
     }
     const confidence = detection.confidence ?? 0;
     const score = round(100 * ratio * confidence);
+    if (
+      detection.countBasis === 'LOWER_BOUND' &&
+      detection.detectedQuantity !== null &&
+      detection.detectedQuantity < asset.declaredQuantity
+    ) {
+      return {
+        score,
+        explanation: `Se observaron al menos ${detection.detectedQuantity} de ${asset.declaredQuantity} declarados (cobertura ${percent(ratio)}). La evidencia cubre una parte del rodeo: es una cota inferior, no confirma ni descarta el resto.`,
+        factors: [
+          { label: 'Cobertura observada', value: percent(ratio) },
+          { label: 'Base del conteo', value: 'Cota inferior (fotos, cámaras o barrido)' },
+          { label: 'Confianza del modelo', value: percent(confidence, 0) },
+          { label: 'Evidencias analizadas', value: String(detection.evidenceCount) },
+        ],
+      };
+    }
     return {
       score,
       explanation: `Coincidencia de ${percent(ratio)} entre lo declarado y lo detectado, con confianza de detección de ${percent(confidence, 0)}.`,

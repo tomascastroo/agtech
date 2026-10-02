@@ -462,3 +462,23 @@ El análisis **no certifica la autenticidad** del documento y no reemplaza la re
   - historial.
 
   Es informativo y **no modifica el score**.
+
+## 14. Escáner de Bovinos
+
+Detalle completo, resultados medidos (solo sintéticos) y cómo probarlo desde un celular real en
+[`docs/scanner.md`](scanner.md).
+
+- **En el celular:** cámara en vivo, YOLOX-Nano con ONNX Runtime Web (WebGPU o WASM), tracker
+  estilo ByteTrack y conteo neto por línea. El conteo que muestra es **preliminar**. Todo
+  funciona sin señal: los cuadros se guardan en IndexedDB y se sincronizan solos, de forma
+  reanudable e idempotente.
+- **En el servidor:** el worker reprocesa los cuadros muestreados (YOLOX-S, compensación de
+  movimiento de cámara y el mismo tracker) y registra una evidencia inmutable `SCAN`. Ese es el
+  **conteo oficial**. No se guarda video completo.
+- **Metodología del conteo (scoring `agro-score/1.1.0`):**
+  - Solo un escaneo **fijo** de paso controlado es un conteo comparable con lo declarado
+    (CENSO).
+  - Fotos, cámaras y barridos son **cota inferior**. Si quedan por debajo de lo declarado, el
+    resultado es **no concluyente** (cobertura parcial) en lugar de rechazado. El puntaje
+    numérico no cambia: cambia la interpretación.
+  - Las anomalías críticas mantienen el rechazo o la observación.

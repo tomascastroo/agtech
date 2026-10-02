@@ -2,7 +2,13 @@ export const QUEUES = {
   VERIFICATION: 'verification',
   REPORTS: 'reports',
   MONITORING: 'monitoring',
+  SCANS: 'scans',
 } as const;
+
+export interface ScanJobData {
+  scanId: string;
+  organizationId: string;
+}
 
 export interface VerificationJobData {
   runId: string;

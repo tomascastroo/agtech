@@ -5,7 +5,19 @@ import time
 from dataclasses import asdict
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Header, HTTPException, Query, UploadFile, status
+import cv2
+import numpy as np
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    Header,
+    HTTPException,
+    Query,
+    UploadFile,
+    status,
+)
 from fastapi.concurrency import run_in_threadpool
 
 from ..config import Settings, get_settings
@@ -22,6 +34,7 @@ from ..domain.models_registry import (
     ModelDescriptor,
     yolox_descriptor,
 )
+from ..domain.scan_processing import BLURRY_SHARPNESS, frame_quality, process_scan
 from ..domain.sentinel2 import (
     PROCESSING_VERSION,
     NdviResult,
@@ -29,12 +42,11 @@ from ..domain.sentinel2 import (
     SceneNotFoundError,
     VegetationThresholds,
 )
-from ..domain.tracking import TRACKER_VERSION, TrackerParams, count_video
+from ..domain.tracking import TRACKER_VERSION, LineSpec
 from ..infrastructure.document_reader import UnreadableDocumentError, read_document
 from ..infrastructure.image_io import DecodedImage, InvalidImageError, decode_image
 from ..infrastructure.sentinel_catalog import CatalogUnavailableError
 from ..infrastructure.sentinel_reader import PolygonOutsideSceneError, analyze_scene
-from ..infrastructure.video_reader import UnreadableVideoError, sample_frames
 from ..runtime import ModelNotAvailableError, get_catalog, get_detector
 from .schemas import (
     ChangeResponse,
@@ -49,11 +61,13 @@ from .schemas import (
     NdviRequest,
     ObservationsRequest,
     ObservationsResponse,
+    ScanBoxOut,
+    ScanCrossingOut,
+    ScanFrameOut,
+    ScanProcessResponse,
+    ScanTrackOut,
     SceneOut,
     SceneSearchRequest,
-    VideoCountResponse,
-    VideoFrameDetectionsOut,
-    VideoTrackOut,
 )
 
 MAX_DETECTIONS_RETURNED = 500
@@ -366,124 +380,135 @@ def _elapsed_ms(started: float) -> int:
     return int((time.perf_counter() - started) * 1000)
 
 
-def _video_model(settings: Settings) -> ModelInfo:
+def _scan_model(settings: Settings) -> ModelInfo:
     base = _model_info(_active_detector_model(settings))
-    name, version = TRACKER_VERSION.split("/")
     return base.model_copy(
-        update={"code": f"{base.code}+{name}", "version": f"{base.version}+{version}"}
+        update={"code": f"{base.code}+scan", "version": f"{base.version}+{TRACKER_VERSION}"}
     )
 
 
-VIDEO_LIMITATIONS = {
-    "passage": [
-        "Cuenta los animales cuyo recorrido cruza la línea central del cuadro; supone que todo el "
-        "rodeo pasa por el punto de paso filmado.",
-        "Sin re-identificación por apariencia: un animal que retrocede y vuelve a cruzar después "
-        "de perderse varios cuadros puede contarse dos veces; animales pegados pueden contarse "
-        "como uno.",
-        "Parámetros de seguimiento no calibrados con video de campo.",
+SCAN_LIMITATIONS = {
+    "FIXED": [
+        "Cuenta los animales cuyo recorrido cruza la línea de conteo; supone que todo el rodeo "
+        "declarado pasa por el punto filmado (manga, tranquera, puerta de corral).",
+        "Sin re-identificación por apariencia: animales pegados que el detector une en una caja "
+        "cuentan como uno; un animal oculto mucho tiempo que reaparece es un track nuevo.",
+        "Parámetros de detección y seguimiento no calibrados con escaneos de campo.",
     ],
-    "overview": [
-        "Vista general: se informa el máximo de animales visibles en un mismo cuadro (cota "
-        "inferior). No estima el stock total del establecimiento.",
-        "Los tracks confirmados se informan como cota superior: oclusiones y animales que salen y "
-        "vuelven a entrar al cuadro generan identidades nuevas.",
+    "SWEEP": [
+        "Barrido desde un punto: cuenta los animales que cruzaron la línea central mientras la "
+        "cámara giraba. Es una COTA INFERIOR: no ve animales ocultos, lejanos ni fuera del arco "
+        "barrido, y no estima el stock total del establecimiento.",
+        "Si el operador camina durante el barrido aparece paralaje y el conteo pierde validez.",
+        "Parámetros de detección y seguimiento no calibrados con escaneos de campo.",
     ],
 }
 
 
-@router.post("/animals/count-video", response_model=VideoCountResponse)
-async def count_in_video(
+def _decode_frame(data: bytes, settings: Settings) -> np.ndarray:
+    if len(data) > settings.scan_max_frame_bytes:
+        raise HTTPException(status.HTTP_413_CONTENT_TOO_LARGE, "Cuadro demasiado grande")
+    bgr = cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_COLOR)
+    if bgr is None:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Cuadro ilegible")
+    h, w = bgr.shape[:2]
+    scale = settings.scan_max_frame_side_px / max(h, w)
+    if scale < 1:
+        bgr = cv2.resize(bgr, (round(w * scale), round(h * scale)), interpolation=cv2.INTER_AREA)
+    return bgr
+
+
+def _frame_out(index: int, detections, quality, shift) -> ScanFrameOut:
+    return ScanFrameOut(
+        index=index,
+        detections=[
+            ScanBoxOut(
+                x=int(d.x1),
+                y=int(d.y1),
+                width=int(d.width),
+                height=int(d.height),
+                score=round(d.score, 4),
+                label=d.label,
+            )
+            for d in detections[:MAX_DETECTIONS_RETURNED]
+        ],
+        sharpness=quality.sharpness,
+        brightness=quality.brightness,
+        camera_shift=(round(shift[0], 2), round(shift[1], 2)) if shift is not None else None,
+    )
+
+
+@router.post("/scans/process", response_model=ScanProcessResponse)
+async def process_scan_frames(
     settings: SettingsDep,
-    file: Annotated[UploadFile, File()],
-    mode: Annotated[str, Query(pattern="^(passage|overview)$")] = "passage",
-) -> VideoCountResponse:
-    """Video → cuadros muestreados → YOLOX por cuadro → seguimiento → conteo sin duplicados."""
+    frames: Annotated[list[UploadFile], File()],
+    key_frames: Annotated[list[UploadFile] | None, File()] = None,
+    mode: Annotated[str, Form(pattern="^(FIXED|SWEEP)$")] = "FIXED",
+    line_orientation: Annotated[str, Form(pattern="^(vertical|horizontal)$")] = "vertical",
+    line_position: Annotated[float, Form(ge=0.05, le=0.95)] = 0.5,
+) -> ScanProcessResponse:
+    """Conteo oficial: cuadros (en orden) → YOLOX → compensación de cámara → tracker → línea."""
     started = time.perf_counter()
     if settings.detector != "yolox":
-        raise HTTPException(
-            status.HTTP_503_SERVICE_UNAVAILABLE, "El conteo en video requiere YOLOX"
-        )
-    data = await file.read(settings.video_max_upload_bytes + 1)
-    if len(data) > settings.video_max_upload_bytes:
-        raise HTTPException(status.HTTP_413_CONTENT_TOO_LARGE, "Video demasiado grande")
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "El escáner requiere YOLOX")
+    if len(frames) > settings.scan_max_frames:
+        raise HTTPException(status.HTTP_413_CONTENT_TOO_LARGE, "Demasiados cuadros")
     try:
         detector = get_detector(settings)
     except ModelNotAvailableError as exc:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(exc)) from exc
-    try:
-        video = await run_in_threadpool(
-            sample_frames,
-            data,
-            target_fps=settings.video_sample_fps,
-            max_frames=settings.video_max_frames,
-            max_side_px=settings.video_max_side_px,
-        )
-    except UnreadableVideoError as exc:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
-
+    decoded = [
+        _decode_frame(await f.read(settings.scan_max_frame_bytes + 1), settings) for f in frames
+    ]
+    keys = [
+        _decode_frame(await f.read(settings.scan_max_frame_bytes + 1), settings)
+        for f in key_frames or []
+    ]
     classes = LIVESTOCK_CLASS_SETS[settings.detector_class_set]
     no_tiling = TilingParams(tile_size=0)
 
-    def detect_all() -> list[list[Detection]]:
-        return [
-            detector.detect(
-                frame,
-                score_threshold=settings.video_score_threshold,
-                class_ids=classes,
-                tiling=no_tiling,
-            )[0]
-            for frame in video.frames
-        ]
+    def detect(image: np.ndarray) -> list[Detection]:
+        return detector.detect(
+            image,
+            score_threshold=settings.scan_score_threshold,
+            class_ids=classes,
+            tiling=no_tiling,
+        )[0]
 
-    per_frame = await run_in_threadpool(detect_all)
-    boxes = [[(d.x1, d.y1, d.x2, d.y2, d.score) for d in frame] for frame in per_frame]
-    counted = count_video(boxes, (video.width, video.height), TrackerParams())
-    peak_index = counted.detections_per_frame.index(counted.max_simultaneous)
-    passage = mode == "passage"
-    return VideoCountResponse(
+    line = LineSpec(orientation=line_orientation, position=line_position)  # type: ignore[arg-type]
+    try:
+        result = await run_in_threadpool(process_scan, decoded, detect, mode, line)  # type: ignore[arg-type]
+    except ValueError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
+    key_results = await run_in_threadpool(lambda: [(detect(k), frame_quality(k)) for k in keys])
+    count = result.count
+    return ScanProcessResponse(
         mode=mode,
-        count=counted.line_crossings if passage else counted.max_simultaneous,
-        method="LINE_CROSSING" if passage else "MAX_SIMULTANEOUS",
-        confidence=counted.crossing_confidence if passage else counted.overview_confidence,
-        line_crossings=counted.line_crossings,
-        max_simultaneous=counted.max_simultaneous,
-        confirmed_tracks=counted.confirmed_tracks,
-        axis=counted.axis,
-        line_position=counted.line_position,
-        frames_processed=counted.frames,
-        source_fps=video.source_fps,
-        sampled_fps=video.sampled_fps,
-        duration_s=video.duration_s,
-        truncated=video.truncated,
-        width=video.width,
-        height=video.height,
-        detections_per_frame=counted.detections_per_frame,
-        tracks=[VideoTrackOut(**asdict(t)) for t in counted.tracks],
-        peak_frame=VideoFrameDetectionsOut(
-            frame=peak_index,
-            detections=[
-                DetectionOut(
-                    x=int(d.x1),
-                    y=int(d.y1),
-                    width=int(d.width),
-                    height=int(d.height),
-                    area_px=int(d.width * d.height),
-                    estimated_animals=1,
-                    label=d.label,
-                    score=round(d.score, 4),
-                )
-                for d in per_frame[peak_index][:MAX_DETECTIONS_RETURNED]
-            ],
-        ),
-        score_threshold=settings.video_score_threshold,
-        limitations=VIDEO_LIMITATIONS[mode]
-        + (
-            [f"Video truncado: se analizaron los primeros {counted.frames} cuadros muestreados."]
-            if video.truncated
-            else []
-        ),
-        model=_video_model(settings),
+        net_count=count.net_count,
+        positive_crossings=count.positive_crossings,
+        negative_crossings=count.negative_crossings,
+        max_simultaneous=count.max_simultaneous,
+        confirmed_tracks=count.confirmed_tracks,
+        confidence=count.confidence,
+        frames_processed=count.frames,
+        width=result.frame_size[0],
+        height=result.frame_size[1],
+        line_orientation=line_orientation,
+        line_position=line_position,
+        camera_pan_px=round(sum(dx for dx, _ in result.shifts), 1) if result.shifts else None,
+        blurry_frames=sum(1 for q in result.quality if q.sharpness < BLURRY_SHARPNESS),
+        tracks=[ScanTrackOut(**asdict(t)) for t in count.tracks],
+        crossings=[ScanCrossingOut(**asdict(e)) for e in count.events],
+        frames=[
+            _frame_out(i, d, q, result.shifts[i] if result.shifts else None)
+            for i, (d, q) in enumerate(zip(result.detections, result.quality, strict=True))
+        ],
+        key_frames=[_frame_out(i, d, q, None) for i, (d, q) in enumerate(key_results)],
+        warnings=result.warnings,
+        limitations=SCAN_LIMITATIONS[mode],
+        score_threshold=settings.scan_score_threshold,
+        tracker=TRACKER_VERSION,
+        model=_scan_model(settings),
         processing_ms=_elapsed_ms(started),
     )
 

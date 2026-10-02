@@ -5,9 +5,10 @@ export type EvidenceSourceKind =
   | 'RFID'
   | 'SENSOR'
   | 'REGISTRY'
-  | 'DRONE';
+  | 'DRONE'
+  | 'SCANNER';
 
-export type EvidenceType = 'IMAGE' | 'SATELLITE_SCENE' | 'RFID_READ' | 'SENSOR_READING';
+export type EvidenceType = 'IMAGE' | 'SATELLITE_SCENE' | 'RFID_READ' | 'SENSOR_READING' | 'SCAN';
 
 /** Códigos de fuentes de evidencia registradas en la tabla evidence_sources. */
 export const EVIDENCE_SOURCE_CODES = {
@@ -16,4 +17,5 @@ export const EVIDENCE_SOURCE_CODES = {
   SATELLITE_SIMULATED: 'SATELLITE_SENTINEL2_SIMULATED',
   SATELLITE_STAC: 'SATELLITE_SENTINEL2_STAC',
   RFID_SIMULATED: 'RFID_SIMULATED',
+  BOVINE_SCANNER: 'BOVINE_SCANNER',
 } as const;

@@ -190,44 +190,62 @@ class DocumentAnalysisResponse(BaseModel):
     processing_ms: int
 
 
-class VideoTrackOut(BaseModel):
+class ScanTrackOut(BaseModel):
     id: int
     first_frame: int
     last_frame: int
     hits: int
-    crossed: bool
+    net_crossings: int
     mean_score: float
 
 
-class VideoFrameDetectionsOut(BaseModel):
+class ScanCrossingOut(BaseModel):
+    track_id: int
     frame: int
-    detections: list[DetectionOut]
+    direction: int
 
 
-class VideoCountResponse(BaseModel):
-    """Conteo en video. `count` depende del modo: cruces de línea (paso controlado) o máximo
-    simultáneo en un cuadro (vista general, cota inferior)."""
-
-    mode: str
-    count: int
-    method: str
-    confidence: float = Field(ge=0, le=1)
-    line_crossings: int
-    max_simultaneous: int
-    confirmed_tracks: int
-    axis: str
-    line_position: float
-    frames_processed: int
-    source_fps: float
-    sampled_fps: float
-    duration_s: float
-    truncated: bool
+class ScanBoxOut(BaseModel):
+    x: int
+    y: int
     width: int
     height: int
-    detections_per_frame: list[int]
-    tracks: list[VideoTrackOut]
-    peak_frame: VideoFrameDetectionsOut
-    score_threshold: float
+    score: float
+    label: str
+
+
+class ScanFrameOut(BaseModel):
+    index: int
+    detections: list[ScanBoxOut]
+    sharpness: float
+    brightness: float
+    camera_shift: tuple[float, float] | None
+
+
+class ScanProcessResponse(BaseModel):
+    """Conteo OFICIAL de un escaneo de bovinos (reprocesado en el servidor)."""
+
+    mode: str
+    net_count: int
+    positive_crossings: int
+    negative_crossings: int
+    max_simultaneous: int
+    confirmed_tracks: int
+    confidence: float = Field(ge=0, le=1)
+    frames_processed: int
+    width: int
+    height: int
+    line_orientation: str
+    line_position: float
+    camera_pan_px: float | None
+    blurry_frames: int
+    tracks: list[ScanTrackOut]
+    crossings: list[ScanCrossingOut]
+    frames: list[ScanFrameOut]
+    key_frames: list[ScanFrameOut]
+    warnings: list[str]
     limitations: list[str]
+    score_threshold: float
+    tracker: str
     model: ModelInfo
     processing_ms: int

@@ -606,6 +606,7 @@ export interface GuaranteeRequest {
   } | null;
   alerts?: { id: string; type: string; severity: string; title: string; status: string }[];
   crossSources?: CrossSource[];
+  scans?: RequestScanSummary[];
   invitation?: { url: string; expiresAt: string };
   producerStatus: ProducerStatus;
   progress: { key: string; label: string; state: 'DONE' | 'PENDING' | 'TODO' | 'IN_PROGRESS' }[];
@@ -713,4 +714,71 @@ export interface RfidReading {
   establishmentName: string;
   officialTag: string | null;
   readerSerial: string | null;
+}
+
+/** Escaneo de bovinos asociado a una solicitud (resumen). */
+export interface RequestScanSummary {
+  id: string;
+  mode: 'FIXED' | 'SWEEP';
+  status: 'UPLOADING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+  startedAt: string;
+  durationS: number | null;
+  officialCount: number | null;
+  deviceCount: number | null;
+  quality: 'COMPLETE' | 'LIMITED' | 'INSUFFICIENT' | null;
+  warningCount: number;
+  lowerBound: boolean;
+  error: string | null;
+}
+
+export interface ScanBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  score: number;
+  label: string;
+}
+
+/** Escaneo con resultado oficial, para la entidad. */
+export interface ScanDetail {
+  id: string;
+  mode: 'FIXED' | 'SWEEP';
+  status: 'UPLOADING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+  startedAt: string;
+  durationS: number | null;
+  sampledFps: number;
+  frameSize: { width: number; height: number };
+  location: GeoPoint | null;
+  locationAccuracyM: number | null;
+  maxDisplacementM: number | null;
+  heading: { startDeg: number | null; sweptDeg: number | null; source: string } | null;
+  device: Record<string, unknown>;
+  received: { frames: number; keyFrames: number };
+  deviceResult: { netCount?: number; backend?: string; model?: string } | null;
+  official: {
+    count: number | null;
+    positiveCrossings: number;
+    negativeCrossings: number;
+    maxSimultaneous: number;
+    confirmedTracks: number;
+    confidence: number;
+    framesProcessed: number;
+    blurryFrames: number;
+    limitations: string[];
+    model: { code: string; version: string; simulated: boolean };
+    tracker: string;
+    lowerBound: boolean;
+  } | null;
+  quality: 'COMPLETE' | 'LIMITED' | 'INSUFFICIENT' | null;
+  warnings: string[];
+  evidenceId: string | null;
+  error: string | null;
+  keyFrames?: {
+    index: number;
+    capturedMs: number;
+    sha256: string;
+    url: string;
+    detections: ScanBox[] | null;
+  }[];
 }

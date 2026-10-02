@@ -4,18 +4,19 @@
   "private": true,
   "scripts": {
     "dev": "next dev --port 3000",
-    "build": "node scripts/copy-maplibre-worker.mjs && next build && node scripts/copy-standalone-assets.mjs",
+    "build": "node scripts/copy-maplibre-worker.mjs && node scripts/prepare-scanner-assets.mjs && next build && node scripts/copy-standalone-assets.mjs",
     "start": "node .next/standalone/apps/web/server.js",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "predev": "node scripts/copy-maplibre-worker.mjs"
+    "predev": "node scripts/copy-maplibre-worker.mjs && node scripts/prepare-scanner-assets.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.104.0",
     "maplibre-gl": "^6.11.2",
     "next": "16.3.8",
+    "onnxruntime-web": "1.30.0",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },

@@ -32,6 +32,7 @@ export function buildScoringInput(
     },
     detection: {
       detectedQuantity: outcome.detectedQuantity,
+      countBasis: outcome.countBasis ?? 'CENSUS',
       confidence: outcome.confidence,
       evidenceCount: outcome.primaryEvidenceCount,
       averageQuality: outcome.averageQuality,

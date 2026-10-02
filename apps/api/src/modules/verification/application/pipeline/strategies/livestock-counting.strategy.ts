@@ -61,9 +61,11 @@ export class LivestockCountingStrategy implements VerificationStrategy {
   async acquire(ctx: PipelineContext): Promise<AcquiredEvidence[]> {
     const frames = await this.capture.captureAll(ctx);
     const manual = await this.capture.manualEvidence(ctx);
+    const scans = await this.capture.scanEvidence(ctx);
     const manualRole = frames.length > 0 ? 'SUPPORTING' : 'PRIMARY';
     return [
       ...frames.map((evidence) => ({ evidence, role: 'PRIMARY' as const })),
+      ...scans.map((evidence) => ({ evidence, role: 'PRIMARY' as const })),
       ...manual.map((evidence) => ({ evidence, role: manualRole as 'PRIMARY' | 'SUPPORTING' })),
     ];
   }
@@ -87,6 +89,21 @@ export class LivestockCountingStrategy implements VerificationStrategy {
         : used.length
           ? Math.min(...used.map((l) => l.confidence ?? 0))
           : null;
+
+    // Base del conteo: solo un escaneo FIJO (paso controlado) es comparable con lo declarado;
+    // fotos, cámaras y barridos móviles muestran una parte del rodeo (cota inferior).
+    const fixedScans = new Set(
+      used
+        .filter((l) => l.evidence?.type === 'SCAN' && l.evidence.metadata?.mode === 'FIXED')
+        .map((l) => l.evidenceId),
+    );
+    const countBasis: 'CENSUS' | 'LOWER_BOUND' =
+      unique &&
+      unique.groups.length > 0 &&
+      unique.groups.every((g) => fixedScans.has(g.evidenceIds[g.counts.indexOf(g.estimate)]!))
+        ? 'CENSUS'
+        : 'LOWER_BOUND';
+    const scansUsed = used.filter((l) => l.evidence?.type === 'SCAN').length;
 
     const anomalies: Anomaly[] = [];
     const duplicate = duplicateEvidenceAnomaly(used);
@@ -121,6 +138,7 @@ export class LivestockCountingStrategy implements VerificationStrategy {
     const modelIds = [...new Set(used.map((l) => l.aiModelVersionId).filter(Boolean))];
     return {
       detectedQuantity: detected,
+      countBasis,
       confidence: roundedConfidence,
       averageQuality: quality,
       primaryEvidenceCount: used.length,
@@ -190,6 +208,28 @@ export class LivestockCountingStrategy implements VerificationStrategy {
           ? [{ key: 'image_quality_avg', value: quality, source: 'computer_vision' }]
           : []),
         { key: 'evidence_primary_count', value: used.length, source: 'pipeline' },
+        {
+          key: 'count_lower_bound',
+          value: countBasis === 'LOWER_BOUND' ? 1 : 0,
+          source: 'pipeline',
+          details: {
+            basis: countBasis,
+            explanation:
+              countBasis === 'CENSUS'
+                ? 'Conteo en paso controlado: comparable con lo declarado'
+                : 'Fotos, cámaras o barrido: cuentan la parte observada del rodeo (cota inferior)',
+          },
+        },
+        ...(detected !== null && declared > 0
+          ? [
+              {
+                key: 'coverage_ratio',
+                value: Math.round((Math.min(detected, declared) / declared) * 10_000) / 10_000,
+                source: 'computer_vision',
+              },
+            ]
+          : []),
+        ...(scansUsed ? [{ key: 'scans_used', value: scansUsed, source: 'bovine_scanner' }] : []),
         { key: 'cameras_expected', value: expectedDevices, source: 'devices' },
         { key: 'cameras_reporting', value: cameraLinks.length, source: 'devices' },
       ],

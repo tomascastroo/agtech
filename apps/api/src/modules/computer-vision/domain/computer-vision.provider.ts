@@ -67,6 +67,55 @@ export interface ChangeDetection {
   model: ModelRef;
 }
 
+/** Cuadros de un escaneo de bovinos (en orden) para el conteo oficial. */
+export interface ScanFramesInput {
+  frames: { bytes: Buffer; index: number }[];
+  keyFrames: { bytes: Buffer; index: number }[];
+  mode: 'FIXED' | 'SWEEP';
+  line: { orientation: 'vertical' | 'horizontal'; position: number };
+}
+
+export interface ScanBox extends BoundingBox {
+  score: number;
+  label: string;
+}
+
+export interface ScanProcessing {
+  netCount: number;
+  positiveCrossings: number;
+  negativeCrossings: number;
+  maxSimultaneous: number;
+  confirmedTracks: number;
+  confidence: number;
+  framesProcessed: number;
+  width: number;
+  height: number;
+  cameraPanPx: number | null;
+  blurryFrames: number;
+  tracks: {
+    id: number;
+    firstFrame: number;
+    lastFrame: number;
+    hits: number;
+    netCrossings: number;
+    meanScore: number;
+  }[];
+  crossings: { trackId: number; frame: number; direction: number }[];
+  frames: {
+    index: number;
+    detections: ScanBox[];
+    sharpness: number;
+    cameraShift: [number, number] | null;
+  }[];
+  keyFrames: { index: number; detections: ScanBox[] }[];
+  warnings: string[];
+  limitations: string[];
+  scoreThreshold: number;
+  tracker: string;
+  model: ModelRef;
+  processingMs: number;
+}
+
 export interface CallContext {
   requestId?: string;
 }
@@ -86,5 +135,7 @@ export abstract class ComputerVisionProvider {
     after: ImageInput,
     context?: CallContext,
   ): Promise<ChangeDetection>;
+  /** Conteo oficial de un escaneo: detección + seguimiento + conteo neto por línea. */
+  abstract processScan(input: ScanFramesInput, context?: CallContext): Promise<ScanProcessing>;
   abstract health(): Promise<{ ok: boolean; detail?: string }>;
 }

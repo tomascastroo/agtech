@@ -37,6 +37,8 @@ export const envSchema = z
     AI_SERVICE_URL: z.url().default('http://localhost:8000'),
     AI_SERVICE_TOKEN: z.string().default(''),
     AI_SERVICE_TIMEOUT_MS: z.coerce.number().int().min(1000).max(120000).default(30000),
+    // Reprocesamiento oficial de escaneos (cientos de cuadros por llamada).
+    AI_SERVICE_SCAN_TIMEOUT_MS: z.coerce.number().int().min(10000).max(1800000).default(600000),
 
     // `real` es sinónimo de `ai-service` (detector YOLOX en el servicio de visión).
     CV_PROVIDER: z

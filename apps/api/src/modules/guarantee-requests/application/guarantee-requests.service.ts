@@ -559,7 +559,7 @@ export class GuaranteeRequestsService {
     if (info.status !== 'OPEN') throw new ConflictError('El pedido ya fue respondido');
     const [row] = (await this.dataSource.query(
       info.kind === 'EVIDENCE'
-        ? `SELECT count(*)::int AS n FROM evidence WHERE asset_id = $1 AND type = 'IMAGE' AND created_at > $2`
+        ? `SELECT count(*)::int AS n FROM evidence WHERE asset_id = $1 AND type IN ('IMAGE','SCAN') AND created_at > $2`
         : `SELECT count(*)::int AS n FROM documents WHERE (asset_id = $1 OR establishment_id = $3)
              AND created_at > $2 AND ($4::text IS NULL OR type = $4)`,
       info.kind === 'EVIDENCE'
@@ -677,7 +677,7 @@ export class GuaranteeRequestsService {
         : Promise.resolve([]),
       request.assetId
         ? q(
-            `SELECT (SELECT count(*)::int FROM evidence WHERE asset_id = $1 AND type = 'IMAGE') AS evidence,
+            `SELECT (SELECT count(*)::int FROM evidence WHERE asset_id = $1 AND type IN ('IMAGE','SCAN')) AS evidence,
                       (SELECT count(*)::int FROM documents
                         WHERE asset_id = $1 OR (asset_id IS NULL AND establishment_id = $2)) AS documents`,
             [request.assetId, request.establishmentId],
@@ -721,6 +721,14 @@ export class GuaranteeRequestsService {
           ])
         : Promise.resolve([]),
     ]);
+    const scans = (await this.dataSource.query(
+      `SELECT id, mode, status, started_at AS "startedAt", duration_s::float AS "durationS",
+              official_count AS "officialCount", quality,
+              (client_result->>'netCount')::int AS "deviceCount",
+              jsonb_array_length(warnings) AS "warningCount", error
+         FROM scan_sessions WHERE guarantee_request_id = $1 ORDER BY started_at DESC LIMIT 20`,
+      [request.id],
+    )) as Record<string, unknown>[];
     const counting =
       verification?.outcome && !options.forProducer
         ? await this.countingBreakdown(String(verification.runId))
@@ -930,6 +938,7 @@ export class GuaranteeRequestsService {
           : null,
       alerts: options.forProducer ? undefined : alerts,
       crossSources: sources,
+      scans: scans.map((scan) => ({ ...scan, lowerBound: scan.mode === 'SWEEP' })),
     };
   }
 

@@ -8,6 +8,8 @@ import {
   type ImageInput,
   type ModelRef,
   type ObjectDetection,
+  type ScanFramesInput,
+  type ScanProcessing,
 } from '../domain/computer-vision.provider.js';
 
 const MODEL: ModelRef = { code: 'mock-cv', version: '0.1.0', simulated: true };
@@ -60,6 +62,45 @@ export class MockComputerVisionProvider extends ComputerVisionProvider {
   async detectChanges(before: ImageInput, after: ImageInput): Promise<ChangeDetection> {
     const same = sha256Hex(before.bytes) === sha256Hex(after.bytes);
     return { changedFraction: same ? 0 : 0.05, regions: [], model: MODEL };
+  }
+
+  /**
+   * Escaneo SIMULADO: no mira los cuadros. Devuelve un conteo determinístico derivado de los
+   * hashes de los cuadros (independiente del conteo del celular), marcado como simulado.
+   */
+  async processScan(input: ScanFramesInput): Promise<ScanProcessing> {
+    const digest = sha256Hex(Buffer.concat(input.frames.map((f) => f.bytes)));
+    const count = 5 + (parseInt(digest.slice(0, 6), 16) % 20);
+    return {
+      netCount: count,
+      positiveCrossings: count,
+      negativeCrossings: 0,
+      maxSimultaneous: Math.min(count, 6),
+      confirmedTracks: count,
+      confidence: 0.8,
+      framesProcessed: input.frames.length,
+      width: 640,
+      height: 360,
+      cameraPanPx: input.mode === 'SWEEP' ? 0 : null,
+      blurryFrames: 0,
+      tracks: [],
+      crossings: [],
+      frames: input.frames.map((f) => ({
+        index: f.index,
+        detections: [],
+        sharpness: 400,
+        cameraShift: null,
+      })),
+      keyFrames: input.keyFrames.map((f) => ({ index: f.index, detections: [] })),
+      warnings: [],
+      limitations: [
+        'Resultado SIMULADO (proveedor de visión de desarrollo): no analiza los cuadros.',
+      ],
+      scoreThreshold: 0.15,
+      tracker: 'mock-tracker/0.1.0',
+      model: MODEL,
+      processingMs: 1,
+    };
   }
 
   async health() {

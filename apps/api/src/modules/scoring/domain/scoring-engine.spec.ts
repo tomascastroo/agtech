@@ -65,7 +65,7 @@ describe('ScoringEngine', () => {
       ['risk', 68],
       ['consistency', 95],
     ]);
-    expect(output.modelVersion).toBe('agro-score/1.0.0');
+    expect(output.modelVersion).toBe('agro-score/1.1.0');
   });
 
   it('es explicable: cada componente informa peso, aporte, explicación y factores', () => {
@@ -99,6 +99,66 @@ describe('ScoringEngine', () => {
       },
     });
     expect(component(engine.score(sameDay, DEFAULT_SCORING_WEIGHTS), 'historical').score).toBe(70);
+  });
+
+  it('cota inferior por debajo de lo declarado: no concluyente (cobertura parcial), no rechazo', () => {
+    const partial = {
+      detectedQuantity: 261,
+      confidence: 0.82,
+      evidenceCount: 7,
+      averageQuality: 0.8,
+    };
+    const lowerBound = engine.score(
+      laEsperanza({ detection: { ...partial, countBasis: 'LOWER_BOUND' } }),
+      DEFAULT_SCORING_WEIGHTS,
+    );
+    expect(lowerBound.outcome).toBe('INCONCLUSIVE');
+    expect(component(lowerBound, 'existence').explanation).toMatch(/al menos 261 de 1500/);
+    // El mismo número en un conteo comparable (paso controlado) sí es un faltante.
+    const census = engine.score(
+      laEsperanza({ detection: { ...partial, countBasis: 'CENSUS' } }),
+      DEFAULT_SCORING_WEIGHTS,
+    );
+    expect(census.outcome).not.toBe('INCONCLUSIVE');
+    expect(census.outcome).not.toBe('VERIFIED');
+    // El puntaje no cambia: solo la interpretación del resultado.
+    expect(lowerBound.finalScore).toBe(census.finalScore);
+  });
+
+  it('cota inferior con anomalía crítica mantiene el rechazo/observación', () => {
+    const output = engine.score(
+      laEsperanza({
+        detection: {
+          detectedQuantity: 261,
+          confidence: 0.82,
+          evidenceCount: 7,
+          averageQuality: 0.8,
+          countBasis: 'LOWER_BOUND',
+        },
+        anomalies: [
+          { code: 'LOCATION_MISMATCH', severity: 'CRITICAL', message: 'fuera', details: {} },
+        ],
+      }),
+      DEFAULT_SCORING_WEIGHTS,
+    );
+    expect(['REJECTED', 'OBSERVED']).toContain(output.outcome);
+  });
+
+  it('cota inferior que alcanza lo declarado se verifica normalmente', () => {
+    const output = engine.score(
+      laEsperanza({
+        detection: {
+          detectedQuantity: 1482,
+          confidence: 0.86,
+          evidenceCount: 6,
+          averageQuality: 0.87,
+          countBasis: 'LOWER_BOUND',
+        },
+      }),
+      DEFAULT_SCORING_WEIGHTS,
+    );
+    expect(output.outcome).toBe('VERIFIED');
+    expect(output.finalScore).toBe(82);
   });
 
   it('marca INCONCLUSIVE sin evidencia', () => {

@@ -103,4 +103,12 @@ export class CameraCaptureService {
     const byId = new Map([...recent, ...requested].map((e) => [e.id, e]));
     return [...byId.values()].filter((e) => e.type === 'IMAGE');
   }
+
+  /** Escaneos de bovinos con conteo oficial (evidencia SCAN) dentro de la ventana de vigencia. */
+  async scanEvidence(ctx: PipelineContext): Promise<EvidenceEntity[]> {
+    const maxAge = ctx.monitoring?.maxEvidenceAgeHours ?? ctx.run.inputSnapshot.maxEvidenceAgeHours;
+    const since = new Date(ctx.now.getTime() - maxAge * HOUR_MS);
+    const recent = await this.evidence.recentByKind(ctx.asset.id, 'SCANNER', since);
+    return recent.filter((e) => e.type === 'SCAN');
+  }
 }
