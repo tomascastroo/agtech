@@ -1,0 +1,96 @@
+{
+ "description": "Videos SINTÉTICOS de barrido desde un punto: bovinos quietos (recortes reales de Open Images V7) en un panorama de pastura procedural; la cámara gira (traslación) con temblor de mano. Prueban el conteo neto del escáner móvil; no miden precisión en campo.",
+ "seed": 20261003,
+ "fps": 12,
+ "width": 960,
+ "height": 540,
+ "panorama_width": 3600,
+ "ground_truth_in_swept_arc": 12,
+ "animal_boxes_panorama": [
+  [
+   527,
+   285,
+   714,
+   453
+  ],
+  [
+   794,
+   214,
+   956,
+   381
+  ],
+  [
+   1007,
+   283,
+   1175,
+   432
+  ],
+  [
+   1172,
+   227,
+   1364,
+   367
+  ],
+  [
+   1351,
+   317,
+   1551,
+   460
+  ],
+  [
+   1627,
+   180,
+   1710,
+   330
+  ],
+  [
+   1778,
+   325,
+   2018,
+   464
+  ],
+  [
+   2114,
+   174,
+   2197,
+   323
+  ],
+  [
+   2239,
+   245,
+   2416,
+   402
+  ],
+  [
+   2396,
+   259,
+   2632,
+   415
+  ],
+  [
+   2607,
+   313,
+   2847,
+   458
+  ],
+  [
+   2814,
+   236,
+   3034,
+   380
+  ]
+ ],
+ "videos": {
+  "barrido-sintetico": {
+   "file": "barrido-sintetico.mp4",
+   "frames": 189,
+   "revisit": false
+  },
+  "barrido-ida-vuelta-sintetico": {
+   "file": "barrido-ida-vuelta-sintetico.mp4",
+   "frames": 287,
+   "revisit": true
+  }
+ },
+ "synthetic": true
+}

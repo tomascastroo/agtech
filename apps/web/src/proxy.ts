@@ -14,7 +14,8 @@ function contentSecurityPolicy(nonce: string): string {
   const dev = process.env.NODE_ENV !== 'production';
   return [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${dev ? " 'unsafe-eval'" : ''}`,
+    // 'wasm-unsafe-eval' permite compilar WebAssembly (ONNX Runtime del escáner); no habilita eval().
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'wasm-unsafe-eval'${dev ? " 'unsafe-eval'" : ''}`,
     "style-src 'self' 'unsafe-inline'",
     `img-src 'self' data: blob: ${[...assetOrigins, ...mapOrigins].join(' ')}`,
     `connect-src 'self' ${mapOrigins.join(' ')}${dev ? ' ws:' : ''}`,
@@ -56,5 +57,7 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|maplibre/|favicon.ico|icon.svg).*)'],
+  matcher: [
+    '/((?!api|_next/static|_next/image|maplibre/|ort/|models/|sw.js|manifest.webmanifest|favicon.ico|icon.svg).*)',
+  ],
 };

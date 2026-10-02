@@ -3,7 +3,8 @@ import { login } from './helpers';
 
 /**
  * Criterio de éxito del MVP sobre los datos demo: La Esperanza, 1.500 bovinos declarados,
- * verificación → 1.482 detectados, 99 % de coincidencia, score 82/100, evidencia,
+ * verificación con YOLOX real sobre las composiciones de las 6 cámaras → 1.500 detectados,
+ * 100 % de coincidencia, score 82/100, evidencia,
  * historial, informe PDF y confirmación como garantía.
  */
 test('La Esperanza: verificación de punta a punta', async ({ page, context }) => {
@@ -27,8 +28,8 @@ test('La Esperanza: verificación de punta a punta', async ({ page, context }) =
   await expect(result).toBeVisible({ timeout: 60_000 });
 
   await expect(page.getByTestId('stat-declared')).toContainText('1.500');
-  await expect(page.getByTestId('stat-detected')).toContainText('1.482');
-  await expect(page.getByTestId('stat-match')).toContainText('99 %');
+  await expect(page.getByTestId('stat-detected')).toContainText('1.500');
+  await expect(page.getByTestId('stat-match')).toContainText('100 %');
   await expect(page.getByTestId('score-value')).toHaveText('82');
   const breakdown = page.getByTestId('score-breakdown');
   for (const label of [
@@ -44,7 +45,7 @@ test('La Esperanza: verificación de punta a punta', async ({ page, context }) =
   // Evidencia: 6 cámaras con conteo, modelo y confianza.
   const gallery = page.getByTestId('evidence-gallery');
   await expect(gallery.locator('article')).toHaveCount(6);
-  await expect(gallery).toContainText('classical-livestock-counter');
+  await expect(gallery).toContainText('yolox-s-coco');
   await expect(
     page.getByRole('img', { name: 'Evolución del score de verificación' }),
   ).toBeVisible();

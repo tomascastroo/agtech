@@ -2,6 +2,8 @@ import { AlertRuleEntity } from '../modules/alerts/infrastructure/alert-rule.ent
 import { AlertEntity } from '../modules/alerts/infrastructure/alert.entity.js';
 import { AnimalIdentificationEntity } from '../modules/animals/infrastructure/animal-identification.entity.js';
 import { AnimalObservationEntity } from '../modules/animals/infrastructure/animal-observation.entity.js';
+import { ScanFrameEntity } from '../modules/scans/infrastructure/scan-frame.entity.js';
+import { ScanSessionEntity } from '../modules/scans/infrastructure/scan-session.entity.js';
 import { RfidObservationEntity } from '../modules/animals/infrastructure/rfid-observation.entity.js';
 import { AnimalEntity } from '../modules/animals/infrastructure/animal.entity.js';
 import { AssetMetadataEntity } from '../modules/assets/infrastructure/asset-metadata.entity.js';
@@ -76,6 +78,8 @@ export const ENTITIES = [
   AnimalIdentificationEntity,
   AnimalObservationEntity,
   RfidObservationEntity,
+  ScanSessionEntity,
+  ScanFrameEntity,
   ExternalDataSnapshotEntity,
   AuditLogEntity,
 ];

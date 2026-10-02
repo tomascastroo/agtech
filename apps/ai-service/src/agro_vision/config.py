@@ -35,6 +35,13 @@ class Settings(BaseSettings):
     detector_tile_min_ratio: float = Field(default=2.5, ge=1)
     detector_threads: int = Field(default=0, ge=0)
 
+    # Escáner de bovinos: reprocesamiento oficial de cuadros muestreados. Umbral NO calibrado
+    # con escaneos de campo (ver docs/scanner.md).
+    scan_max_frames: int = Field(default=1200, ge=10, le=5000)
+    scan_max_frame_bytes: int = 3 * 1024 * 1024
+    scan_max_frame_side_px: int = Field(default=1280, ge=320, le=3840)
+    scan_score_threshold: float = Field(default=0.15, ge=0.05, le=0.95)
+
     # Sentinel-2 L2A (AWS Open Data).
     sentinel_catalog: Literal["auto", "earth-search", "aws-inventory"] = "auto"
     earth_search_url: str = "https://earth-search.aws.element84.com/v1"

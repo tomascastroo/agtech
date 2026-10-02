@@ -19,3 +19,7 @@ test-results/
 # Servicio de visión: pesos de modelos y datos de benchmark descargados
 apps/ai-service/models/*.onnx
 apps/ai-service/.cache/
+
+# Escáner de bovinos: runtime ONNX y modelo copiados/descargados en el build
+apps/web/public/ort/
+apps/web/public/models/

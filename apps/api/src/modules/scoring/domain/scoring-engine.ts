@@ -94,6 +94,15 @@ export class ScoringEngine {
   ): VerificationOutcome {
     if (input.detection.evidenceCount === 0) return 'INCONCLUSIVE';
     const critical = input.anomalies.some((a) => a.severity === 'CRITICAL');
+    // Cota inferior por debajo de lo declarado: la evidencia cubre parte del rodeo; no prueba
+    // un faltante (no se rechaza) ni confirma el stock (no se verifica).
+    const partialCoverage =
+      input.detection.countBasis === 'LOWER_BOUND' &&
+      input.detection.detectedQuantity !== null &&
+      input.detection.detectedQuantity < input.asset.declaredQuantity &&
+      ratio !== null &&
+      ratio < OUTCOME_THRESHOLDS.minimumMatchForVerified;
+    if (partialCoverage && !critical) return 'INCONCLUSIVE';
     if (finalScore < OUTCOME_THRESHOLDS.rejectedBelow) return 'REJECTED';
     if (critical && ratio !== null && ratio < 0.7) return 'REJECTED';
     if (

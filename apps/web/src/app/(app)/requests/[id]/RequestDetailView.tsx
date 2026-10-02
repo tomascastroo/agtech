@@ -4,6 +4,7 @@ import { useParams } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { RequestStageBadge } from '@/components/domain/RequestStageBadge';
+import { ScansPanel } from '@/components/domain/ScansPanel';
 import { OutcomeBadge, RiskBadge, SeverityBadge } from '@/components/domain/StatusBadges';
 import styles from '@/components/domain/domain.module.css';
 import { Button, LinkButton } from '@/components/ui/Button';
@@ -152,6 +153,8 @@ export function RequestDetailView() {
           ) : null}
           {v?.counting ? <CountingDetail counting={v.counting} /> : null}
         </Panel>
+
+        {r.asset && r.scans?.length ? <ScansPanel assetId={r.asset.id} /> : null}
 
         {r.crossSources ? <CrossSourcesPanel sources={r.crossSources} /> : null}
 

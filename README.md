@@ -93,6 +93,10 @@ Existe una segunda organización (Pampa Seguros) para verificar el aislamiento m
    envíen el kit” / “Ya instalé mis dispositivos”) o fotos → verificación.
 8. **Configuración**: usuarios, pesos del score, reglas de alerta, integraciones y modelos
    (indicando cuáles son simulados) y registro de auditoría.
+9. **Escáner de Bovinos** (portal del productor → solicitud → *Escanear rodeo*): la cámara del
+   celular detecta y cuenta bovinos en vivo (YOLOX-Nano en el dispositivo, modo fijo en manga o
+   barrido), funciona sin señal y se sincroniza solo; el servidor recalcula el conteo oficial.
+   Ver [`docs/scanner.md`](docs/scanner.md) (incluye cómo probarlo desde un celular real).
 
 ## Arquitectura
 

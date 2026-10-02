@@ -12,7 +12,7 @@ const OUTCOME_TEXT: Record<string, string> = {
   VERIFIED: 'Activo verificado',
   OBSERVED: 'Verificación con observaciones',
   REJECTED: 'Verificación no satisfactoria',
-  INCONCLUSIVE: 'Verificación no concluyente por falta de evidencia',
+  INCONCLUSIVE: 'Verificación no concluyente',
 };
 
 const RISK_TEXT: Record<string, string> = {
@@ -40,7 +40,17 @@ export function buildSummary(input: {
 }): string {
   const { scoring } = input;
   const parts = [`${OUTCOME_TEXT[scoring.outcome]}.`];
-  if (input.detected !== null && scoring.matchRatio !== null) {
+  if (
+    scoring.outcome === 'INCONCLUSIVE' &&
+    input.detected !== null &&
+    scoring.matchRatio !== null
+  ) {
+    parts.push(
+      `Se observaron al menos ${n(input.detected, 2)} de ${n(input.declared, 2)} ${unitLabel(input.unit, input.declared)} declaradas (cobertura ${n(scoring.matchRatio * 100, 1)} %) sobre ${input.evidenceCount} ${input.evidenceLabel}; la evidencia no cubre todo el rodeo.`,
+    );
+  } else if (scoring.outcome === 'INCONCLUSIVE' && input.evidenceCount === 0) {
+    parts.push('No se registró evidencia utilizable.');
+  } else if (input.detected !== null && scoring.matchRatio !== null) {
     parts.push(
       `Se verificaron ${n(input.detected, 2)} de ${n(input.declared, 2)} ${unitLabel(input.unit, input.declared)} declaradas (coincidencia ${n(scoring.matchRatio * 100, 1)} %) sobre ${input.evidenceCount} ${input.evidenceLabel}.`,
     );

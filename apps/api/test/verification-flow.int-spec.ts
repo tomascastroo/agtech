@@ -60,7 +60,7 @@ describe('Flujo de verificación (API + worker + BullMQ)', () => {
       outcome: 'VERIFIED',
       riskLevel: 'MEDIUM',
       locationVerified: true,
-      scoringModelVersion: 'agro-score/1.0.0',
+      scoringModelVersion: 'agro-score/1.1.0',
     });
     expect(run.result.components.map((c: { score: number }) => c.score)).toEqual([
       90, 85, 70, 68, 95,

@@ -8,6 +8,7 @@ import { MonitoringEventsModule } from './modules/monitoring/monitoring-events.m
 import { MonitoringWorkerModule } from './modules/monitoring/monitoring-worker.module.js';
 import { ReportsWorkerModule } from './modules/reports/reports-worker.module.js';
 import { StorageModule } from './modules/storage/storage.module.js';
+import { ScansWorkerModule } from './modules/scans/scans-worker.module.js';
 import { VerificationWorkerModule } from './modules/verification/verification-worker.module.js';
 import { ObservabilityModule } from './common/observability/error-reporter.js';
 
@@ -23,6 +24,7 @@ import { ObservabilityModule } from './common/observability/error-reporter.js';
     AuditModule,
     MonitoringEventsModule,
     VerificationWorkerModule,
+    ScansWorkerModule,
     ReportsWorkerModule,
     MonitoringWorkerModule,
   ],

@@ -6,6 +6,7 @@ import { ProducerPortal1793000000000 } from './migrations/1793000000000-producer
 import { GuaranteeRequests1792000000000 } from './migrations/1792000000000-guarantee-requests.js';
 import { RealVerificationSignals1791000000000 } from './migrations/1791000000000-real-verification-signals.js';
 import { EvidenceQuality1794000000000 } from './migrations/1794000000000-evidence-quality.js';
+import { BovineScanner1795000000000 } from './migrations/1795000000000-bovine-scanner.js';
 import { SnakeNamingStrategy } from './snake-naming.strategy.js';
 
 export const MIGRATIONS = [
@@ -14,6 +15,7 @@ export const MIGRATIONS = [
   GuaranteeRequests1792000000000,
   ProducerPortal1793000000000,
   EvidenceQuality1794000000000,
+  BovineScanner1795000000000,
 ];
 
 export function typeOrmOptions(env: Env): DataSourceOptions {

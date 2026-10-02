@@ -27,5 +27,6 @@ import {
   ],
   controllers: [GuaranteeRequestsController, ProducerRequestsController, ProducerPortalController],
   providers: [GuaranteeRequestsService],
+  exports: [GuaranteeRequestsService],
 })
 export class GuaranteeRequestsModule {}

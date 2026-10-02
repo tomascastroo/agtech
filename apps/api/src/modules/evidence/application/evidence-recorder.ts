@@ -47,7 +47,8 @@ export class EvidenceRecorder {
     if (input.file) {
       const kind = detectFileKind(input.file.bytes);
       mimeType = kind?.mime ?? input.file.mimeType;
-      const extension = kind?.extensions[0] ?? 'bin';
+      const extension =
+        kind?.extensions[0] ?? (input.file.mimeType === 'application/json' ? 'json' : 'bin');
       sha256 = sha256Hex(input.file.bytes);
       sizeBytes = input.file.bytes.length;
       storageKey = storageKeys.evidence(input.organizationId, input.assetId, extension);

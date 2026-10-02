@@ -188,3 +188,64 @@ class DocumentAnalysisResponse(BaseModel):
     engine: str
     version: str
     processing_ms: int
+
+
+class ScanTrackOut(BaseModel):
+    id: int
+    first_frame: int
+    last_frame: int
+    hits: int
+    net_crossings: int
+    mean_score: float
+
+
+class ScanCrossingOut(BaseModel):
+    track_id: int
+    frame: int
+    direction: int
+
+
+class ScanBoxOut(BaseModel):
+    x: int
+    y: int
+    width: int
+    height: int
+    score: float
+    label: str
+
+
+class ScanFrameOut(BaseModel):
+    index: int
+    detections: list[ScanBoxOut]
+    sharpness: float
+    brightness: float
+    camera_shift: tuple[float, float] | None
+
+
+class ScanProcessResponse(BaseModel):
+    """Conteo OFICIAL de un escaneo de bovinos (reprocesado en el servidor)."""
+
+    mode: str
+    net_count: int
+    positive_crossings: int
+    negative_crossings: int
+    max_simultaneous: int
+    confirmed_tracks: int
+    confidence: float = Field(ge=0, le=1)
+    frames_processed: int
+    width: int
+    height: int
+    line_orientation: str
+    line_position: float
+    camera_pan_px: float | None
+    blurry_frames: int
+    tracks: list[ScanTrackOut]
+    crossings: list[ScanCrossingOut]
+    frames: list[ScanFrameOut]
+    key_frames: list[ScanFrameOut]
+    warnings: list[str]
+    limitations: list[str]
+    score_threshold: float
+    tracker: str
+    model: ModelInfo
+    processing_ms: int

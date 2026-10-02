@@ -26,6 +26,7 @@ import { QUEUE_PREFIX, QUEUES, redisConnection } from './queues.js';
       { name: QUEUES.VERIFICATION },
       { name: QUEUES.REPORTS },
       { name: QUEUES.MONITORING },
+      { name: QUEUES.SCANS },
     ),
   ],
   exports: [BullModule],

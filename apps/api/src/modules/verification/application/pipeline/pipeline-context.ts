@@ -53,6 +53,12 @@ export interface StrategyOutcome {
   expectedDevices: number;
   activeDevices: number;
   vegetationChangePct: number | null;
+  /**
+   * CENSUS: el conteo es comparable con lo declarado (paso controlado, área completa).
+   * LOWER_BOUND: cota inferior (fotos o barrido de una parte del rodeo): si es menor a lo
+   * declarado no prueba faltante, solo cobertura parcial. Por defecto CENSUS.
+   */
+  countBasis?: 'CENSUS' | 'LOWER_BOUND';
   metrics: MetricInput[];
   anomalies: Anomaly[];
 }

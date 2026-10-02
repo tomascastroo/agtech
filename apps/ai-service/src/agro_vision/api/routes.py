@@ -5,16 +5,28 @@ import time
 from dataclasses import asdict
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Header, HTTPException, Query, UploadFile, status
+import cv2
+import numpy as np
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    Header,
+    HTTPException,
+    Query,
+    UploadFile,
+    status,
+)
 from fastapi.concurrency import run_in_threadpool
 
 from ..config import Settings, get_settings
 from ..domain.change_detection import detect_changes
 from ..domain.counting import CounterParams, count_animals
-from ..domain.detection import TilingParams
+from ..domain.detection import Detection, TilingParams
 from ..domain.documents import DOCUMENT_ANALYZER_VERSION, classify, extract_fields
 from ..domain.image_quality import assess_quality
-from ..domain.livestock import count_livestock
+from ..domain.livestock import LIVESTOCK_CLASS_SETS, count_livestock
 from ..domain.models_registry import (
     IMAGE_QUALITY,
     NDVI_PROCESSOR,
@@ -22,6 +34,7 @@ from ..domain.models_registry import (
     ModelDescriptor,
     yolox_descriptor,
 )
+from ..domain.scan_processing import BLURRY_SHARPNESS, frame_quality, process_scan
 from ..domain.sentinel2 import (
     PROCESSING_VERSION,
     NdviResult,
@@ -29,6 +42,7 @@ from ..domain.sentinel2 import (
     SceneNotFoundError,
     VegetationThresholds,
 )
+from ..domain.tracking import TRACKER_VERSION, LineSpec
 from ..infrastructure.document_reader import UnreadableDocumentError, read_document
 from ..infrastructure.image_io import DecodedImage, InvalidImageError, decode_image
 from ..infrastructure.sentinel_catalog import CatalogUnavailableError
@@ -47,6 +61,11 @@ from .schemas import (
     NdviRequest,
     ObservationsRequest,
     ObservationsResponse,
+    ScanBoxOut,
+    ScanCrossingOut,
+    ScanFrameOut,
+    ScanProcessResponse,
+    ScanTrackOut,
     SceneOut,
     SceneSearchRequest,
 )
@@ -359,6 +378,139 @@ async def changes(
 
 def _elapsed_ms(started: float) -> int:
     return int((time.perf_counter() - started) * 1000)
+
+
+def _scan_model(settings: Settings) -> ModelInfo:
+    base = _model_info(_active_detector_model(settings))
+    return base.model_copy(
+        update={"code": f"{base.code}+scan", "version": f"{base.version}+{TRACKER_VERSION}"}
+    )
+
+
+SCAN_LIMITATIONS = {
+    "FIXED": [
+        "Cuenta los animales cuyo recorrido cruza la línea de conteo; supone que todo el rodeo "
+        "declarado pasa por el punto filmado (manga, tranquera, puerta de corral).",
+        "Sin re-identificación por apariencia: animales pegados que el detector une en una caja "
+        "cuentan como uno; un animal oculto mucho tiempo que reaparece es un track nuevo.",
+        "Parámetros de detección y seguimiento no calibrados con escaneos de campo.",
+    ],
+    "SWEEP": [
+        "Barrido desde un punto: cuenta los animales que cruzaron la línea central mientras la "
+        "cámara giraba. Es una COTA INFERIOR: no ve animales ocultos, lejanos ni fuera del arco "
+        "barrido, y no estima el stock total del establecimiento.",
+        "Si el operador camina durante el barrido aparece paralaje y el conteo pierde validez.",
+        "Parámetros de detección y seguimiento no calibrados con escaneos de campo.",
+    ],
+}
+
+
+def _decode_frame(data: bytes, settings: Settings) -> np.ndarray:
+    if len(data) > settings.scan_max_frame_bytes:
+        raise HTTPException(status.HTTP_413_CONTENT_TOO_LARGE, "Cuadro demasiado grande")
+    bgr = cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_COLOR)
+    if bgr is None:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Cuadro ilegible")
+    h, w = bgr.shape[:2]
+    scale = settings.scan_max_frame_side_px / max(h, w)
+    if scale < 1:
+        bgr = cv2.resize(bgr, (round(w * scale), round(h * scale)), interpolation=cv2.INTER_AREA)
+    return bgr
+
+
+def _frame_out(index: int, detections, quality, shift) -> ScanFrameOut:
+    return ScanFrameOut(
+        index=index,
+        detections=[
+            ScanBoxOut(
+                x=int(d.x1),
+                y=int(d.y1),
+                width=int(d.width),
+                height=int(d.height),
+                score=round(d.score, 4),
+                label=d.label,
+            )
+            for d in detections[:MAX_DETECTIONS_RETURNED]
+        ],
+        sharpness=quality.sharpness,
+        brightness=quality.brightness,
+        camera_shift=(round(shift[0], 2), round(shift[1], 2)) if shift is not None else None,
+    )
+
+
+@router.post("/scans/process", response_model=ScanProcessResponse)
+async def process_scan_frames(
+    settings: SettingsDep,
+    frames: Annotated[list[UploadFile], File()],
+    key_frames: Annotated[list[UploadFile] | None, File()] = None,
+    mode: Annotated[str, Form(pattern="^(FIXED|SWEEP)$")] = "FIXED",
+    line_orientation: Annotated[str, Form(pattern="^(vertical|horizontal)$")] = "vertical",
+    line_position: Annotated[float, Form(ge=0.05, le=0.95)] = 0.5,
+) -> ScanProcessResponse:
+    """Conteo oficial: cuadros (en orden) → YOLOX → compensación de cámara → tracker → línea."""
+    started = time.perf_counter()
+    if settings.detector != "yolox":
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "El escáner requiere YOLOX")
+    if len(frames) > settings.scan_max_frames:
+        raise HTTPException(status.HTTP_413_CONTENT_TOO_LARGE, "Demasiados cuadros")
+    try:
+        detector = get_detector(settings)
+    except ModelNotAvailableError as exc:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(exc)) from exc
+    decoded = [
+        _decode_frame(await f.read(settings.scan_max_frame_bytes + 1), settings) for f in frames
+    ]
+    keys = [
+        _decode_frame(await f.read(settings.scan_max_frame_bytes + 1), settings)
+        for f in key_frames or []
+    ]
+    classes = LIVESTOCK_CLASS_SETS[settings.detector_class_set]
+    no_tiling = TilingParams(tile_size=0)
+
+    def detect(image: np.ndarray) -> list[Detection]:
+        return detector.detect(
+            image,
+            score_threshold=settings.scan_score_threshold,
+            class_ids=classes,
+            tiling=no_tiling,
+        )[0]
+
+    line = LineSpec(orientation=line_orientation, position=line_position)  # type: ignore[arg-type]
+    try:
+        result = await run_in_threadpool(process_scan, decoded, detect, mode, line)  # type: ignore[arg-type]
+    except ValueError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
+    key_results = await run_in_threadpool(lambda: [(detect(k), frame_quality(k)) for k in keys])
+    count = result.count
+    return ScanProcessResponse(
+        mode=mode,
+        net_count=count.net_count,
+        positive_crossings=count.positive_crossings,
+        negative_crossings=count.negative_crossings,
+        max_simultaneous=count.max_simultaneous,
+        confirmed_tracks=count.confirmed_tracks,
+        confidence=count.confidence,
+        frames_processed=count.frames,
+        width=result.frame_size[0],
+        height=result.frame_size[1],
+        line_orientation=line_orientation,
+        line_position=line_position,
+        camera_pan_px=round(sum(dx for dx, _ in result.shifts), 1) if result.shifts else None,
+        blurry_frames=sum(1 for q in result.quality if q.sharpness < BLURRY_SHARPNESS),
+        tracks=[ScanTrackOut(**asdict(t)) for t in count.tracks],
+        crossings=[ScanCrossingOut(**asdict(e)) for e in count.events],
+        frames=[
+            _frame_out(i, d, q, result.shifts[i] if result.shifts else None)
+            for i, (d, q) in enumerate(zip(result.detections, result.quality, strict=True))
+        ],
+        key_frames=[_frame_out(i, d, q, None) for i, (d, q) in enumerate(key_results)],
+        warnings=result.warnings,
+        limitations=SCAN_LIMITATIONS[mode],
+        score_threshold=settings.scan_score_threshold,
+        tracker=TRACKER_VERSION,
+        model=_scan_model(settings),
+        processing_ms=_elapsed_ms(started),
+    )
 
 
 @router.post("/documents/analyze", response_model=DocumentAnalysisResponse)

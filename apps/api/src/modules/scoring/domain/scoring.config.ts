@@ -1,6 +1,6 @@
 import { SCORE_COMPONENT_KEYS, type ScoringWeights } from './scoring.types.js';
 
-export const SCORING_MODEL_VERSION = 'agro-score/1.0.0';
+export const SCORING_MODEL_VERSION = 'agro-score/1.1.0';
 
 /** Pesos por defecto. Cada organización puede ajustarlos (deben sumar 1). */
 export const DEFAULT_SCORING_WEIGHTS: ScoringWeights = {

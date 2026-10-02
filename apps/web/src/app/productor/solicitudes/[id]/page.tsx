@@ -6,6 +6,7 @@ import { ProgressBar, ProducerStatusBadge } from '@/components/producer/Cards';
 import { AssetStep, EstablishmentStep } from '@/components/producer/DeclarationForms';
 import { PhotoCapture } from '@/components/producer/PhotoCapture';
 import { ProducerDocuments } from '@/components/producer/ProducerDocuments';
+import { ScannerScans } from '@/components/scanner/ScannerScans';
 import { useProducerRefresh, useProducerRequest } from '@/components/producer/data';
 import styles from '@/components/producer/producer.module.css';
 import { Callout, ErrorState, Loading } from '@/components/ui/Feedback';
@@ -88,6 +89,15 @@ export default function ProducerRequestPage() {
               onUploaded={refresh}
             />
             <EvidenceGrid items={r.evidence} />
+          </Section>
+
+          <Section
+            id="escaner"
+            title="Escáner de bovinos"
+            done={(r.scans ?? []).some((s) => s.status === 'COMPLETED')}
+            subtitle="Conteo con la cámara del celular"
+          >
+            <ScannerScans requestId={r.id} assetName={r.asset.name} />
           </Section>
 
           <Section

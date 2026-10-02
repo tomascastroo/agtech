@@ -35,6 +35,10 @@ export class ImageAnalysisService {
     mode: 'count' | 'quality',
   ): Promise<void> {
     for (const link of links) {
+      if (!isAnalyzed(link) && link.evidence?.type === 'SCAN') {
+        await this.useScanResult(link);
+        continue;
+      }
       if (isAnalyzed(link) || link.evidence?.type !== 'IMAGE' || !link.evidence.storageKey)
         continue;
       const image = await this.load(link.evidence);
@@ -98,6 +102,43 @@ export class ImageAnalysisService {
         aiModelVersionId: link.aiModelVersionId ?? null,
       });
     }
+  }
+
+  /**
+   * Evidencia de escaneo: el conteo oficial ya lo calculó el servidor sobre los cuadros
+   * muestreados (no se recalcula ni se usa el conteo del celular). Un escaneo insuficiente
+   * queda excluido del conteo.
+   */
+  private async useScanResult(link: VerificationEvidenceEntity): Promise<void> {
+    const meta = link.evidence!.metadata as Record<string, unknown>;
+    const insufficient = meta.quality === 'INSUFFICIENT';
+    link.role = insufficient ? 'EXCLUDED' : link.role;
+    link.detectedCount = typeof meta.officialCount === 'number' ? meta.officialCount : null;
+    link.confidence = typeof meta.confidence === 'number' ? meta.confidence : null;
+    link.exclusionReason = insufficient ? 'Escaneo de calidad insuficiente' : null;
+    link.analysis = {
+      analyzedAt: new Date().toISOString(),
+      count: link.detectedCount,
+      confidence: link.confidence,
+      scan: {
+        scanSessionId: meta.scanSessionId,
+        mode: meta.mode,
+        lowerBound: meta.lowerBound,
+        quality: meta.quality,
+        frames: meta.frames,
+        deviceCount: meta.deviceCount,
+      },
+      model: meta.model,
+      provider: 'bovine-scanner',
+    };
+    await this.verification.updateLink(link.verificationRunId, link.evidenceId, {
+      role: link.role,
+      detectedCount: link.detectedCount,
+      confidence: link.confidence,
+      analysis: link.analysis,
+      exclusionReason: link.exclusionReason,
+      aiModelVersionId: null,
+    });
   }
 
   private async load(evidence: EvidenceEntity): Promise<ImageInput> {

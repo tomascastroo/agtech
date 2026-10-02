@@ -8,6 +8,8 @@ import { Loading } from '@/components/ui/Feedback';
 import { Icon, type IconName } from '@/components/ui/Icon';
 import { api } from '@/lib/api/client';
 import { useSession } from '@/lib/api/queries';
+import { registerServiceWorker } from '@/lib/scanner/offline';
+import { startAutoSync } from '@/lib/scanner/sync';
 import styles from './producer.module.css';
 
 const NAV: { href: string; label: string; icon: IconName }[] = [
@@ -25,6 +27,12 @@ export function ProducerShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const client = useQueryClient();
   const role = session.data?.role;
+
+  // Escáner de bovinos: escaneos guardados sin señal se sincronizan solos al volver la conexión.
+  useEffect(() => {
+    registerServiceWorker();
+    return startAutoSync();
+  }, []);
 
   useEffect(() => {
     // Los usuarios de la entidad usan el portal institucional.

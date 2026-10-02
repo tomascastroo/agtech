@@ -10,7 +10,54 @@ import {
   type ImageInput,
   type ModelRef,
   type ObjectDetection,
+  type ScanFramesInput,
+  type ScanProcessing,
 } from '../domain/computer-vision.provider.js';
+
+interface RemoteScanBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  score: number;
+  label: string;
+}
+
+interface RemoteScan {
+  net_count: number;
+  positive_crossings: number;
+  negative_crossings: number;
+  max_simultaneous: number;
+  confirmed_tracks: number;
+  confidence: number;
+  frames_processed: number;
+  width: number;
+  height: number;
+  camera_pan_px: number | null;
+  blurry_frames: number;
+  tracks: {
+    id: number;
+    first_frame: number;
+    last_frame: number;
+    hits: number;
+    net_crossings: number;
+    mean_score: number;
+  }[];
+  crossings: { track_id: number; frame: number; direction: number }[];
+  frames: {
+    index: number;
+    detections: RemoteScanBox[];
+    sharpness: number;
+    camera_shift: [number, number] | null;
+  }[];
+  key_frames: { index: number; detections: RemoteScanBox[] }[];
+  warnings: string[];
+  limitations: string[];
+  score_threshold: number;
+  tracker: string;
+  model: RemoteModel;
+  processing_ms: number;
+}
 
 interface RemoteModel {
   code: string;
@@ -153,6 +200,72 @@ export class AiServiceComputerVisionProvider extends ComputerVisionProvider {
     return { changedFraction: r.changed_fraction, regions: r.regions, model: toModel(r.model) };
   }
 
+  async processScan(input: ScanFramesInput, context?: CallContext): Promise<ScanProcessing> {
+    const form = new FormData();
+    for (const frame of input.frames) {
+      form.append(
+        'frames',
+        new Blob([new Uint8Array(frame.bytes)], { type: 'image/jpeg' }),
+        `${String(frame.index).padStart(5, '0')}.jpg`,
+      );
+    }
+    for (const frame of input.keyFrames) {
+      form.append(
+        'key_frames',
+        new Blob([new Uint8Array(frame.bytes)], { type: 'image/jpeg' }),
+        `k${String(frame.index).padStart(3, '0')}.jpg`,
+      );
+    }
+    form.append('mode', input.mode);
+    form.append('line_orientation', input.line.orientation);
+    form.append('line_position', String(input.line.position));
+    const r = await this.send<RemoteScan>(
+      '/v1/scans/process',
+      form,
+      context,
+      this.config.env.AI_SERVICE_SCAN_TIMEOUT_MS,
+    );
+    return {
+      netCount: r.net_count,
+      positiveCrossings: r.positive_crossings,
+      negativeCrossings: r.negative_crossings,
+      maxSimultaneous: r.max_simultaneous,
+      confirmedTracks: r.confirmed_tracks,
+      confidence: r.confidence,
+      framesProcessed: r.frames_processed,
+      width: r.width,
+      height: r.height,
+      cameraPanPx: r.camera_pan_px,
+      blurryFrames: r.blurry_frames,
+      tracks: r.tracks.map((t) => ({
+        id: t.id,
+        firstFrame: t.first_frame,
+        lastFrame: t.last_frame,
+        hits: t.hits,
+        netCrossings: t.net_crossings,
+        meanScore: t.mean_score,
+      })),
+      crossings: r.crossings.map((c) => ({
+        trackId: c.track_id,
+        frame: c.frame,
+        direction: c.direction,
+      })),
+      frames: r.frames.map((f) => ({
+        index: f.index,
+        detections: f.detections,
+        sharpness: f.sharpness,
+        cameraShift: f.camera_shift,
+      })),
+      keyFrames: r.key_frames.map((f) => ({ index: f.index, detections: f.detections })),
+      warnings: r.warnings,
+      limitations: r.limitations,
+      scoreThreshold: r.score_threshold,
+      tracker: r.tracker,
+      model: toModel(r.model),
+      processingMs: r.processing_ms,
+    };
+  }
+
   async health(): Promise<{ ok: boolean; detail?: string }> {
     try {
       const response = await fetch(new URL('/health/ready', this.config.env.AI_SERVICE_URL), {
@@ -177,6 +290,15 @@ export class AiServiceComputerVisionProvider extends ComputerVisionProvider {
         image.fileName,
       );
     }
+    return this.send<T>(path, form, context, this.config.env.AI_SERVICE_TIMEOUT_MS);
+  }
+
+  private async send<T>(
+    path: string,
+    form: FormData,
+    context: CallContext | undefined,
+    timeoutMs: number,
+  ): Promise<T> {
     const headers: Record<string, string> = {};
     if (this.config.env.AI_SERVICE_TOKEN)
       headers['x-internal-token'] = this.config.env.AI_SERVICE_TOKEN;
@@ -188,7 +310,7 @@ export class AiServiceComputerVisionProvider extends ComputerVisionProvider {
         method: 'POST',
         body: form,
         headers,
-        signal: AbortSignal.timeout(this.config.env.AI_SERVICE_TIMEOUT_MS),
+        signal: AbortSignal.timeout(timeoutMs),
       });
     } catch (error) {
       this.logger.warn({ err: error, path }, 'Servicio de visión no disponible');

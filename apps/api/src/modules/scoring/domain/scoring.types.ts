@@ -62,6 +62,8 @@ export interface ScoringInput {
   };
   detection: {
     detectedQuantity: number | null;
+    /** LOWER_BOUND: lo detectado es una cota inferior (cobertura parcial del rodeo). */
+    countBasis?: 'CENSUS' | 'LOWER_BOUND';
     confidence: number | null;
     evidenceCount: number;
     averageQuality: number | null;
