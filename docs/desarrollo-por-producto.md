@@ -28,14 +28,14 @@ conflictos de renombre con cualquier trabajo en paralelo.
 
 | Capa | Dónde |
 |---|---|
-| **Escáner** (fijo/paso, barrido, corral, fotos), sesiones, cuadros y conteo oficial | `apps/api/src/modules/scans/` · migraciones `1795…-bovine-scanner`, `1796…-livestock-scanner-modes` |
+| **Escáner** (fijo/paso, barrido, corral, fotos, manga + RFID), sesiones, cuadros y conteo oficial | `apps/api/src/modules/scans/` · migraciones `1795…-bovine-scanner`, `1796…-livestock-scanner-modes`, `1797…-chute-rfid` |
 | **RFID**, animales, visual + RFID y monitoreo del rodeo | `apps/api/src/modules/animals/` |
 | **Verificación ganadera** | `verification/application/pipeline/strategies/livestock-counting.strategy.ts` · `verification/domain/unique-count.ts` · `verification/domain/livestock-history.ts` |
 | **Tipos de producción** (feedlot, cría, pastoreo) | `assets/domain/livestock-profile.ts` |
-| **Visión bovina** (servicio de IA) | `domain/{tracking,pen_count,scan_processing,livestock,counting}.py` · `/v1/scans/process`, `/v1/animals/count` · `scripts/generate_{passage,sweep}_video.py`, `generate_tracker_fixture.py`, `generate_cattle_composites.py`, `benchmark_cattle.py` |
+| **Visión bovina** (servicio de IA) | `domain/{tracking,pen_count,scan_processing,livestock,counting}.py` · `/v1/scans/process`, `/v1/animals/count` · `/v1/scans/track` · `scripts/generate_{passage,sweep,chute}_video.py`, `generate_tracker_fixture.py`, `generate_cattle_composites.py`, `benchmark_cattle.py` |
 | **Web: celular** | `apps/web/src/lib/scanner/` · `components/scanner/` · `app/escaner/` |
-| **Web: banco** | `components/domain/{ScansPanel,LivestockMonitorPanel,RfidReadings}.tsx` |
-| **Tests** | `api/test/bovine-scanner.int-spec.ts` · `web/e2e/04-bovine-scanner.spec.ts`, `05-livestock-modes.spec.ts` · `ai-service/tests/test_{tracking,scans,pen_count,counting}.py` |
+| **Web: banco** | `components/domain/{ScansPanel,LivestockMonitorPanel,RfidReadings,BovineIndividualsPanel}.tsx` |
+| **Tests** | `api/test/{bovine-scanner,chute-rfid}.int-spec.ts` · `web/e2e/04-bovine-scanner.spec.ts`, `05-livestock-modes.spec.ts`, `06-chute-rfid.spec.ts` · `ai-service/tests/test_{tracking,scans,pen_count,counting}.py` |
 | **Docs** | `docs/scanner.md` · `docs/phone-testing.md` · `scripts/phone-test.sh` |
 
 ### Agricultura (`feature/agricultura`)

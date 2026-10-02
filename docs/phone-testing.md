@@ -107,6 +107,17 @@ escáner fijo.
   3. Tocá **Otra foto** para sumar zonas del grupo. Cada foto tiene que compartir una parte con
      la anterior.
   4. Tocá **FINALIZAR**.
+- **Manga + RFID (individual):**
+  1. Poné en pantalla `infra/seed-assets/videos/manga-individual-sintetico.mp4`, donde pasa un
+     bovino por vez.
+  2. Elegí **Manga + RFID** y tocá **Iniciar sesión de manga**.
+  3. Cuando diga **Bovino estable: leé la caravana**, tocá **Leer RFID (SIMULADO)**.
+  4. Aparece **✓ Bovino identificado** (preliminar) con la caravana y la cantidad de imágenes.
+     Con dos bovinos en cuadro, o si se mueve, dice que **no se asoció**.
+  5. Tocá **Registrar siguiente bovino** y repetí. Al final, **FINALIZAR**.
+  6. El servidor confirma cada animal. El banco ve **Bovinos identificados: N** marcado
+     SIMULADO.
+  - Hoy no hay lector físico conectado: las lecturas son simuladas.
 - **Recomendado:** si el rodeo es de feedlot, el escáner marca **Recomendado** en el escáner de
   corral; en cría, en el fijo; en pastoreo, en el barrido.
 - **Mensajes en rojo** ("Mové más lento", "Acercate", "Hay demasiados animales ocultos", "Falta

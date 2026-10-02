@@ -1,0 +1,51 @@
+{
+ "description": "Video SINTÉTICO de manga individual: recortes de bovinos de fotografías reales de Open Images V7; un bovino por vez entra, queda quieto y sale. Sirve para probar el flujo Manga + RFID con cámara falsa; no mide precisión en campo.",
+ "file": "manga-individual-sintetico.mp4",
+ "seed": 20261003,
+ "width": 640,
+ "height": 480,
+ "fps": 12,
+ "frames": 660,
+ "animals": 4,
+ "still_windows_s": [
+  [
+   1.5,
+   10.5
+  ],
+  [
+   15.0,
+   24.0
+  ],
+  [
+   28.5,
+   37.5
+  ],
+  [
+   42.0,
+   51.0
+  ]
+ ],
+ "synthetic": true,
+ "attribution": [
+  [
+   "226042dbf3ebdf47",
+   "John Johnston",
+   "https://creativecommons.org/licenses/by/2.0/"
+  ],
+  [
+   "373eb7cd1849a39d",
+   "Ronnie Macdonald",
+   "https://creativecommons.org/licenses/by/2.0/"
+  ],
+  [
+   "4d55c519a24906d3",
+   "Ricky wilson",
+   "https://creativecommons.org/licenses/by/2.0/"
+  ],
+  [
+   "65fa93cf7916e533",
+   "Louise Python",
+   "https://creativecommons.org/licenses/by/2.0/"
+  ]
+ ]
+}

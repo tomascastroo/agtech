@@ -628,8 +628,8 @@ function ChuteResultCard({ last }: { last: NonNullable<ChuteLive['last']> }) {
         <div>{CHUTE_REASON_LABELS[last.reason] ?? last.reason}</div>
       )}
       <div className={styles.small}>
-        Animal #{last.sequence} · Imágenes de evidencia: {last.frames} ·{' '}
-        {new Date(last.capturedAt).toLocaleString('es-AR')}
+        Animal #{last.sequence} · Imágenes de evidencia: {last.frames} cuadros guardados (el
+        servidor elige los mejores) · {new Date(last.capturedAt).toLocaleString('es-AR')}
       </div>
       <div className={styles.small}>
         Estado: PRELIMINAR (celular). El resultado oficial lo confirma el servidor al sincronizar.
@@ -685,7 +685,11 @@ function ChuteSummary({
                 ? `✓ ${v.code ? `${v.code} · ` : ''}${formatEid(v.eid ?? '')}`
                 : `${CHUTE_RESULT_TITLES[v.status]} (${CHUTE_REASON_LABELS[v.reason ?? ''] ?? v.reason})`}{' '}
               <span className={styles.small}>
-                · {c.frameIndices.length} imágenes · {v.official ? 'OFICIAL' : 'PRELIMINAR'}
+                ·{' '}
+                {v.official
+                  ? `${v.official.bestFrames} imágenes de evidencia (de ${c.frameIndices.length} cuadros)`
+                  : `${c.frameIndices.length} cuadros guardados`}{' '}
+                · {v.official ? 'OFICIAL' : 'PRELIMINAR'}
                 {c.rfidSource === 'SIMULATED' ? ' · SIMULADO' : ''}
               </span>
             </li>

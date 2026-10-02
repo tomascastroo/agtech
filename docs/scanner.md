@@ -14,6 +14,7 @@ resultado oficial.
 | **Escáner móvil / barrido** (`SWEEP`) | Operador quieto que gira despacio sobre el rodeo | Animales que cruzan la línea central mientras la cámara gira (conteo neto) | **Cota inferior**: si da menos que lo declarado, la verificación es *no concluyente* (cobertura parcial), no *rechazada* |
 | **Escáner de corral** (`PEN`) | Animales **quietos**: corral, aguada, agrupamiento. Se apunta al grupo y, si no entra, se recorre despacio | **Animales únicos** observados (sin línea): un animal que se vuelve a ver se cuenta una vez | **Cota inferior** (los tapados por otros no se ven) |
 | **Analizar foto** (`PHOTO`) | Una o varias fotos del mismo grupo (hasta 12) | **Animales únicos**: solo se suman zonas de fotos que se solapan | **Cota inferior** |
+| **Manga + RFID** (`CHUTE`) | Escaneo INDIVIDUAL: un bovino por vez quieto en la manga y la lectura de su caravana | **Bovinos identificados por caravana** (asociaciones RFID ↔ bovino confirmadas por el servidor) | **Comparable** solo con lector real y si pasa todo el rodeo; con lecturas SIMULADAS, cota inferior |
 
 Avisos en vivo:
 - **"Girá más despacio"**: velocidad de giro por encima de 45°/s, medida con giroscopio o brújula.
@@ -178,6 +179,109 @@ oficial) con las caravanas leídas en los últimos 30 días:
 - **Lector físico:** no hay integración con hardware. Las lecturas reales llegan por el puente
   del lector (`POST /assets/:id/rfid/observations`).
 
+### Manga + RFID (registro individual)
+
+El operador pone un bovino en la manga, la cámara lo detecta y el lector lee la caravana. Cada
+pieza tiene un solo trabajo:
+
+| Pieza | Trabajo |
+|---|---|
+| RFID | Identidad (la caravana electrónica) |
+| YOLOX | Detección ("hay un bovino") |
+| ByteTrack | Seguimiento ("es el mismo bovino que en el cuadro anterior") |
+| Matching (`chute-matching.ts`) | Asociación: ¿la lectura corresponde, sin ambigüedad, a UN bovino estable en la zona de captura? |
+| Imágenes | Respaldo de la asociación |
+
+**No hay reconocimiento visual del animal** (Re-ID): el sistema no reconoce a la vaca por su
+aspecto.
+
+**Regla: ante la duda no se asocia.**
+- **Sin bovino** en la zona: NO DETERMINABLE.
+- **Dos o más bovinos:** AMBIGUO.
+- **Lectura dudosa:** dos caravanas distintas, una lectura inválida o una lectura fuera de la
+  ventana de cuadros. No se asocia.
+- **Escena no confiable:** track inestable, animal caminando, tapado, cortado o imágenes de
+  mala calidad. No se asocia.
+- **Ventana temporal:** no se exige el mismo instante. Se usa una ventana configurable
+  alrededor de la lectura (1,5 s antes y 1 s después), con al menos 3 cuadros.
+- **Reglas entre animales** (solo pueden bajar una confirmación):
+  - lecturas tan seguidas que sus ventanas se pisan;
+  - el mismo track con dos caravanas;
+  - la misma caravana dos veces en la sesión (vale la primera).
+
+**Estados en el celular:** `WAITING_FOR_ANIMAL` → `ANIMAL_DETECTED` →
+`WAITING_FOR_STABLE_TRACK` → `WAITING_FOR_RFID` → `MATCHING` → `CONFIRMED` / `AMBIGUOUS` /
+`INSUFFICIENT_EVIDENCE` (o `MULTIPLE_ANIMALS` en vivo, `FAILED` si no se pudo guardar). Después,
+**Registrar siguiente bovino**.
+
+**Flujo:**
+1. **Celular (`lib/scanner/chute-session.ts`):**
+   - YOLOX-Nano + ByteTrack; búfer circular de ~3,5 s de cuadros JPEG 640 px en memoria.
+   - Ante una lectura espera la ventana posterior y guarda en IndexedDB **solo** los cuadros
+     de la ventana (hasta 24) y la captura: lecturas, índices de cuadros, track y decisión
+     PRELIMINAR.
+   - No se guarda video. Funciona sin señal.
+2. **Sincronización:**
+   - crea la sesión `CHUTE` con su zona de captura;
+   - sube los cuadros (con su hash);
+   - `POST /producer/me/requests/:id/scans/:scanId/captures` por cada animal (idempotente,
+     auditado);
+   - `finalize` con `expectedCaptures`.
+   - Estados: OFFLINE → SINCRONIZANDO → PROCESANDO → VERIFICADO EN SERVIDOR.
+3. **Servidor (worker, `chute-processing.service.ts`):** por cada captura:
+   - verifica los hashes;
+   - **re-detecta y re-sigue** los cuadros (`/v1/scans/track`, YOLOX-S + ByteTrack);
+   - decide con el mismo módulo de asociación y aplica las reglas entre capturas.
+
+   El resultado del celular nunca se usa: solo se guarda como referencia. Si queda
+   **CONFIRMADA**, registra en una transacción:
+   - la lectura en `rfid_observations` (con su origen `SIMULATED` / `READER_BRIDGE`);
+   - la identidad `bovine_individuals` (código interno `BOV-00001`…, por organización; REAL y
+     SIMULADO nunca se mezclan);
+   - una evidencia inmutable `RFID_READ`. Su manifiesto incluye:
+     - la caravana, el track y las métricas de la asociación;
+     - los mejores cuadros (5 a 8, por calidad y separados en el tiempo) con caja, puntaje y
+       SHA-256;
+     - los hashes de todos los cuadros de la ventana;
+     - el modelo.
+
+   La sesión registra además una evidencia `SCAN` con el conteo de caravanas distintas
+   confirmadas.
+4. **Inmutabilidad:**
+   - `chute_captures` no admite borrar.
+   - Una captura resuelta no se puede modificar (trigger en la base).
+   - Una corrección es otra captura, auditada.
+5. **Entidad:**
+   - `GET /assets/:id/bovine-individuals` devuelve "Bovinos identificados: N", REAL / SIMULADO.
+   - `GET /bovine-individuals/:id` devuelve las capturas con los cuadros y sus cajas.
+   - Siempre dentro de la organización: otra recibe 404.
+
+**Lector RFID** (`lib/scanner/rfid-reader.ts`):
+- Hoy solo existe `SimulatedRfidReader`: caravanas deterministas 032000000000001, …002, etc.
+  Todo queda marcado **SIMULADO** y nunca es censo.
+- No hay lector "desde archivo": las horas de un archivo del bastón son de otro reloj, y una
+  lectura que no se puede ubicar en la ventana no se asocia.
+- **Para un lector físico falta:**
+  - un `RfidReader` con origen `READER_BRIDGE` que entregue cada lectura en el momento en que
+    ocurre (BLE / Web Bluetooth o una app puente nativa, según el bastón);
+  - registrar el lector como dispositivo `RFID_READER` de la organización (el servidor lo
+    exige);
+  - medir en campo la latencia lector → teléfono para calibrar la ventana;
+  - pruebas con animales reales.
+
+**Dataset para Re-ID futuro** (`GET /assets/:id/bovine-individuals/dataset`): una fila por cuadro
+elegido de cada captura confirmada. Cada fila tiene:
+- la caravana (etiqueta);
+- el código interno y si es SIMULADO;
+- la sesión, la captura y la evidencia;
+- el índice del cuadro, su SHA-256 y su hora;
+- el track, la caja y la confianza;
+- la nitidez y el brillo;
+- el dispositivo, el establecimiento, el activo y la versión del modelo.
+
+Las imágenes están en el almacenamiento de objetos y se verifican por hash. **No se calculan
+embeddings** ni se entrena nada.
+
 ### Monitoreo recurrente
 
 `GET /assets/:id/livestock/history` devuelve una fila por verificación: **Fecha | Declarados |
@@ -305,9 +409,14 @@ ffmpeg -i infra/seed-assets/videos/paso-manga-sintetico.mp4 \
 ffmpeg -i infra/seed-assets/videos/barrido-ida-vuelta-sintetico.mp4 \
   -vf "tpad=start_duration=3:start_mode=clone:stop_duration=3:stop_mode=clone" \
   -pix_fmt yuv420p /tmp/corral-camera.y4m
+# Manga + RFID (un bovino por vez; generado con scripts/generate_chute_video.py):
+ffmpeg -i infra/seed-assets/videos/manga-individual-sintetico.mp4 \
+  -pix_fmt yuv420p /tmp/manga-individual.y4m
 cd apps/web
 SCANNER_FAKE_CAMERA=/tmp/manga-camera.y4m SCANNER_FAKE_CAMERA_STILL=/tmp/corral-camera.y4m \
-  SEED_DEMO_PASSWORD=... npx playwright test e2e/04-bovine-scanner.spec.ts e2e/05-livestock-modes.spec.ts
+  SCANNER_FAKE_CAMERA_CHUTE=/tmp/manga-individual.y4m \
+  SEED_DEMO_PASSWORD=... npx playwright test e2e/04-bovine-scanner.spec.ts \
+  e2e/05-livestock-modes.spec.ts e2e/06-chute-rfid.spec.ts
 ```
 
 ## Costos

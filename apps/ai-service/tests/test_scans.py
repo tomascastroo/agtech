@@ -195,3 +195,29 @@ def test_track_endpoint_returns_tracked_detections(client):
     assert tracked, "debería seguir al menos un bovino"
     assert body["tracker"].startswith("agro-bytetrack/")
     assert "sharpness" in body["frames"][0]
+
+
+CHUTE_VIDEO = ROOT_DIR / "infra" / "seed-assets" / "videos" / "manga-individual-sintetico.mp4"
+
+
+@pytest.mark.skipif(
+    not (WEIGHTS.exists() and CHUTE_VIDEO.exists()), reason="sin pesos YOLOX o video de manga"
+)
+def test_track_endpoint_on_chute_video_follows_one_still_bovine(client):
+    """Manga individual (SINTÉTICO): con un bovino quieto hay un único track estable."""
+    video = sample_frames(CHUTE_VIDEO.read_bytes(), target_fps=8, max_frames=1000, max_side_px=640)
+    window = video.frames[20:40]  # 2,5-5 s: el primer bovino está quieto en la manga
+    files = [
+        ("frames", (f"{i}.jpg", cv2.imencode(".jpg", f)[1].tobytes(), "image/jpeg"))
+        for i, f in enumerate(window)
+    ]
+    response = client.post("/v1/scans/track", files=files, headers=HEADERS)
+    assert response.status_code == 200
+    frames = response.json()["frames"]
+    confirmed = [
+        [d for d in f["detections"] if d["confirmed"] and d["score"] >= 0.5] for f in frames
+    ]
+    ids = {d["track_id"] for c in confirmed for d in c}
+    with_one = sum(1 for c in confirmed if len(c) == 1)
+    assert len(ids) == 1, f"un solo track esperado, hubo {ids}"
+    assert with_one >= 0.6 * len(frames)
