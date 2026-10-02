@@ -7,7 +7,7 @@
  * No se guarda el video completo.
  */
 import type { OrtYoloxDetector } from './detector';
-import { SCANNER_MODEL } from './detector';
+import { prefersWasm, SCANNER_MODEL } from './detector';
 import { GpsTracker, HeadingTracker, keepScreenOn } from './sensors';
 import {
   activeScans,
@@ -36,6 +36,11 @@ export const MAX_DURATION_S = 180;
 export const MAX_PENDING_WRITES = 4;
 /** Cada cuánto se actualiza el escaneo en curso en el teléfono (para recuperarlo si se corta). */
 export const CHECKPOINT_EVERY_MS = 10_000;
+/**
+ * Tope de inferencias por segundo en iPhone: deja respirar a la CPU y al recolector de memoria
+ * (el muestreo de cuadros para el servidor sigue a 6/s igual).
+ */
+export const LOW_MEMORY_MAX_INFERENCE_FPS = 4;
 /** Giro más rápido que esto pierde animales en el barrido. */
 export const FAST_TURN_DEG_S = 45;
 
@@ -81,6 +86,8 @@ export class ScanSessionEngine {
   private releaseWakeLock: () => void = () => undefined;
   private readonly warnings = new Set<string>();
   private readonly startMs = performance.now();
+  private readonly minDetectionGapMs = prefersWasm() ? 1000 / LOW_MEMORY_MAX_INFERENCE_FPS : 0;
+  private lastDetectionAt = 0;
 
   constructor(
     private readonly video: HTMLVideoElement,
@@ -134,8 +141,10 @@ export class ScanSessionEngine {
 
   private async detect() {
     if (this.stopped) return;
-    if (!this.busy && this.video.readyState >= 2) {
+    const sinceLast = performance.now() - this.lastDetectionAt;
+    if (!this.busy && this.video.readyState >= 2 && sinceLast >= this.minDetectionGapMs) {
       this.busy = true;
+      this.lastDetectionAt = performance.now();
       try {
         const boxes = await this.detector.detect(
           this.video,

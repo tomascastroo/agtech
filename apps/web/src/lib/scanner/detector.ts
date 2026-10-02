@@ -20,11 +20,31 @@ export type InferenceBackend = 'webgpu' | 'wasm';
 
 type OrtModule = typeof Ort;
 
+/**
+ * Archivos del motor según el dispositivo. En iPhone/iPad se usa el paquete solo-WASM (motor de
+ * ~14 MB): el de WebGPU trae un WASM "asyncify" de ~27 MB que, compilado, ocupa mucha más
+ * memoria y contribuía a que iOS cerrara la página.
+ */
+export function ortBundle(): { module: string; files: string[] } {
+  return prefersWasm()
+    ? {
+        module: '/ort/ort.wasm.min.mjs',
+        files: ['/ort/ort-wasm-simd-threaded.mjs', '/ort/ort-wasm-simd-threaded.wasm'],
+      }
+    : {
+        module: '/ort/ort.webgpu.min.mjs',
+        files: [
+          '/ort/ort-wasm-simd-threaded.asyncify.mjs',
+          '/ort/ort-wasm-simd-threaded.asyncify.wasm',
+        ],
+      };
+}
+
 let ortPromise: Promise<OrtModule> | null = null;
 function loadOrt(): Promise<OrtModule> {
   // Import en tiempo de ejecución, fuera del bundler (archivo estático en /ort/).
   ortPromise ??= import(
-    /* webpackIgnore: true */ /* turbopackIgnore: true */ '/ort/ort.webgpu.min.mjs' as string
+    /* webpackIgnore: true */ /* turbopackIgnore: true */ ortBundle().module
   ) as Promise<OrtModule>;
   return ortPromise;
 }

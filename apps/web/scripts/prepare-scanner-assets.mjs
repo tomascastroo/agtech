@@ -14,6 +14,11 @@ const ortDist = dirname(require.resolve('onnxruntime-web'));
 const ortTarget = join(root, 'public/ort');
 mkdirSync(ortTarget, { recursive: true });
 for (const file of [
+  // WASM liviano (iPhone/iPad: ~14 MB, sin asyncify).
+  'ort.wasm.min.mjs',
+  'ort-wasm-simd-threaded.mjs',
+  'ort-wasm-simd-threaded.wasm',
+  // WebGPU + WASM (resto de los navegadores).
   'ort.webgpu.min.mjs',
   'ort-wasm-simd-threaded.asyncify.mjs',
   'ort-wasm-simd-threaded.asyncify.wasm',

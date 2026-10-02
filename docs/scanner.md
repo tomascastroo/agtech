@@ -59,8 +59,15 @@ Qué se guarda y qué no:
 
 ### Memoria en el celular y escaneos cortados
 
-- **iPhone/iPad:** se usa WASM y no WebGPU. ONNX Runtime con WebGPU en WebKit hacía que iOS
-  cerrara la página a los pocos segundos ("Ocurrió un problema varias veces").
+- **iPhone/iPad, modo de bajo consumo:**
+  - **Motor:** se usa WASM y no WebGPU. ONNX Runtime con WebGPU en WebKit hacía que iOS cerrara
+    la página ("Ocurrió un problema varias veces").
+  - **Paquete:** el liviano solo-WASM (`ort.wasm.min.mjs`, motor de ~14 MB) en lugar del
+    asyncify de ~27 MB.
+  - **Cámara:** 640×480.
+  - **Inferencia:** como máximo 4 por segundo. El muestreo para el servidor sigue en 6/s.
+  - **Para probar WebGPU:** agregá `?ia=webgpu` a la URL.
+- **Precarga de motor y modelo:** baja de a un archivo, sin picos de memoria.
 - **Cuadros en vuelo acotados:** como máximo hay 4 cuadros codificándose o guardándose a la vez.
   Si el teléfono no da abasto se saltea el cuadro (queda una advertencia) en lugar de acumular
   imágenes en memoria.

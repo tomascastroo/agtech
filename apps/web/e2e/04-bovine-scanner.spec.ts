@@ -27,6 +27,14 @@ test.use({
   permissions: ['camera', 'geolocation'],
   geolocation: { latitude: -36.7905, longitude: -59.153, accuracy: 8 },
   viewport: { width: 412, height: 915 },
+  // SCANNER_E2E_IOS=1: se presenta como iPhone para recorrer el camino de iOS (motor solo-WASM,
+  // cámara 640×480, inferencia limitada).
+  ...(process.env.SCANNER_E2E_IOS
+    ? {
+        userAgent:
+          'Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.6 Mobile/15E148 Safari/604.1',
+      }
+    : {}),
 });
 
 async function csrf(context: BrowserContext): Promise<string> {
