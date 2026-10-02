@@ -113,6 +113,8 @@ hay calibración con video real de mangas argentinas.
 
 ## Cómo probarlo desde un celular real
 
+**Guía paso a paso: [`docs/phone-testing.md`](phone-testing.md)** (script `scripts/phone-test.sh`).
+
 El navegador solo abre la cámara en un **contexto seguro** (HTTPS), o en `localhost`.
 
 1. **Levantar el stack** con `docker compose up -d --build`. El build de la web descarga y

@@ -7,7 +7,11 @@ import { Loading } from '@/components/ui/Feedback';
 import { api } from '@/lib/api/client';
 import type { ProducerRequestDetail } from '@/lib/api/types';
 import { cachedRequest, cacheRequest, type CachedRequest } from '@/lib/scanner/request-cache';
-import { registerServiceWorker, warmScannerAssets } from '@/lib/scanner/offline';
+import {
+  cacheScannerPageForOffline,
+  registerServiceWorker,
+  warmScannerAssets,
+} from '@/lib/scanner/offline';
 import { startAutoSync } from '@/lib/scanner/sync';
 
 /**
@@ -22,7 +26,10 @@ export default function ScannerPage() {
   useEffect(() => {
     registerServiceWorker();
     // Deja el motor y el modelo en caché: la próxima vez el escáner abre sin señal.
-    if (navigator.onLine) void warmScannerAssets();
+    if (navigator.onLine) {
+      void warmScannerAssets();
+      void cacheScannerPageForOffline();
+    }
     return startAutoSync();
   }, []);
 
