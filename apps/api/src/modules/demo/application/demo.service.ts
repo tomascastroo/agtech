@@ -1,0 +1,201 @@
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { Repository } from 'typeorm';
+import type { AuthenticatedUser } from '../../../common/auth/authenticated-user.js';
+import type { RequestContext } from '../../../common/auth/decorators.js';
+import { randomToken } from '../../../common/crypto/hashing.js';
+import { ForbiddenActionError, ValidationFailedError } from '../../../common/domain/errors.js';
+import { AppConfig } from '../../../config/app-config.js';
+import { AuditService } from '../../audit/application/audit.service.js';
+import { AUDIT_ACTIONS } from '../../audit/application/audit.types.js';
+import type { DocumentType } from '../../documents/domain/document.types.js';
+import { GuaranteeRequestsService } from '../../guarantee-requests/application/guarantee-requests.service.js';
+import { GuaranteeRequestEntity } from '../../guarantee-requests/infrastructure/guarantee-request.entity.js';
+import {
+  DEMO_DOCUMENT_TYPES,
+  DEMO_PRODUCER,
+  DEMO_SCENARIOS,
+  demoScenario,
+} from '../domain/demo-scenarios.js';
+
+const DOCUMENT_TITLES: Record<string, string> = {
+  'constancia-cuit': 'Constancia de CUIT (documento de demostración)',
+  renspa: 'Constancia RENSPA (documento de demostración)',
+  'renspa-inconsistente': 'Constancia RENSPA (documento de demostración)',
+  'certificado-vacunacion': 'Certificado de vacunación (documento de demostración)',
+  'contrato-arrendamiento': 'Contrato de arrendamiento (documento de demostración)',
+};
+const DEMO_PHOTOS = ['CAM-LE-01.jpg', 'CAM-LE-02.jpg', 'CAM-LE-03.jpg', 'CAM-LE-04.jpg'];
+
+/**
+ * "Simular solicitud": arma una solicitud de garantía completa y navegable con datos FICTICIOS,
+ * llamando a los MISMOS servicios que una solicitud real (crear, aceptar la invitación, declarar
+ * establecimiento y activo, cargar documentos y fotos, enviar, pedir documentación). No hay
+ * modelos ni base paralelos: los datos quedan marcados data_source = DEMO y los documentos pasan
+ * por el OCR real. Se puede desactivar con DEMO_MODE=disabled.
+ */
+@Injectable()
+export class DemoService {
+  constructor(
+    private readonly requests: GuaranteeRequestsService,
+    @InjectRepository(GuaranteeRequestEntity)
+    private readonly entities: Repository<GuaranteeRequestEntity>,
+    private readonly config: AppConfig,
+    private readonly audit: AuditService,
+  ) {}
+
+  get enabled(): boolean {
+    return this.config.env.DEMO_MODE === 'enabled';
+  }
+
+  scenarios() {
+    return {
+      enabled: this.enabled,
+      producer: DEMO_PRODUCER,
+      scenarios: DEMO_SCENARIOS.map((s) => ({
+        code: s.code,
+        name: s.name,
+        description: s.description,
+        shows: s.shows,
+      })),
+    };
+  }
+
+  async create(user: AuthenticatedUser, scenarioCode: string, context: RequestContext) {
+    if (!this.enabled) throw new ForbiddenActionError('El modo demostración está desactivado');
+    const scenario = demoScenario(scenarioCode);
+    if (!scenario) throw new ValidationFailedError('Escenario de demostración inexistente');
+    const suffix = randomToken(4)
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, 'x');
+    const email = `juan.perez.${suffix}@demo.agrogarantias.invalid`;
+    const password = `Demo-${randomToken(9)}`;
+
+    // 1. La entidad crea la solicitud (mismo servicio que "Crear solicitud").
+    const created = await this.requests.create(
+      user,
+      {
+        producerName: DEMO_PRODUCER.name,
+        producerTaxId: DEMO_PRODUCER.taxId,
+        producerEmail: email,
+        assetTypeCode: 'BOVINOS',
+        requestedAmount: 450_000,
+        currency: 'USD',
+        notes: `DATOS DE DEMOSTRACIÓN – ${scenario.name}`,
+      },
+      context,
+      { dataSource: 'DEMO', demoScenario: scenario.code, producerEmail: email },
+    );
+    const token = String(created.invitation.url).split('/solicitud/')[1]!;
+
+    // 2. El productor ficticio acepta la invitación (crea su acceso).
+    await this.requests.acceptInvitation(
+      token,
+      { email, password, fullName: DEMO_PRODUCER.name },
+      context,
+    );
+
+    // 3. Declara establecimiento y activo.
+    await this.requests.establishmentFor(
+      await this.entity(created.id),
+      {
+        name: DEMO_PRODUCER.establishment,
+        holderName: DEMO_PRODUCER.name,
+        holderTaxId: DEMO_PRODUCER.taxId,
+        renspa: DEMO_PRODUCER.renspa,
+        establishmentType: scenario.system === 'FEEDLOT' ? 'FEEDLOT' : 'CRIA',
+        tenure: 'LEASED',
+        province: DEMO_PRODUCER.province,
+        locality: DEMO_PRODUCER.locality,
+        totalAreaHa: 1200,
+        location: DEMO_PRODUCER.location,
+      },
+      context,
+    );
+    await this.requests.assetFor(
+      await this.entity(created.id),
+      {
+        name: scenario.system === 'FEEDLOT' ? 'Feedlot La Esperanza' : 'Rodeo de cría La Esperanza',
+        declaredQuantity: 1500,
+        metadata: {
+          sistema_productivo: scenario.system === 'FEEDLOT' ? 'Feedlot' : 'Cría',
+          raza_predominante: 'Aberdeen Angus',
+        },
+      },
+      context,
+    );
+
+    // 4. Documentos de demostración (OCR real) y fotos.
+    const dir = this.assetsDir();
+    for (const doc of scenario.documents) {
+      const buffer = await readFile(join(dir, 'demo-documents', `${doc}.png`));
+      await this.requests.documentFor(
+        await this.entity(created.id),
+        { buffer, originalname: `${doc}-demo.png`, mimetype: 'image/png', size: buffer.length },
+        {
+          type: DEMO_DOCUMENT_TYPES[doc] as DocumentType,
+          title: DOCUMENT_TITLES[doc],
+          dataSource: 'DEMO',
+        },
+        context,
+      );
+    }
+    for (const photo of DEMO_PHOTOS.slice(0, scenario.photos)) {
+      const buffer = await readFile(join(dir, 'cameras', photo));
+      await this.requests.evidenceFor(
+        await this.entity(created.id),
+        { buffer, originalname: `demo-${photo}`, mimetype: 'image/jpeg', size: buffer.length },
+        {
+          capturedAt: new Date().toISOString(),
+          latitude: DEMO_PRODUCER.location.latitude,
+          longitude: DEMO_PRODUCER.location.longitude,
+          accuracyM: 12,
+          locationSource: 'DEVICE_GPS',
+          description: 'Foto de demostración (imagen de ejemplo, no del establecimiento)',
+        },
+        context,
+      );
+    }
+
+    // 5. Estado del escenario: pedidos de la entidad y/o envío del productor.
+    for (const code of scenario.requestRequirements) {
+      await this.requests.requestInformation(
+        user,
+        created.id,
+        { kind: 'DOCUMENT', requirementCode: code },
+        context,
+      );
+    }
+    if (scenario.submit) await this.requests.submitFor(await this.entity(created.id), context);
+
+    await this.audit.record({
+      actor: { kind: 'user', user },
+      action: AUDIT_ACTIONS.DEMO_REQUEST_CREATED,
+      resourceType: 'guarantee_request',
+      resourceId: created.id,
+      metadata: { scenario: scenario.code },
+      context,
+    });
+    return {
+      requestId: created.id,
+      scenario: { code: scenario.code, name: scenario.name },
+      // Acceso del productor ficticio (para mostrar su portal en la presentación).
+      producerAccess: { email, password },
+      demo: true,
+    };
+  }
+
+  private entity(id: string) {
+    return this.entities.findOneByOrFail({ id });
+  }
+
+  private assetsDir(): string {
+    return (
+      this.config.env.SEED_ASSETS_DIR ??
+      fileURLToPath(new URL('../../../../../../infra/seed-assets', import.meta.url))
+    );
+  }
+}

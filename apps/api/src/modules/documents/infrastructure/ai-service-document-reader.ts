@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { AppConfig } from '../../../config/app-config.js';
 import { ExternalServiceError } from '../../../common/domain/errors.js';
-import type { TextAnalysis } from '../domain/document-analysis.js';
+import type { FieldEntry, TextAnalysis } from '../domain/document-analysis.js';
 
 interface RemoteDocumentAnalysis {
   method: 'PDF_TEXT' | 'OCR';
@@ -15,12 +15,21 @@ interface RemoteDocumentAnalysis {
     issued_at: string | null;
     expires_at: string | null;
     dates: string[];
+    establishment_names?: string[];
+    localities?: string[];
+    provinces?: string[];
+    head_counts?: number[];
+    vaccines?: string[];
   };
+  entries?: FieldEntry[];
+  text?: string;
   engine: string;
   version: string;
 }
 
 export interface DocumentReading extends TextAnalysis {
+  /** Texto completo leído (OCR o capa de texto del PDF). */
+  text: string;
   engine: string;
   version: string;
 }
@@ -68,7 +77,14 @@ export class AiServiceDocumentReader {
         issuedAt: r.fields.issued_at,
         expiresAt: r.fields.expires_at,
         dates: r.fields.dates,
+        establishmentNames: r.fields.establishment_names ?? [],
+        localities: r.fields.localities ?? [],
+        provinces: r.fields.provinces ?? [],
+        headCounts: r.fields.head_counts ?? [],
+        vaccines: r.fields.vaccines ?? [],
       },
+      entries: r.entries ?? [],
+      text: r.text ?? r.text_excerpt,
       engine: r.engine,
       version: r.version,
     };

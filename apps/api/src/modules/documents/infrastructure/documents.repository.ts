@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Brackets, Repository } from 'typeorm';
+import { Brackets, IsNull, Repository } from 'typeorm';
 import { DocumentEntity } from './document.entity.js';
 
 @Injectable()
@@ -14,6 +14,19 @@ export class DocumentsRepository {
   }
 
   /** Documentos del activo y de su establecimiento (p. ej. RENSPA, escritura). */
+  /** Documentos de una solicitud: del activo y del establecimiento (titular / inmueble). */
+  forRequest(
+    organizationId: string,
+    assetId: string | null,
+    establishmentId: string,
+  ): Promise<DocumentEntity[]> {
+    if (assetId) return this.forAsset(organizationId, assetId, establishmentId);
+    return this.documents.find({
+      where: { organizationId, establishmentId, assetId: IsNull() },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
   forAsset(
     organizationId: string,
     assetId: string,

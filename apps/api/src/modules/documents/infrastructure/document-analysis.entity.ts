@@ -2,8 +2,10 @@ import { Column, Entity } from 'typeorm';
 import { TimestampedEntity } from '../../../database/base.entity.js';
 import { numericTransformer } from '../../../database/transformers.js';
 import type {
+  DeclaredData,
   DocumentAnalysisStatus,
   ExtractedFields,
+  FieldEntry,
   ValidationResult,
 } from '../domain/document-analysis.js';
 
@@ -42,6 +44,18 @@ export class DocumentAnalysisEntity extends TimestampedEntity {
 
   @Column({ type: 'text', nullable: true })
   textExcerpt: string | null;
+
+  /** Texto completo leído por OCR / capa de texto (para auditar la extracción). */
+  @Column({ type: 'text', nullable: true })
+  ocrText: string | null;
+
+  /** Campos con valor original, normalizado y confianza de la línea. */
+  @Column({ type: 'jsonb', default: [] })
+  fieldEntries: FieldEntry[];
+
+  /** Datos declarados contra los que se comparó (para reproducir el resultado). */
+  @Column({ type: 'jsonb', nullable: true })
+  declared: Omit<DeclaredData, 'documentType'> | null;
 
   @Column({ type: 'varchar', length: 48, nullable: true })
   engine: string | null;

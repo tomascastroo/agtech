@@ -71,6 +71,8 @@ export const envSchema = z
     VERIFICATION_JOB_ATTEMPTS: z.coerce.number().int().min(1).max(10).default(3),
 
     SEED_DEMO_PASSWORD: z.string().min(8).optional(),
+    /** "Simular solicitud": crea solicitudes con datos ficticios marcados DEMO. */
+    DEMO_MODE: z.enum(['enabled', 'disabled']).default('enabled'),
     SEED_ASSETS_DIR: z.string().optional(),
   })
   .superRefine((env, ctx) => {

@@ -24,7 +24,12 @@ from ..config import Settings, get_settings
 from ..domain.change_detection import detect_changes
 from ..domain.counting import CounterParams, count_animals
 from ..domain.detection import Detection, TilingParams
-from ..domain.documents import DOCUMENT_ANALYZER_VERSION, classify, extract_fields
+from ..domain.documents import (
+    DOCUMENT_ANALYZER_VERSION,
+    classify,
+    extract_entries,
+    extract_fields,
+)
 from ..domain.image_quality import assess_quality
 from ..domain.livestock import LIVESTOCK_CLASS_SETS, count_livestock
 from ..domain.models_registry import (
@@ -53,6 +58,7 @@ from .schemas import (
     CountResponse,
     DetectionOut,
     DocumentAnalysisResponse,
+    DocumentFieldEntryOut,
     DocumentFieldsOut,
     ExifInfo,
     ImageAnalysisResponse,
@@ -636,6 +642,11 @@ async def analyze_document(
         classification_score=classification.score,
         classification_keywords=classification.matched,
         fields=DocumentFieldsOut(**asdict(fields)),
+        entries=[
+            DocumentFieldEntryOut(**asdict(e))
+            for e in extract_entries(doc.text, doc.line_confidences)
+        ],
+        text=doc.text[:50_000],
         engine="pdfium-text" if doc.method == "PDF_TEXT" else "rapidocr-onnxruntime",
         version=DOCUMENT_ANALYZER_VERSION,
         processing_ms=_elapsed_ms(started),

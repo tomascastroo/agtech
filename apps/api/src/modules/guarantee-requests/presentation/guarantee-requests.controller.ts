@@ -4,7 +4,9 @@ import {
   Get,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
+  Query,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
@@ -19,6 +21,9 @@ import {
   OmitType,
 } from '@nestjs/swagger';
 import {
+  ArrayMaxSize,
+  IsArray,
+  IsBoolean,
   IsEmail,
   IsIn,
   IsNumber,
@@ -28,6 +33,7 @@ import {
   Matches,
   MaxLength,
   Min,
+  IsUUID,
 } from 'class-validator';
 import type { AuthenticatedUser } from '../../../common/auth/authenticated-user.js';
 import {
@@ -89,6 +95,35 @@ class CreateGuaranteeRequestDto {
   @IsString()
   @MaxLength(500)
   notes?: string;
+
+  @ApiPropertyOptional({ description: 'Producto de crédito (define el checklist documental)' })
+  @IsOptional()
+  @Matches(/^[A-Z_]{2,48}$/)
+  creditProductCode?: string;
+
+  @ApiPropertyOptional({ type: [String], description: 'Requisitos del producto que no aplican' })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(30)
+  @Matches(/^[A-Z_]{2,48}$/, { each: true })
+  notApplicableRequirements?: string[];
+
+  @ApiPropertyOptional({ description: 'Establecimiento ya registrado del productor' })
+  @IsOptional()
+  @IsUUID()
+  establishmentId?: string;
+}
+
+class RequirementApplicabilityDto {
+  @ApiProperty()
+  @IsBoolean()
+  notApplicable: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  note?: string;
 }
 
 class AcceptInvitationDto {
@@ -119,10 +154,16 @@ class InformationRequestDto {
   @IsIn(DOCUMENT_TYPES)
   documentType?: string;
 
-  @ApiProperty({ example: 'Necesitamos la constancia actualizada de titularidad.' })
+  @ApiPropertyOptional({ description: 'Requisito del checklist que se pide' })
+  @IsOptional()
+  @Matches(/^[A-Z_]{2,48}$/)
+  requirementCode?: string;
+
+  @ApiPropertyOptional({ example: 'Necesitamos la constancia actualizada de titularidad.' })
+  @IsOptional()
   @IsString()
   @Length(3, 500)
-  message: string;
+  message?: string;
 }
 
 class ProducerAssetDto extends OmitType(CreateAssetDto, ['establishmentId', 'assetTypeCode']) {}
@@ -148,6 +189,29 @@ export class GuaranteeRequestsController {
   @RequirePermissions(PERMISSIONS.ASSETS_READ)
   list(@CurrentUser() user: AuthenticatedUser) {
     return this.requests.list(user.organizationId);
+  }
+
+  @Get('new/options')
+  @RequirePermissions(PERMISSIONS.ASSETS_WRITE)
+  @ApiOperation({ summary: 'Productos de crédito y productores existentes para crear rápido' })
+  options(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('assetTypeCode') assetTypeCode: string = 'BOVINOS',
+  ) {
+    return this.requests.creationOptions(user.organizationId, assetTypeCode);
+  }
+
+  @Patch(':id/requirements/:code')
+  @RequirePermissions(PERMISSIONS.ASSETS_WRITE)
+  @ApiOperation({ summary: 'Marca un requisito como NO APLICA (o lo reactiva)' })
+  setRequirement(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('code') code: string,
+    @Body() dto: RequirementApplicabilityDto,
+    @ReqContext() context: RequestContext,
+  ) {
+    return this.requests.setRequirementApplicability(user, id, code, dto, context);
   }
 
   @Get(':id')

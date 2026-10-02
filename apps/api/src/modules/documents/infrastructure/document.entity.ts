@@ -52,6 +52,10 @@ export class DocumentEntity extends TimestampedEntity {
   @Column({ type: 'timestamptz', nullable: true })
   reviewedAt: Date | null;
 
+  /** REAL o DEMO (documento de demostración, generado por "Simular solicitud"). */
+  @Column({ type: 'varchar', length: 8, default: 'REAL' })
+  dataSource: 'REAL' | 'DEMO';
+
   @DeleteDateColumn({ type: 'timestamptz' })
   deletedAt: Date | null;
 }

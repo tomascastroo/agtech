@@ -50,6 +50,14 @@ export class MockLivestockRegistryProvider extends LivestockRegistryProvider {
 
   async lookupByRenspa(renspa: string): Promise<RegistryLookup> {
     const record = FIXTURES[renspa];
-    return record ? { status: 'OK', record } : { status: 'NOT_FOUND' };
+    // Sin ficha de desarrollo NO se responde "no encontrado": eso sería inventar una respuesta
+    // de SENASA (y penalizaría el riesgo). No hay conexión oficial: el dato no está disponible.
+    return record
+      ? { status: 'OK', record }
+      : {
+          status: 'ERROR',
+          reason:
+            'Sin conexión con SENASA: el registro simulado solo tiene fichas de los establecimientos de desarrollo.',
+        };
   }
 }

@@ -24,6 +24,20 @@ export interface ExtractedFields {
   issuedAt: string | null;
   expiresAt: string | null;
   dates: string[];
+  establishmentNames?: string[];
+  localities?: string[];
+  provinces?: string[];
+  headCounts?: number[];
+  vaccines?: string[];
+}
+
+/** Campo leído tal como figura (original), normalizado y con la confianza de su línea. */
+export interface FieldEntry {
+  field: string;
+  original: string;
+  normalized: string;
+  confidence: number | null;
+  line: number;
 }
 
 export interface TextAnalysis {
@@ -32,6 +46,7 @@ export interface TextAnalysis {
   textExcerpt: string;
   detectedType: string;
   fields: ExtractedFields;
+  entries?: FieldEntry[];
 }
 
 export interface DeclaredData {
@@ -39,9 +54,21 @@ export interface DeclaredData {
   renspa: string | null;
   holderName: string | null;
   holderTaxId: string | null;
+  establishmentName?: string | null;
+  locality?: string | null;
+  province?: string | null;
 }
 
-export type CheckKey = 'TEXT' | 'DOCUMENT_TYPE' | 'RENSPA' | 'CUIT' | 'HOLDER' | 'EXPIRY';
+export type CheckKey =
+  | 'TEXT'
+  | 'DOCUMENT_TYPE'
+  | 'RENSPA'
+  | 'CUIT'
+  | 'HOLDER'
+  | 'EXPIRY'
+  | 'ESTABLISHMENT'
+  | 'LOCALITY'
+  | 'PROVINCE';
 export type CheckStatus = 'MATCH' | 'MISMATCH' | 'NOT_FOUND' | 'NOT_DECLARED';
 
 export interface ValidationResult {
@@ -57,6 +84,7 @@ export interface ValidationResult {
 const REQUIRED_FIELDS: Partial<Record<DocumentType, CheckKey[]>> = {
   RENSPA: ['RENSPA'],
   ID_CUIT: ['CUIT'],
+  MIPYME_CERTIFICATE: ['CUIT'],
 };
 
 const LEGAL_SUFFIXES = /\b(S\.?A\.?S?|S\.?R\.?L\.?|S\.?C\.?A\.?|S\.?H\.?|SOCIEDAD ANONIMA)\b/g;
@@ -147,6 +175,19 @@ export function validateDocument(
     });
   }
 
+  // Establecimiento, localidad y provincia: solo se comparan si el documento los menciona (no
+  // todos los documentos los traen; su ausencia no es una inconsistencia).
+  results.push(
+    ...compareText(
+      'ESTABLISHMENT',
+      declared.establishmentName,
+      f.establishmentNames,
+      'Establecimiento',
+    ),
+    ...compareText('LOCALITY', declared.locality, f.localities, 'Localidad'),
+    ...compareText('PROVINCE', declared.province, f.provinces, 'Provincia'),
+  );
+
   if (f.expiresAt) {
     const expired = f.expiresAt < today.toISOString().slice(0, 10);
     results.push({
@@ -163,6 +204,32 @@ export function validateDocument(
     analysis.textConfidence < MIN_EXTRACTION_CONFIDENCE ||
     results.some((r) => r.status === 'MISMATCH' || (r.required && r.status === 'NOT_FOUND'));
   return { status: review ? 'REVIEW_REQUIRED' : 'CONSISTENT', results };
+}
+
+function compareText(
+  check: 'ESTABLISHMENT' | 'LOCALITY' | 'PROVINCE',
+  expected: string | null | undefined,
+  found: string[] | undefined,
+  label: string,
+): ValidationResult[] {
+  if (!expected || !found?.length) return [];
+  const want = compactName(expected);
+  const match = found.some((v) => {
+    const got = compactName(v);
+    return got.length >= 3 && (got === want || got.includes(want) || want.includes(got));
+  });
+  return [
+    {
+      check,
+      status: match ? 'MATCH' : 'MISMATCH',
+      required: false,
+      expected,
+      found,
+      message: match
+        ? `${label} coincide con lo declarado`
+        : `${label} del documento distinto de lo declarado`,
+    },
+  ];
 }
 
 function compareIdentifier(

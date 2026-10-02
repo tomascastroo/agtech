@@ -23,6 +23,8 @@ export interface CreateEstablishmentCommand {
   totalAreaHa?: number;
   location: { latitude: number; longitude: number };
   boundary?: unknown;
+  /** Solo uso interno ("Simular solicitud"); no forma parte del DTO público. */
+  dataSource?: 'REAL' | 'DEMO';
 }
 
 @Injectable()
@@ -75,6 +77,7 @@ export class EstablishmentsService {
           locality: command.locality ?? null,
           totalAreaHa,
           createdBy: user.userId,
+          dataSource: command.dataSource ?? 'REAL',
         },
         {
           name: 'Casco principal',

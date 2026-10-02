@@ -74,4 +74,15 @@ export class GuaranteeRequestEntity extends TimestampedEntity {
 
   @Column({ type: 'uuid' })
   createdBy: string;
+
+  /** Producto de crédito elegido por la entidad (define el checklist documental). */
+  @Column({ type: 'varchar', length: 48, nullable: true })
+  creditProductCode: string | null;
+
+  /** REAL o DEMO ("Simular solicitud": datos ficticios, mismos modelos y servicios). */
+  @Column({ type: 'varchar', length: 8, default: 'REAL' })
+  dataSource: 'REAL' | 'DEMO';
+
+  @Column({ type: 'varchar', length: 32, nullable: true })
+  demoScenario: string | null;
 }

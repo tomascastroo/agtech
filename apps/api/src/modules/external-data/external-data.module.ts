@@ -1,6 +1,10 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ExternalDataService } from './application/external-data.service.js';
+import {
+  OfficialDataProvider,
+  SenasaOfficialDataProvider,
+} from './domain/official-data.provider.js';
 import { LivestockRegistryProvider } from './domain/livestock-registry.provider.js';
 import { ExternalDataSnapshotEntity } from './infrastructure/external-data-snapshot.entity.js';
 import { AppConfig } from '../../config/app-config.js';
@@ -20,7 +24,8 @@ import { MockLivestockRegistryProvider } from './infrastructure/mock-livestock-r
           ? new OfficialSenasaRegistryProvider(config)
           : new MockLivestockRegistryProvider(),
     },
+    { provide: OfficialDataProvider, useClass: SenasaOfficialDataProvider },
   ],
-  exports: [ExternalDataService],
+  exports: [ExternalDataService, OfficialDataProvider],
 })
 export class ExternalDataModule {}

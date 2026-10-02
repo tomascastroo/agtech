@@ -33,6 +33,16 @@ import { RoleEntity } from '../../users/infrastructure/role.entity.js';
 import { UserEntity } from '../../users/infrastructure/user.entity.js';
 import { VerificationRequestService } from '../../verification/application/verification-request.service.js';
 import { crossSources } from './cross-sources.js';
+import {
+  OBLIGATION_LABELS,
+  productsFor,
+  REQUIREMENT_CATALOG,
+  type RequirementCode,
+} from '../../documents/domain/document-requirements.js';
+import {
+  DEFAULT_PRODUCT_BY_ASSET_TYPE,
+  RequestDocumentationService,
+} from './request-documentation.service.js';
 import { presentDocument } from '../../documents/presentation/documents.controller.js';
 import { presentEvidence } from '../../evidence/presentation/evidence.presenter.js';
 import { GuaranteeRequestEntity } from '../infrastructure/guarantee-request.entity.js';
@@ -70,6 +80,19 @@ export interface CreateGuaranteeRequestCommand {
   requestedAmount?: number;
   currency?: string;
   notes?: string;
+  /** Producto de crédito (checklist documental). Por defecto, el base del tipo de garantía. */
+  creditProductCode?: string;
+  /** Requisitos del producto que no aplican a esta solicitud. */
+  notApplicableRequirements?: string[];
+  /** Establecimiento ya registrado del productor (no se le vuelve a pedir). */
+  establishmentId?: string;
+}
+
+/** Solo para "Simular solicitud": mismos servicios, datos marcados DEMO. */
+export interface CreateRequestOptions {
+  dataSource?: 'REAL' | 'DEMO';
+  demoScenario?: string;
+  producerEmail?: string;
 }
 
 /**
@@ -97,6 +120,7 @@ export class GuaranteeRequestsService {
     private readonly evidence: EvidenceService,
     private readonly verifications: VerificationRequestService,
     private readonly audit: AuditService,
+    private readonly documentation: RequestDocumentationService,
   ) {}
 
   // ------------------------------------------------------------------ banco
@@ -104,12 +128,25 @@ export class GuaranteeRequestsService {
     user: AuthenticatedUser,
     command: CreateGuaranteeRequestCommand,
     context: RequestContext,
+    options: CreateRequestOptions = {},
   ) {
     if (!isValidCuit(command.producerTaxId)) {
       throw new ValidationFailedError('El CUIT del productor no es válido (dígito verificador)');
     }
     const type = await this.assetsRepository.typeByCode(command.assetTypeCode);
     if (!type) throw new ValidationFailedError('Tipo de garantía inexistente');
+    const productCode = command.creditProductCode ?? DEFAULT_PRODUCT_BY_ASSET_TYPE[type.code];
+    if (command.establishmentId) {
+      // Establecimiento ya registrado: tiene que ser de la entidad y del mismo titular.
+      const [est] = (await this.dataSource.query(
+        `SELECT holder_tax_id AS "holderTaxId" FROM establishments
+           WHERE id = $1 AND organization_id = $2 AND deleted_at IS NULL`,
+        [command.establishmentId, user.organizationId],
+      )) as { holderTaxId: string }[];
+      if (!est) throw new NotFoundError('Establecimiento', command.establishmentId);
+      if (est.holderTaxId.replace(/\D/g, '') !== command.producerTaxId.replace(/\D/g, ''))
+        throw new ValidationFailedError('El establecimiento es de otro titular');
+    }
     const token = randomToken();
     const request = await this.dataSource.transaction(async (manager) => {
       const role = await manager.findOneByOrFail(RoleEntity, { code: 'PRODUCER' });
@@ -117,7 +154,9 @@ export class GuaranteeRequestsService {
         manager.create(UserEntity, {
           organizationId: user.organizationId,
           roleId: role.id,
-          email: `productor+${randomToken(6).toLowerCase()}@invitacion.agrogarantias.local`,
+          email:
+            options.producerEmail ??
+            `productor+${randomToken(6).toLowerCase()}@invitacion.agrogarantias.local`,
           fullName: command.producerName.trim(),
           // Sin contraseña utilizable y deshabilitado para login: accede solo con el link.
           passwordHash: `!invitation-only:${randomToken(16)}`,
@@ -139,15 +178,31 @@ export class GuaranteeRequestsService {
           inviteTokenHash: sha256Hex(token),
           inviteExpiresAt: new Date(Date.now() + INVITATION_DAYS * DAY_MS),
           createdBy: user.userId,
+          creditProductCode: productCode ?? null,
+          dataSource: options.dataSource ?? 'REAL',
+          demoScenario: options.demoScenario ?? null,
+          establishmentId: command.establishmentId ?? null,
         }),
       );
+      if (productCode)
+        await this.documentation.initialize(
+          manager,
+          created,
+          productCode,
+          command.notApplicableRequirements ?? [],
+        );
       await this.audit.record(
         {
           actor: { kind: 'user', user },
           action: AUDIT_ACTIONS.GUARANTEE_REQUEST_CREATED,
           resourceType: 'guarantee_request',
           resourceId: created.id,
-          metadata: { producerTaxId: created.producerTaxId, assetTypeCode: created.assetTypeCode },
+          metadata: {
+            producerTaxId: created.producerTaxId,
+            assetTypeCode: created.assetTypeCode,
+            creditProductCode: created.creditProductCode,
+            dataSource: created.dataSource,
+          },
           context,
         },
         manager,
@@ -192,6 +247,57 @@ export class GuaranteeRequestsService {
   async detail(organizationId: string, id: string) {
     const request = await this.requests.findOneBy({ id, organizationId });
     if (!request) throw new NotFoundError('Solicitud de garantía', id);
+    return this.present(request);
+  }
+
+  /**
+   * Datos para crear una solicitud rápido: productos de crédito del tipo de garantía y
+   * productores que la entidad ya tiene (con sus establecimientos), para no volver a pedirlos.
+   */
+  async creationOptions(organizationId: string, assetTypeCode: string) {
+    const producers = (await this.dataSource.query(
+      `SELECT DISTINCT ON (r.producer_tax_id) r.producer_name AS name, r.producer_tax_id AS "taxId",
+              r.producer_email AS email, r.data_source = 'DEMO' AS demo
+         FROM guarantee_requests r WHERE r.organization_id = $1
+         ORDER BY r.producer_tax_id, r.created_at DESC`,
+      [organizationId],
+    )) as { name: string; taxId: string; email: string | null; demo: boolean }[];
+    const establishments = (await this.dataSource.query(
+      `SELECT id, name, province, locality, renspa, holder_tax_id AS "holderTaxId",
+              data_source = 'DEMO' AS demo
+         FROM establishments WHERE organization_id = $1 AND deleted_at IS NULL ORDER BY name`,
+      [organizationId],
+    )) as { id: string; holderTaxId: string }[];
+    const digits = (v: string) => v.replace(/\D/g, '');
+    return {
+      products: productsFor(assetTypeCode).map((p) => ({
+        ...p,
+        requirements: p.requirements.map((r) => ({
+          ...r,
+          name: REQUIREMENT_CATALOG[r.code].name,
+          obligationLabel: OBLIGATION_LABELS[r.obligation],
+        })),
+      })),
+      defaultProductCode: DEFAULT_PRODUCT_BY_ASSET_TYPE[assetTypeCode] ?? null,
+      producers: producers
+        .filter((p) => !p.demo)
+        .map((p) => ({
+          ...p,
+          establishments: establishments.filter((e) => digits(e.holderTaxId) === digits(p.taxId)),
+        })),
+    };
+  }
+
+  async setRequirementApplicability(
+    user: AuthenticatedUser,
+    id: string,
+    code: string,
+    command: { notApplicable: boolean; note?: string },
+    context: RequestContext,
+  ) {
+    const request = await this.requests.findOneBy({ id, organizationId: user.organizationId });
+    if (!request) throw new NotFoundError('Solicitud de garantía', id);
+    await this.documentation.setApplicability(user, request, code, command, context);
     return this.present(request);
   }
 
@@ -415,15 +521,21 @@ export class GuaranteeRequestsService {
       ? ((await this.dataSource.query(
           `SELECT id, holder_tax_id = $3 AS "sameHolder" FROM establishments
            WHERE organization_id = $1 AND renspa = $2 AND deleted_at IS NULL
+             AND data_source = 'REAL' AND $4::text = 'REAL'
            ORDER BY (holder_tax_id = $3) DESC, created_at ASC LIMIT 1`,
-          [request.organizationId, command.renspa, command.holderTaxId],
+          [request.organizationId, command.renspa, command.holderTaxId, request.dataSource],
         )) as { id: string; sameHolder: boolean }[])
       : [];
     if (existing && !existing.sameHolder) {
       throw new ConflictError('El RENSPA ya está registrado a nombre de otro titular');
     }
     const establishment =
-      existing ?? (await this.establishments.create(producer, command, context));
+      existing ??
+      (await this.establishments.create(
+        producer,
+        { ...command, dataSource: request.dataSource },
+        context,
+      ));
     await this.requests.update(
       { id: request.id },
       { establishmentId: establishment.id, status: 'IN_PROGRESS' },
@@ -446,6 +558,7 @@ export class GuaranteeRequestsService {
         ...command,
         establishmentId: request.establishmentId,
         assetTypeCode: request.assetTypeCode,
+        dataSource: request.dataSource,
       },
       context,
     );
@@ -515,21 +628,40 @@ export class GuaranteeRequestsService {
   async requestInformation(
     user: AuthenticatedUser,
     id: string,
-    command: { kind: InformationRequestKind; documentType?: string; message: string },
+    command: {
+      kind: InformationRequestKind;
+      documentType?: string;
+      requirementCode?: string;
+      message?: string;
+    },
     context: RequestContext,
   ) {
     const request = await this.requests.findOneBy({ id, organizationId: user.organizationId });
     if (!request) throw new NotFoundError('Solicitud de garantía', id);
-    if (!request.assetId) {
+    // Un requisito del checklist se puede pedir desde que existe la solicitud; un pedido libre
+    // (evidencia, otro documento) requiere el activo declarado.
+    const requirement = command.requirementCode
+      ? await this.documentation.requirement(request, command.requirementCode)
+      : null;
+    if (!requirement && !request.assetId) {
       throw new ValidationFailedError('El productor todavía no declaró el activo');
     }
+    const message =
+      command.message?.trim() ||
+      (requirement ? `${requirement.name}: ${requirement.purpose} ${requirement.howTo}` : '');
+    if (!message) throw new ValidationFailedError('Indicá qué información necesitás');
     const created = await this.infoRequests.save(
       this.infoRequests.create({
         organizationId: user.organizationId,
         guaranteeRequestId: id,
-        kind: command.kind,
-        documentType: command.kind === 'DOCUMENT' ? (command.documentType ?? null) : null,
-        message: command.message.trim(),
+        kind: requirement ? 'DOCUMENT' : command.kind,
+        documentType: requirement
+          ? requirement.documentTypes[0]!
+          : command.kind === 'DOCUMENT'
+            ? (command.documentType ?? null)
+            : null,
+        requirementCode: requirement?.code ?? null,
+        message: message.slice(0, 500),
         status: 'OPEN',
         requestedBy: user.userId,
       }),
@@ -543,6 +675,7 @@ export class GuaranteeRequestsService {
         informationRequestId: created.id,
         kind: created.kind,
         documentType: created.documentType,
+        requirementCode: created.requirementCode,
       },
       context,
     });
@@ -570,10 +703,19 @@ export class GuaranteeRequestsService {
       info.kind === 'EVIDENCE'
         ? `SELECT count(*)::int AS n FROM evidence WHERE asset_id = $1 AND type IN ('IMAGE','SCAN') AND created_at > $2`
         : `SELECT count(*)::int AS n FROM documents WHERE (asset_id = $1 OR establishment_id = $3)
-             AND created_at > $2 AND ($4::text IS NULL OR type = $4)`,
+             AND created_at > $2 AND ($4::text[] IS NULL OR type = ANY($4::text[]))`,
       info.kind === 'EVIDENCE'
         ? [request.assetId, info.createdAt]
-        : [request.assetId, info.createdAt, request.establishmentId, info.documentType],
+        : [
+            request.assetId,
+            info.createdAt,
+            request.establishmentId,
+            info.requirementCode && info.requirementCode in REQUIREMENT_CATALOG
+              ? [...REQUIREMENT_CATALOG[info.requirementCode as RequirementCode].documentTypes]
+              : info.documentType
+                ? [info.documentType]
+                : null,
+          ],
     )) as { n: number }[];
     if (!row || row.n === 0) {
       throw new ValidationFailedError(
@@ -721,8 +863,8 @@ export class GuaranteeRequestsService {
           )
         : Promise.resolve([]),
       q(
-        `SELECT id, kind, document_type AS "documentType", message, status, created_at AS "createdAt",
-                  responded_at AS "respondedAt"
+        `SELECT id, kind, document_type AS "documentType", requirement_code AS "requirementCode",
+                  message, status, created_at AS "createdAt", responded_at AS "respondedAt"
            FROM information_requests WHERE guarantee_request_id = $1 ORDER BY created_at DESC`,
         [request.id],
       ),
@@ -795,7 +937,17 @@ export class GuaranteeRequestsService {
         };
       },
     );
-    const missingDocuments = requiredDocuments.filter((r) => !r.satisfied);
+    // Checklist del producto de crédito (si la solicitud tiene uno); si no, la regla histórica
+    // del tipo de activo. Para avanzar solo cuentan los OBLIGATORIOS sin documento.
+    const [documentation, dataLayers] = await Promise.all([
+      this.documentation.checklist(request, options),
+      options.forProducer ? Promise.resolve(null) : this.documentation.dataLayers(request),
+    ]);
+    const missingDocuments: { name: string }[] = documentation
+      ? documentation.items.filter((i) => i.obligation === 'MANDATORY' && i.status === 'PENDING')
+      : requiredDocuments
+          .filter((r) => !r.satisfied)
+          .map((r) => ({ name: r.alternatives.join(' o ') }));
     const openInfo = (info as { status: string }[]).filter((i) => i.status === 'OPEN');
 
     const stage = verification?.outcome
@@ -864,21 +1016,30 @@ export class GuaranteeRequestsService {
       description: string;
       informationRequestId?: string;
       documentType?: string | null;
+      requirementCode?: string | null;
     }[] = [];
     for (const i of info as {
       id: string;
       kind: string;
       documentType: string | null;
+      requirementCode: string | null;
       message: string;
       status: string;
     }[]) {
       if (i.status !== 'OPEN') continue;
+      const requirement =
+        i.requirementCode && i.requirementCode in REQUIREMENT_CATALOG
+          ? REQUIREMENT_CATALOG[i.requirementCode as RequirementCode]
+          : null;
       tasks.push({
         kind: i.kind === 'EVIDENCE' ? 'INFO_EVIDENCE' : 'INFO_DOCUMENT',
-        title: `${requesterName} solicita ${i.kind === 'EVIDENCE' ? 'más evidencia' : 'documentación adicional'}`,
+        title: requirement
+          ? `${requesterName} solicita: ${requirement.name}`
+          : `${requesterName} solicita ${i.kind === 'EVIDENCE' ? 'más evidencia' : 'documentación adicional'}`,
         description: i.message,
         informationRequestId: i.id,
         documentType: i.documentType,
+        requirementCode: i.requirementCode,
       });
     }
     if (!submitted) {
@@ -906,7 +1067,7 @@ export class GuaranteeRequestsService {
           tasks.push({
             kind: 'DOCUMENTS',
             title: 'Completar documentación',
-            description: `${missingDocuments.length} documento(s) requerido(s) pendiente(s).`,
+            description: `Falta: ${missingDocuments.map((d) => d.name).join(', ')}.`,
           });
         if (missing.length === 0)
           tasks.push({
@@ -948,6 +1109,11 @@ export class GuaranteeRequestsService {
       evidenceCount: c.evidence,
       documentCount: c.documents,
       requiredDocuments,
+      documentation,
+      dataLayers,
+      dataSource: request.dataSource,
+      demoScenario: request.demoScenario,
+      creditProductCode: request.creditProductCode,
       missing,
       informationRequests: info,
       // El productor ve el estado de la verificación, no la evaluación (score/alertas) de la entidad.

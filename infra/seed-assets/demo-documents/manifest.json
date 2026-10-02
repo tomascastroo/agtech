@@ -1,0 +1,28 @@
+{
+ "description": "Documentos de DEMOSTRACIÓN (datos ficticios, sin valor) para 'Simular solicitud'. No imitan el formato de SENASA, ARCA ni de ningún organismo.",
+ "holder": "JUAN PÉREZ",
+ "cuit": "20-00000001-9",
+ "renspa": "99.001.0.00001/00",
+ "documents": {
+  "constancia-cuit": {
+   "file": "constancia-cuit.png",
+   "type": "ID_CUIT"
+  },
+  "renspa": {
+   "file": "renspa.png",
+   "type": "RENSPA"
+  },
+  "renspa-inconsistente": {
+   "file": "renspa-inconsistente.png",
+   "type": "RENSPA"
+  },
+  "certificado-vacunacion": {
+   "file": "certificado-vacunacion.png",
+   "type": "SANITARY_CERTIFICATE"
+  },
+  "contrato-arrendamiento": {
+   "file": "contrato-arrendamiento.png",
+   "type": "LEASE_CONTRACT"
+  }
+ }
+}

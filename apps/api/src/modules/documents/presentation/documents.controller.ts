@@ -171,6 +171,17 @@ export class DocumentsController {
     return this.documents.downloadUrl(user, id, context);
   }
 
+  @Post('documents/:id/analyze')
+  @RequirePermissions(PERMISSIONS.DOCUMENTS_WRITE)
+  @ApiOperation({ summary: 'Procesa el documento de nuevo (OCR + campos + comparación)' })
+  reanalyze(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @ReqContext() context: RequestContext,
+  ) {
+    return this.documents.reanalyze(user, id, context);
+  }
+
   @Patch('documents/:id/review')
   @RequirePermissions(PERMISSIONS.DOCUMENTS_REVIEW)
   @ApiOperation({ summary: 'Valida o rechaza un documento' })

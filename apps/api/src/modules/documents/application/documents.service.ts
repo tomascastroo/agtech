@@ -14,7 +14,7 @@ import { storageKeys } from '../../storage/storage-keys.js';
 import { requirementAlternatives, type DocumentType } from '../domain/document.types.js';
 import type { DocumentEntity } from '../infrastructure/document.entity.js';
 import { DocumentsRepository } from '../infrastructure/documents.repository.js';
-import { DocumentAnalysisService } from './document-analysis.service.js';
+import { DocumentAnalysisService, presentAnalysis } from './document-analysis.service.js';
 
 export interface UploadedFile {
   buffer: Buffer;
@@ -28,6 +28,8 @@ export interface UploadDocumentCommand {
   title?: string;
   issuedAt?: string;
   expiresAt?: string;
+  /** DEMO: documento de demostración generado por "Simular solicitud". */
+  dataSource?: 'REAL' | 'DEMO';
 }
 
 const TYPE_TITLES: Record<DocumentType, string> = {
@@ -37,6 +39,11 @@ const TYPE_TITLES: Record<DocumentType, string> = {
   ID_CUIT: 'DNI / Constancia de CUIT del titular',
   SANITARY_CERTIFICATE: 'Certificado sanitario',
   INSURANCE_POLICY: 'Póliza de seguro',
+  MIPYME_CERTIFICATE: 'Certificado MiPyME',
+  STOCK_CERTIFICATE: 'Informe de existencias (SENASA)',
+  BRAND_TITLE: 'Boleto de marca y señal',
+  FEEDLOT_REGISTRATION: 'Inscripción engorde a corral',
+  FINANCIAL_STATEMENTS: 'Información financiera',
   OTHER: 'Documentación adicional',
 };
 
@@ -136,6 +143,23 @@ export class DocumentsService {
     return { url };
   }
 
+  /** Vuelve a leer el documento (OCR + reglas) y lo compara con los datos declarados actuales. */
+  async reanalyze(user: AuthenticatedUser, id: string, context: RequestContext) {
+    const document = await this.documents.findById(user.organizationId, id);
+    if (!document) throw new NotFoundError('Documento', id);
+    const bytes = await this.storage.getObject(document.storageKey);
+    const analysis = await this.analysis.analyze(document, bytes);
+    await this.audit.record({
+      actor: { kind: 'user', user },
+      action: AUDIT_ACTIONS.DOCUMENT_ANALYZED,
+      resourceType: 'document',
+      resourceId: document.id,
+      metadata: { status: analysis.status, version: analysis.version },
+      context,
+    });
+    return presentAnalysis(analysis);
+  }
+
   async review(
     user: AuthenticatedUser,
     id: string,
@@ -198,6 +222,7 @@ export class DocumentsService {
       issuedAt: command.issuedAt ?? null,
       expiresAt: command.expiresAt ?? null,
       uploadedBy: user.userId,
+      dataSource: command.dataSource ?? 'REAL',
     });
     await this.audit.record({
       actor: { kind: 'user', user },

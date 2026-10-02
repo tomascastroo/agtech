@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import threading
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import cv2
 import numpy as np
@@ -25,6 +25,9 @@ class DocumentText:
     confidence: float  # 1.0 para texto nativo del PDF; media ponderada del OCR
     pages: int
     lines: int
+    # Confianza de cada línea del texto (1.0 en la capa de texto del PDF): permite informar la
+    # confianza de cada campo extraído según la línea donde se leyó.
+    line_confidences: list[float] = field(default_factory=list)
 
 
 def _engine():
@@ -37,19 +40,15 @@ def _engine():
         return _ocr
 
 
-def ocr_image(bgr: np.ndarray) -> tuple[list[str], float]:
-    """OCR de una imagen: líneas (orden de lectura) y confianza media ponderada por longitud."""
+def ocr_lines(bgr: np.ndarray) -> list[tuple[str, float]]:
+    """OCR de una imagen: líneas en orden de lectura con su confianza."""
     result, _ = _engine()(bgr)
     if not result:
-        return [], 0.0
-    # Orden de lectura aproximado: por fila (y) y luego por x.
+        return []
     items = sorted(
         result, key=lambda r: (round(min(p[1] for p in r[0]) / 20), min(p[0] for p in r[0]))
     )
-    lines = [str(r[1]) for r in items]
-    weights = [max(len(t), 1) for t in lines]
-    conf = sum(float(r[2]) * w for r, w in zip(items, weights, strict=True)) / sum(weights)
-    return lines, conf
+    return [(str(r[1]), float(r[2])) for r in items]
 
 
 def read_document(data: bytes) -> DocumentText:
@@ -59,8 +58,19 @@ def read_document(data: bytes) -> DocumentText:
     bgr = cv2.imdecode(array, cv2.IMREAD_COLOR)
     if bgr is None:
         raise UnreadableDocumentError("Formato no soportado: se acepta PDF, JPG o PNG")
-    lines, conf = ocr_image(bgr)
-    return DocumentText("\n".join(lines), "OCR", round(conf, 3), 1, len(lines))
+    read = ocr_lines(bgr)
+    return _from_ocr(read, pages=1)
+
+
+def _from_ocr(read: list[tuple[str, float]], pages: int) -> DocumentText:
+    lines = [t for t, _ in read]
+    weights = [max(len(t), 1) for t in lines]
+    conf = (
+        sum(c * w for (_, c), w in zip(read, weights, strict=True)) / sum(weights) if read else 0.0
+    )
+    return DocumentText(
+        "\n".join(lines), "OCR", round(conf, 3), pages, len(lines), [round(c, 3) for _, c in read]
+    )
 
 
 def _read_pdf(data: bytes) -> DocumentText:
@@ -74,18 +84,14 @@ def _read_pdf(data: bytes) -> DocumentText:
     texts = [pdf[i].get_textpage().get_text_range() for i in range(pages)]
     native = "\n".join(t for t in texts if t)
     if len(native.strip()) >= MIN_TEXT_CHARS:
-        return DocumentText(native, "PDF_TEXT", 1.0, pages, native.count("\n") + 1)
+        count = native.count("\n") + 1
+        return DocumentText(native, "PDF_TEXT", 1.0, pages, count, [1.0] * count)
     # PDF escaneado: rasteriza y aplica OCR.
-    all_lines: list[str] = []
-    confs: list[tuple[float, int]] = []
+    read: list[tuple[str, float]] = []
     for i in range(pages):
         bitmap = pdf[i].render(scale=2.0).to_numpy()
         bgr = cv2.cvtColor(
             bitmap, cv2.COLOR_RGBA2BGR if bitmap.shape[2] == 4 else cv2.COLOR_RGB2BGR
         )
-        lines, conf = ocr_image(bgr)
-        all_lines.extend(lines)
-        confs.append((conf, sum(len(t) for t in lines)))
-    total = sum(n for _, n in confs) or 1
-    conf = sum(c * n for c, n in confs) / total
-    return DocumentText("\n".join(all_lines), "OCR", round(conf, 3), pages, len(all_lines))
+        read.extend(ocr_lines(bgr))
+    return _from_ocr(read, pages=pages)

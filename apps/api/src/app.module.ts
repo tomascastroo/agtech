@@ -16,6 +16,7 @@ import { EstablishmentsModule } from './modules/establishments/establishments.mo
 import { EvidenceModule } from './modules/evidence/evidence.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { GuaranteeRequestsModule } from './modules/guarantee-requests/guarantee-requests.module.js';
+import { DemoModule } from './modules/demo/demo.module.js';
 import { ScansModule } from './modules/scans/scans.module.js';
 import { IntegrationsModule } from './modules/integrations/integrations.module.js';
 import { MonitoringEventsModule } from './modules/monitoring/monitoring-events.module.js';
@@ -62,6 +63,7 @@ import { ObservabilityModule } from './common/observability/error-reporter.js';
     AnimalsModule,
     IntegrationsModule,
     GuaranteeRequestsModule,
+    DemoModule,
     ScansModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

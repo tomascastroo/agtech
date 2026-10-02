@@ -21,6 +21,10 @@ export class InformationRequestEntity extends TimestampedEntity {
   @Column({ type: 'varchar', length: 32, nullable: true })
   documentType: string | null;
 
+  /** Requisito del checklist que se pide (si el pedido es de un requisito concreto). */
+  @Column({ type: 'varchar', length: 48, nullable: true })
+  requirementCode: string | null;
+
   @Column({ type: 'varchar', length: 500 })
   message: string;
 

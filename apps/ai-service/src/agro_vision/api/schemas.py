@@ -171,6 +171,21 @@ class DocumentFieldsOut(BaseModel):
     issued_at: str | None
     expires_at: str | None
     dates: list[str]
+    establishment_names: list[str]
+    localities: list[str]
+    provinces: list[str]
+    head_counts: list[int]
+    vaccines: list[str]
+
+
+class DocumentFieldEntryOut(BaseModel):
+    """Campo leído: valor original, normalizado y confianza de la línea (None si no hay)."""
+
+    field: str
+    original: str
+    normalized: str
+    confidence: float | None
+    line: int
 
 
 class DocumentAnalysisResponse(BaseModel):
@@ -185,6 +200,9 @@ class DocumentAnalysisResponse(BaseModel):
     classification_score: int
     classification_keywords: list[str]
     fields: DocumentFieldsOut
+    entries: list[DocumentFieldEntryOut]
+    # Texto completo leído (OCR o capa de texto), para guardarlo y auditar la extracción.
+    text: str
     engine: str
     version: str
     processing_ms: int

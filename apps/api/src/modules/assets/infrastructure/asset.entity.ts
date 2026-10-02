@@ -78,4 +78,8 @@ export class AssetEntity extends TimestampedEntity {
 
   @DeleteDateColumn({ type: 'timestamptz' })
   deletedAt: Date | null;
+
+  /** REAL o DEMO (creado por "Simular solicitud"). */
+  @Column({ type: 'varchar', length: 8, default: 'REAL' })
+  dataSource: 'REAL' | 'DEMO';
 }

@@ -56,11 +56,17 @@ export class DocumentAnalysisService {
       : null;
     try {
       const reading = await this.reader.read(bytes, document.mimeType, document.originalFileName);
-      const { status, results } = validateDocument(reading, {
-        documentType: document.type,
+      const declared = {
         renspa: establishment?.renspa ?? null,
         holderName: establishment?.holderName ?? null,
         holderTaxId: establishment?.holderTaxId ?? null,
+        establishmentName: establishment?.name ?? null,
+        locality: establishment?.locality ?? null,
+        province: establishment?.province ?? null,
+      };
+      const { status, results } = validateDocument(reading, {
+        documentType: document.type,
+        ...declared,
       });
       await this.analyses.update(
         { documentId: document.id },
@@ -72,6 +78,9 @@ export class DocumentAnalysisService {
           extractionConfidence: Math.round(reading.textConfidence * 1000) / 1000,
           validationResults: results,
           textExcerpt: reading.textExcerpt.slice(0, 4000),
+          ocrText: reading.text.slice(0, 50_000),
+          fieldEntries: reading.entries ?? [],
+          declared,
           engine: reading.engine,
           version: reading.version,
           analyzedAt: new Date(),
@@ -107,6 +116,8 @@ export function presentAnalysis(a: DocumentAnalysisEntity | undefined) {
     extractedFields: a.extractedFields,
     extractionConfidence: a.extractionConfidence,
     validationResults: a.validationResults,
+    fieldEntries: a.fieldEntries,
+    declared: a.declared,
     engine: a.engine,
     version: a.version,
     error: a.error,

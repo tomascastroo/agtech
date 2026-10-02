@@ -30,6 +30,8 @@ export interface CreateAssetCommand {
   location?: { latitude: number; longitude: number };
   area?: unknown;
   metadata?: Record<string, unknown>;
+  /** Solo uso interno ("Simular solicitud"); no forma parte del DTO público. */
+  dataSource?: 'REAL' | 'DEMO';
 }
 
 export interface UpdateAssetCommand {
@@ -109,6 +111,7 @@ export class AssetsService {
         repo.create({
           organizationId: user.organizationId,
           establishmentId: establishment.id,
+          dataSource: command.dataSource ?? 'REAL',
           assetTypeId: type.id,
           name: command.name.trim(),
           status: 'DRAFT',
