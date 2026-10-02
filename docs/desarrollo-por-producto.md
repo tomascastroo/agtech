@@ -12,7 +12,7 @@ copiando servicios:
 ```
 
 - **`feature/bovinos`:** solo trabajo ganadero, que se detalla abajo.
-- **`feature/agricultura`:** cuando exista, se crea desde `main`. Incluye Sentinel-2, NDVI,
+- **`feature/agricultura`:** creada desde `main`. Incluye Sentinel-2, NDVI,
   cultivos y los demás activos no bovinos.
 - **Llegada a `main`:** cada branch llega a `main` por PR, sin squash y sin reescribir historial.
 - **Cambios en lo compartido:** un cambio que necesitan los dos productos se hace en un PR
@@ -89,18 +89,17 @@ git checkout feature/bovinos
 git pull origin feature/bovinos
 git merge origin/main                     # traer lo compartido nuevo (merge, sin rebase)
 
-# Checks antes de cada push (por paquete: hoy `pnpm typecheck|lint|build` en la raíz no
-# encuentran proyectos por el filtro ./apps/*; `pnpm test` y `pnpm format:check` sí andan)
+# Checks antes de cada push
 pnpm infra:up                             # PostgreSQL, Redis y MinIO para la integración
-for app in api web; do pnpm --filter @agrogarantias/$app run typecheck && \
-  pnpm --filter @agrogarantias/$app run lint && pnpm --filter @agrogarantias/$app run build; done
-pnpm test && pnpm format:check
+pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm format:check
 pnpm test:ai && pnpm lint:ai              # servicio de IA
 git push origin feature/bovinos           # nunca --force
 
 # Llevar bovinos a main: PR feature/bovinos → main (merge commit, sin squash)
 
-# Arrancar agricultura (cuando corresponda)
-git checkout -b feature/agricultura origin/main
-git push -u origin feature/agricultura
+# Trabajar en agricultura (la branch ya existe, creada desde main)
+git checkout feature/agricultura && git pull origin feature/agricultura
+
+# Arreglo de algo compartido: branch chica desde main → PR a main → merge de main en cada feature
+git checkout -b chore/<tema> origin/main
 ```
