@@ -73,6 +73,9 @@ export interface LocalFrame {
   blob: Blob;
 }
 
+/** Escaneos que se están grabando en esta página (la sincronización no los toca). */
+export const activeScans = new Set<string>();
+
 const DB_NAME = 'agrogarantias-scanner';
 const DB_VERSION = 1;
 
@@ -147,10 +150,52 @@ export async function framesOf(scanId: string): Promise<LocalFrame[]> {
   );
 }
 
+export type FrameKey = [scanId: string, kind: FrameKind, index: number];
+
+/**
+ * Claves de los cuadros de un escaneo, sin cargar las imágenes: un escaneo de 3 minutos son
+ * ~1.000 JPEG y tenerlos todos en memoria a la vez hace que iOS cierre la página.
+ */
+export async function frameKeysOf(scanId: string): Promise<FrameKey[]> {
+  const index = (await store('frames', 'readonly')).index('byScan');
+  const keys = (await done(index.getAllKeys(IDBKeyRange.only(scanId)))) as FrameKey[];
+  return keys.sort((a, b) => (a[1] === b[1] ? a[2] - b[2] : a[1].localeCompare(b[1])));
+}
+
+export async function getFrame(key: FrameKey): Promise<LocalFrame | undefined> {
+  return done((await store('frames', 'readonly')).get(key) as IDBRequest<LocalFrame | undefined>);
+}
+
 export async function deleteFrames(scanId: string): Promise<void> {
-  const frames = await framesOf(scanId);
+  const keys = await frameKeysOf(scanId);
   const s = await store('frames', 'readwrite');
-  await Promise.all(frames.map((f) => done(s.delete([f.scanId, f.kind, f.index]))));
+  await Promise.all(keys.map((key) => done(s.delete(key))));
+}
+
+/**
+ * Renumera los cuadros de cada tipo para que los índices queden consecutivos (0..n-1) en orden
+ * de captura: si algún cuadro no se pudo guardar no quedan huecos (el servidor exige todos los
+ * índices declarados para finalizar). Procesa un cuadro a la vez. Devuelve cuántos hay.
+ */
+export async function compactFrames(scanId: string): Promise<{ samples: number; keys: number }> {
+  const keys = await frameKeysOf(scanId);
+  const count = { SAMPLE: 0, KEY: 0 };
+  for (const key of keys) {
+    const kind = key[1];
+    const target = count[kind]++;
+    if (key[2] === target) continue;
+    const frame = await getFrame(key);
+    if (!frame) continue;
+    const s = await store('frames', 'readwrite');
+    await done(s.delete(key));
+    await done(s.put({ ...frame, index: target }));
+  }
+  return { samples: count.SAMPLE, keys: count.KEY };
+}
+
+export async function deleteScan(id: string): Promise<void> {
+  await deleteFrames(id);
+  await done((await store('scans', 'readwrite')).delete(id));
 }
 
 export async function sha256Hex(blob: Blob): Promise<string> {

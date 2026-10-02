@@ -24,7 +24,7 @@ Avisos en vivo:
 ```
 CELULAR  /escaner/{solicitud}  (Next.js, pantalla completa, fuera del marco del portal)
  ├─ getUserMedia (cámara trasera) + requestVideoFrameCallback
- ├─ ONNX Runtime Web (WebGPU → WASM) + YOLOX-Nano 416 (Apache-2.0)      lib/scanner/detector.ts, yolox.ts
+ ├─ ONNX Runtime Web (WebGPU → WASM; en iOS solo WASM) + YOLOX-Nano 416 lib/scanner/detector.ts, yolox.ts
  ├─ Tracker estilo ByteTrack + conteo neto por línea                    lib/scanner/tracker.ts
  ├─ Cuadros muestreados 6/s, JPEG 640 px, SHA-256 → IndexedDB           lib/scanner/session.ts, store.ts
  ├─ Cuadros representativos cada 5 s (máx. 12), JPEG 1280 px
@@ -56,6 +56,34 @@ Qué se guarda y qué no:
   de GPS (inicio, desplazamiento, precisión), los del rumbo (inicio y arco) y las advertencias.
 - El servidor verifica el hash de cada cuadro antes de procesarlo. Los cuadros no se pueden
   modificar (hay un trigger en la base).
+
+### Memoria en el celular y escaneos cortados
+
+- **iPhone/iPad, modo de bajo consumo:**
+  - **Motor:** se usa WASM y no WebGPU. ONNX Runtime con WebGPU en WebKit hacía que iOS cerrara
+    la página ("Ocurrió un problema varias veces").
+  - **Paquete:** el liviano solo-WASM (`ort.wasm.min.mjs`, motor de ~14 MB) en lugar del
+    asyncify de ~27 MB.
+  - **Cámara:** 640×480.
+  - **Inferencia:** como máximo 4 por segundo. El muestreo para el servidor sigue en 6/s.
+  - **Para probar WebGPU:** agregá `?ia=webgpu` a la URL.
+- **Precarga de motor y modelo:** baja de a un archivo, sin picos de memoria.
+- **Cuadros en vuelo acotados:** como máximo hay 4 cuadros codificándose o guardándose a la vez.
+  Si el teléfono no da abasto se saltea el cuadro (queda una advertencia) en lugar de acumular
+  imágenes en memoria.
+- **Una imagen a la vez:** la subida y la renumeración leen de IndexedDB de a un cuadro; nunca
+  cargan todo el escaneo.
+- **Mientras se escanea no se sube nada.**
+- **Escaneos cortados:** el escaneo en curso se actualiza en el teléfono cada 10 s. Si la página
+  se cierra sin FINALIZAR (el sistema la mató, se recargó, se cerró la pestaña), a los 60 s la
+  sincronización lo cierra con los cuadros guardados, lo marca "Escaneo interrumpido" y lo sube.
+  El conteo oficial lo hace igual el servidor. Si no llegó a guardarse ningún cuadro, se
+  descarta.
+- **Sesión:**
+  - la sincronización en segundo plano nunca navega a /login (eso cortaba el escaneo);
+  - si la sesión venció, el escaneo queda pendiente hasta volver a ingresar;
+  - reusar un refresh token rotado hace menos de 60 s (dos pestañas, o una recarga tras un
+    cierre) se trata como carrera y no revoca la sesión. Pasado ese tiempo, sí se trata como robo.
 
 ### El tracker
 
@@ -112,6 +140,8 @@ Las pérdidas en la manga vienen de animales que el detector no ve en suficiente
 hay calibración con video real de mangas argentinas.
 
 ## Cómo probarlo desde un celular real
+
+**Guía paso a paso: [`docs/phone-testing.md`](phone-testing.md)** (script `scripts/phone-test.sh`).
 
 El navegador solo abre la cámara en un **contexto seguro** (HTTPS), o en `localhost`.
 

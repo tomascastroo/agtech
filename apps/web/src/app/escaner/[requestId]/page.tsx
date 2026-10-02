@@ -7,7 +7,11 @@ import { Loading } from '@/components/ui/Feedback';
 import { api } from '@/lib/api/client';
 import type { ProducerRequestDetail } from '@/lib/api/types';
 import { cachedRequest, cacheRequest, type CachedRequest } from '@/lib/scanner/request-cache';
-import { registerServiceWorker, warmScannerAssets } from '@/lib/scanner/offline';
+import {
+  cacheScannerPageForOffline,
+  registerServiceWorker,
+  warmScannerAssets,
+} from '@/lib/scanner/offline';
 import { startAutoSync } from '@/lib/scanner/sync';
 
 /**
@@ -22,7 +26,10 @@ export default function ScannerPage() {
   useEffect(() => {
     registerServiceWorker();
     // Deja el motor y el modelo en caché: la próxima vez el escáner abre sin señal.
-    if (navigator.onLine) void warmScannerAssets();
+    if (navigator.onLine) {
+      void warmScannerAssets();
+      void cacheScannerPageForOffline();
+    }
     return startAutoSync();
   }, []);
 
@@ -30,7 +37,10 @@ export default function ScannerPage() {
     const local = cachedRequest(requestId);
     // Copia local primero (sin señal), luego se actualiza con la API si hay conexión.
     if (local) queueMicrotask(() => setRequest(local));
-    api<ProducerRequestDetail>(`/producer/me/requests/${requestId}`)
+    // Con la copia local el escáner funciona igual: una sesión vencida no lo cierra.
+    api<ProducerRequestDetail>(`/producer/me/requests/${requestId}`, {
+      redirectOnUnauthorized: !local,
+    })
       .then((r) => {
         if (!r.asset) throw new Error('Primero declará el rodeo en la solicitud');
         const value = { id: r.id, assetName: r.asset.name };

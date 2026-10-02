@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { OrtYoloxDetector, type InferenceBackend } from '@/lib/scanner/detector';
+import { OrtYoloxDetector, prefersWasm, type InferenceBackend } from '@/lib/scanner/detector';
 import { HeadingTracker } from '@/lib/scanner/sensors';
 import { MAX_DURATION_S, ScanSessionEngine, type LiveState } from '@/lib/scanner/session';
 import { scanStatus } from '@/lib/scanner/status';
@@ -60,7 +60,16 @@ export function BovineScanner({ requestId, assetName }: { requestId: string; ass
     streamRef.current = null;
   }, []);
 
-  useEffect(() => stopCamera, [stopCamera]);
+  useEffect(
+    () => () => {
+      // Salir del escáner a mitad de un escaneo lo finaliza y lo deja guardado para subir, en
+      // lugar de dejar el muestreo corriendo sin cámara.
+      void engineRef.current?.finish();
+      engineRef.current = null;
+      stopCamera();
+    },
+    [stopCamera],
+  );
 
   // Estado de sincronización del resultado (OFFLINE / SINCRONIZANDO / VERIFICADO).
   useEffect(() => {
@@ -83,12 +92,15 @@ export function BovineScanner({ requestId, assetName }: { requestId: string; ass
       // Giroscopio/brújula: velocidad de giro (barrido) o quietud del celular (fijo).
       await HeadingTracker.requestPermission();
       setMessage('Abriendo la cámara…');
+      // iPhone: 640×480 alcanza (el detector usa 416 px y el servidor 640 px) y reduce mucho la
+      // memoria de los cuadros que se copian por segundo.
+      const lowMemory = prefersWasm();
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: false,
         video: {
           facingMode: { ideal: 'environment' },
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
+          width: { ideal: lowMemory ? 640 : 1280 },
+          height: { ideal: lowMemory ? 480 : 720 },
         },
       });
       streamRef.current = stream;
