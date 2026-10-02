@@ -1,0 +1,78 @@
+{
+ "description": "Video SINTÉTICO de paso por manga: recortes de bovinos de fotografías reales de Open Images V7 que cruzan el cuadro de izquierda a derecha sobre pastura procedural. Sirve para probar el pipeline de conteo en video; no mide precisión en campo.",
+ "file": "paso-manga-sintetico.mp4",
+ "seed": 20261002,
+ "width": 960,
+ "height": 540,
+ "fps": 12,
+ "frames": 172,
+ "ground_truth_passing": 14,
+ "synthetic": true,
+ "attribution": [
+  [
+   "0755c308c03f0bdc",
+   "Jon&#x27;s pics",
+   "https://creativecommons.org/licenses/by/2.0/"
+  ],
+  [
+   "1f860f31115ed8bb",
+   "Rae Allen",
+   "https://creativecommons.org/licenses/by/2.0/"
+  ],
+  [
+   "2335287cb4210ed5",
+   "senza senso",
+   "https://creativecommons.org/licenses/by/2.0/"
+  ],
+  [
+   "383f4d01a43c5b71",
+   "manhhai",
+   "https://creativecommons.org/licenses/by/2.0/"
+  ],
+  [
+   "421a93da4e4152f3",
+   "Linda",
+   "https://creativecommons.org/licenses/by/2.0/"
+  ],
+  [
+   "450360d4f08b9f53",
+   "FieldsportsChannel TV",
+   "https://creativecommons.org/licenses/by/2.0/"
+  ],
+  [
+   "48f79081769b86d4",
+   "Delaware Agriculture",
+   "https://creativecommons.org/licenses/by/2.0/"
+  ],
+  [
+   "57711acbb13dc757",
+   "docentjoyce",
+   "https://creativecommons.org/licenses/by/2.0/"
+  ],
+  [
+   "5f98a6a9fcb28e04",
+   "Bud Ellison",
+   "https://creativecommons.org/licenses/by/2.0/"
+  ],
+  [
+   "60c1462011836793",
+   "aemosion",
+   "https://creativecommons.org/licenses/by/2.0/"
+  ],
+  [
+   "65fa93cf7916e533",
+   "Louise Python",
+   "https://creativecommons.org/licenses/by/2.0/"
+  ],
+  [
+   "791c4a0fb354f2b6",
+   "Joe Goldberg",
+   "https://creativecommons.org/licenses/by/2.0/"
+  ],
+  [
+   "7d41596df966700d",
+   "Garry Knight",
+   "https://creativecommons.org/licenses/by/2.0/"
+  ]
+ ]
+}

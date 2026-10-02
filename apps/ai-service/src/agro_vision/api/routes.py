@@ -11,10 +11,10 @@ from fastapi.concurrency import run_in_threadpool
 from ..config import Settings, get_settings
 from ..domain.change_detection import detect_changes
 from ..domain.counting import CounterParams, count_animals
-from ..domain.detection import TilingParams
+from ..domain.detection import Detection, TilingParams
 from ..domain.documents import DOCUMENT_ANALYZER_VERSION, classify, extract_fields
 from ..domain.image_quality import assess_quality
-from ..domain.livestock import count_livestock
+from ..domain.livestock import LIVESTOCK_CLASS_SETS, count_livestock
 from ..domain.models_registry import (
     IMAGE_QUALITY,
     NDVI_PROCESSOR,
@@ -29,10 +29,12 @@ from ..domain.sentinel2 import (
     SceneNotFoundError,
     VegetationThresholds,
 )
+from ..domain.tracking import TRACKER_VERSION, TrackerParams, count_video
 from ..infrastructure.document_reader import UnreadableDocumentError, read_document
 from ..infrastructure.image_io import DecodedImage, InvalidImageError, decode_image
 from ..infrastructure.sentinel_catalog import CatalogUnavailableError
 from ..infrastructure.sentinel_reader import PolygonOutsideSceneError, analyze_scene
+from ..infrastructure.video_reader import UnreadableVideoError, sample_frames
 from ..runtime import ModelNotAvailableError, get_catalog, get_detector
 from .schemas import (
     ChangeResponse,
@@ -49,6 +51,9 @@ from .schemas import (
     ObservationsResponse,
     SceneOut,
     SceneSearchRequest,
+    VideoCountResponse,
+    VideoFrameDetectionsOut,
+    VideoTrackOut,
 )
 
 MAX_DETECTIONS_RETURNED = 500
@@ -359,6 +364,128 @@ async def changes(
 
 def _elapsed_ms(started: float) -> int:
     return int((time.perf_counter() - started) * 1000)
+
+
+def _video_model(settings: Settings) -> ModelInfo:
+    base = _model_info(_active_detector_model(settings))
+    name, version = TRACKER_VERSION.split("/")
+    return base.model_copy(
+        update={"code": f"{base.code}+{name}", "version": f"{base.version}+{version}"}
+    )
+
+
+VIDEO_LIMITATIONS = {
+    "passage": [
+        "Cuenta los animales cuyo recorrido cruza la línea central del cuadro; supone que todo el "
+        "rodeo pasa por el punto de paso filmado.",
+        "Sin re-identificación por apariencia: un animal que retrocede y vuelve a cruzar después "
+        "de perderse varios cuadros puede contarse dos veces; animales pegados pueden contarse "
+        "como uno.",
+        "Parámetros de seguimiento no calibrados con video de campo.",
+    ],
+    "overview": [
+        "Vista general: se informa el máximo de animales visibles en un mismo cuadro (cota "
+        "inferior). No estima el stock total del establecimiento.",
+        "Los tracks confirmados se informan como cota superior: oclusiones y animales que salen y "
+        "vuelven a entrar al cuadro generan identidades nuevas.",
+    ],
+}
+
+
+@router.post("/animals/count-video", response_model=VideoCountResponse)
+async def count_in_video(
+    settings: SettingsDep,
+    file: Annotated[UploadFile, File()],
+    mode: Annotated[str, Query(pattern="^(passage|overview)$")] = "passage",
+) -> VideoCountResponse:
+    """Video → cuadros muestreados → YOLOX por cuadro → seguimiento → conteo sin duplicados."""
+    started = time.perf_counter()
+    if settings.detector != "yolox":
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE, "El conteo en video requiere YOLOX"
+        )
+    data = await file.read(settings.video_max_upload_bytes + 1)
+    if len(data) > settings.video_max_upload_bytes:
+        raise HTTPException(status.HTTP_413_CONTENT_TOO_LARGE, "Video demasiado grande")
+    try:
+        detector = get_detector(settings)
+    except ModelNotAvailableError as exc:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(exc)) from exc
+    try:
+        video = await run_in_threadpool(
+            sample_frames,
+            data,
+            target_fps=settings.video_sample_fps,
+            max_frames=settings.video_max_frames,
+            max_side_px=settings.video_max_side_px,
+        )
+    except UnreadableVideoError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
+
+    classes = LIVESTOCK_CLASS_SETS[settings.detector_class_set]
+    no_tiling = TilingParams(tile_size=0)
+
+    def detect_all() -> list[list[Detection]]:
+        return [
+            detector.detect(
+                frame,
+                score_threshold=settings.video_score_threshold,
+                class_ids=classes,
+                tiling=no_tiling,
+            )[0]
+            for frame in video.frames
+        ]
+
+    per_frame = await run_in_threadpool(detect_all)
+    boxes = [[(d.x1, d.y1, d.x2, d.y2, d.score) for d in frame] for frame in per_frame]
+    counted = count_video(boxes, (video.width, video.height), TrackerParams())
+    peak_index = counted.detections_per_frame.index(counted.max_simultaneous)
+    passage = mode == "passage"
+    return VideoCountResponse(
+        mode=mode,
+        count=counted.line_crossings if passage else counted.max_simultaneous,
+        method="LINE_CROSSING" if passage else "MAX_SIMULTANEOUS",
+        confidence=counted.crossing_confidence if passage else counted.overview_confidence,
+        line_crossings=counted.line_crossings,
+        max_simultaneous=counted.max_simultaneous,
+        confirmed_tracks=counted.confirmed_tracks,
+        axis=counted.axis,
+        line_position=counted.line_position,
+        frames_processed=counted.frames,
+        source_fps=video.source_fps,
+        sampled_fps=video.sampled_fps,
+        duration_s=video.duration_s,
+        truncated=video.truncated,
+        width=video.width,
+        height=video.height,
+        detections_per_frame=counted.detections_per_frame,
+        tracks=[VideoTrackOut(**asdict(t)) for t in counted.tracks],
+        peak_frame=VideoFrameDetectionsOut(
+            frame=peak_index,
+            detections=[
+                DetectionOut(
+                    x=int(d.x1),
+                    y=int(d.y1),
+                    width=int(d.width),
+                    height=int(d.height),
+                    area_px=int(d.width * d.height),
+                    estimated_animals=1,
+                    label=d.label,
+                    score=round(d.score, 4),
+                )
+                for d in per_frame[peak_index][:MAX_DETECTIONS_RETURNED]
+            ],
+        ),
+        score_threshold=settings.video_score_threshold,
+        limitations=VIDEO_LIMITATIONS[mode]
+        + (
+            [f"Video truncado: se analizaron los primeros {counted.frames} cuadros muestreados."]
+            if video.truncated
+            else []
+        ),
+        model=_video_model(settings),
+        processing_ms=_elapsed_ms(started),
+    )
 
 
 @router.post("/documents/analyze", response_model=DocumentAnalysisResponse)

@@ -35,6 +35,14 @@ class Settings(BaseSettings):
     detector_tile_min_ratio: float = Field(default=2.5, ge=1)
     detector_threads: int = Field(default=0, ge=0)
 
+    # Video (conteo en paso controlado / vista general). Parámetros por defecto, NO calibrados
+    # con video de campo: ver docs/methodology/conteo-ganado.md.
+    video_max_upload_bytes: int = 100 * 1024 * 1024
+    video_sample_fps: float = Field(default=3.0, gt=0, le=15)
+    video_max_frames: int = Field(default=240, ge=10, le=2000)
+    video_max_side_px: int = Field(default=1280, ge=320, le=3840)
+    video_score_threshold: float = Field(default=0.25, ge=0.05, le=0.95)
+
     # Sentinel-2 L2A (AWS Open Data).
     sentinel_catalog: Literal["auto", "earth-search", "aws-inventory"] = "auto"
     earth_search_url: str = "https://earth-search.aws.element84.com/v1"

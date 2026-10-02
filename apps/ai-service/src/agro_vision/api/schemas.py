@@ -188,3 +188,46 @@ class DocumentAnalysisResponse(BaseModel):
     engine: str
     version: str
     processing_ms: int
+
+
+class VideoTrackOut(BaseModel):
+    id: int
+    first_frame: int
+    last_frame: int
+    hits: int
+    crossed: bool
+    mean_score: float
+
+
+class VideoFrameDetectionsOut(BaseModel):
+    frame: int
+    detections: list[DetectionOut]
+
+
+class VideoCountResponse(BaseModel):
+    """Conteo en video. `count` depende del modo: cruces de línea (paso controlado) o máximo
+    simultáneo en un cuadro (vista general, cota inferior)."""
+
+    mode: str
+    count: int
+    method: str
+    confidence: float = Field(ge=0, le=1)
+    line_crossings: int
+    max_simultaneous: int
+    confirmed_tracks: int
+    axis: str
+    line_position: float
+    frames_processed: int
+    source_fps: float
+    sampled_fps: float
+    duration_s: float
+    truncated: bool
+    width: int
+    height: int
+    detections_per_frame: list[int]
+    tracks: list[VideoTrackOut]
+    peak_frame: VideoFrameDetectionsOut
+    score_threshold: float
+    limitations: list[str]
+    model: ModelInfo
+    processing_ms: int
