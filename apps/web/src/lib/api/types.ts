@@ -155,7 +155,16 @@ export interface DocumentItem {
   expiresAt: string | null;
   scope: 'ASSET' | 'ESTABLISHMENT';
   uploadedAt: string;
+  dataSource?: 'REAL' | 'DEMO';
   analysis?: DocumentAnalysis | null;
+}
+
+export interface OcrFieldEntry {
+  field: string;
+  original: string;
+  normalized: string;
+  confidence: number | null;
+  line: number;
 }
 
 /** Lectura automática del documento comparada con lo declarado (no certifica autenticidad). */
@@ -172,11 +181,24 @@ export interface DocumentAnalysis {
   };
   extractionConfidence: number | null;
   validationResults: {
-    check: 'TEXT' | 'DOCUMENT_TYPE' | 'RENSPA' | 'CUIT' | 'HOLDER' | 'EXPIRY';
+    check:
+      | 'TEXT'
+      | 'DOCUMENT_TYPE'
+      | 'RENSPA'
+      | 'CUIT'
+      | 'HOLDER'
+      | 'EXPIRY'
+      | 'ESTABLISHMENT'
+      | 'LOCALITY'
+      | 'PROVINCE';
     status: 'MATCH' | 'MISMATCH' | 'NOT_FOUND' | 'NOT_DECLARED';
     required: boolean;
+    expected?: string | null;
+    found?: string[];
     message: string;
   }[];
+  /** Campos leídos: valor original, normalizado y confianza de la línea. */
+  fieldEntries?: OcrFieldEntry[];
   engine: string | null;
   error: string | null;
   analyzedAt: string | null;
@@ -421,6 +443,16 @@ export interface DashboardSummary {
     monitoredAssets: number;
     openAlerts: number;
   };
+  /** Qué está pendiente y de quién (solicitudes, documentación, verificaciones). */
+  operations?: {
+    waitingProducer: number;
+    demoRequests: number;
+    openInformationRequests: number;
+    documentsToReview: number;
+    verificationsInProgress: number;
+    verificationsCompleted30d: number;
+    producers: number;
+  };
   alertsBySeverity: Partial<Record<Severity, number>>;
   risk: {
     weightedScore: number | null;
@@ -620,6 +652,136 @@ export interface GuaranteeRequest {
     status: string | null;
   }[];
   informationRequests: InformationRequest[];
+  documentation?: Documentation | null;
+  dataLayers?: DataLayers | null;
+  dataSource?: 'REAL' | 'DEMO';
+  demoScenario?: string | null;
+  creditProductCode?: string | null;
+}
+
+export type RequirementStatus =
+  | 'PENDING'
+  | 'UPLOADED'
+  | 'PROCESSING'
+  | 'CONSISTENT'
+  | 'INCONSISTENT'
+  | 'REVIEW_REQUIRED'
+  | 'NOT_APPLICABLE';
+
+export interface SourceRef {
+  label: string;
+  url: string;
+}
+
+/** Requisito documental de una solicitud (checklist). */
+export interface RequirementItem {
+  code: string;
+  name: string;
+  description: string;
+  purpose: string;
+  howTo: string;
+  category: string;
+  categoryLabel: string;
+  obligation: 'MANDATORY' | 'CONDITIONAL' | 'EVALUATION';
+  obligationLabel: string;
+  condition: string | null;
+  documentTypes: { code: string; name: string }[];
+  validation: 'OCR_CHECK' | 'MANUAL_REVIEW';
+  status: RequirementStatus;
+  statusLabel: string;
+  reason: string;
+  note: string | null;
+  document: {
+    id: string;
+    title: string;
+    type: string;
+    uploadedAt: string;
+    demo: boolean;
+  } | null;
+  requested: { informationRequestId: string; at: string; message: string } | null;
+  sources?: SourceRef[];
+  officialVerification: string | null;
+}
+
+export interface Documentation {
+  product: {
+    code: string;
+    name: string;
+    kind: 'BASE' | 'REFERENCE';
+    description: string;
+    sources?: SourceRef[];
+    consultedAt: string | null;
+  } | null;
+  items: RequirementItem[];
+  summary: {
+    total: number;
+    consistent: number;
+    pending: number;
+    attention: number;
+    processing: number;
+    notApplicable: number;
+    mandatoryMissing: number;
+  };
+}
+
+/** Declarado → extraído (OCR) → verificado internamente → fuente oficial (no conectada). */
+export interface DataLayers {
+  fields: {
+    key: string;
+    label: string;
+    declared: string | null;
+    extracted: (OcrFieldEntry & { documentId: string; documentTitle: string })[];
+    internal: 'MATCH' | 'MISMATCH' | 'NOT_COMPARED';
+    official: { status: 'NOT_CONNECTED' | 'CONNECTED'; value: string | null };
+  }[];
+  officialSources: {
+    code: string;
+    name: string;
+    status: 'NOT_CONNECTED' | 'CONNECTED';
+    scope: string[];
+    reason: string;
+  }[];
+}
+
+export interface CreditProductOption {
+  code: string;
+  name: string;
+  description: string;
+  kind: 'BASE' | 'REFERENCE';
+  sources: SourceRef[];
+  consultedAt: string | null;
+  requirements: {
+    code: string;
+    name: string;
+    obligation: RequirementItem['obligation'];
+    obligationLabel: string;
+    condition: string | null;
+  }[];
+}
+
+export interface RequestCreationOptions {
+  products: CreditProductOption[];
+  defaultProductCode: string | null;
+  producers: {
+    name: string;
+    taxId: string;
+    email: string | null;
+    establishments: { id: string; name: string; province: string; locality: string | null; renspa: string | null }[];
+  }[];
+}
+
+export interface DemoScenarioOption {
+  code: string;
+  name: string;
+  description: string;
+  shows: string;
+}
+
+export interface DemoCreated {
+  requestId: string;
+  scenario: { code: string; name: string };
+  producerAccess: { email: string; password: string };
+  demo: true;
 }
 
 export type ProducerStatus =
@@ -646,6 +808,7 @@ export interface ProducerTask {
   description: string;
   informationRequestId?: string;
   documentType?: string | null;
+  requirementCode?: string | null;
   requestId?: string;
   assetName?: string | null;
 }
@@ -654,6 +817,7 @@ export interface InformationRequest {
   id: string;
   kind: 'DOCUMENT' | 'EVIDENCE';
   documentType: string | null;
+  requirementCode?: string | null;
   message: string;
   status: 'OPEN' | 'RESPONDED';
   createdAt: string;

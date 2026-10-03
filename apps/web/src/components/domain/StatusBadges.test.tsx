@@ -20,7 +20,7 @@ describe('Badges de estado', () => {
       </>,
     );
     expect(screen.getByText('Verificado')).toBeInTheDocument();
-    expect(screen.getByText('Con observaciones')).toBeInTheDocument();
+    expect(screen.getByText('Requiere revisión')).toBeInTheDocument();
     expect(screen.getByText('Alerta')).toBeInTheDocument();
     expect(screen.getByText('Crítica')).toBeInTheDocument();
     expect(screen.getByText('Riesgo moderado')).toBeInTheDocument();

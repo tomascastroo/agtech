@@ -5,9 +5,16 @@ import { useState, type FormEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { RequestStageBadge } from '@/components/domain/RequestStageBadge';
 import { BovineIndividualsPanel } from '@/components/domain/BovineIndividualsPanel';
+import { DataLayersPanel, DemoBanner } from '@/components/domain/DataLayersPanel';
+import { DocumentationChecklist } from '@/components/domain/DocumentationChecklist';
 import { LivestockMonitorPanel } from '@/components/domain/LivestockMonitorPanel';
 import { ScansPanel } from '@/components/domain/ScansPanel';
-import { OutcomeBadge, RiskBadge, SeverityBadge } from '@/components/domain/StatusBadges';
+import {
+  DemoBadge,
+  OutcomeBadge,
+  RiskBadge,
+  SeverityBadge,
+} from '@/components/domain/StatusBadges';
 import styles from '@/components/domain/domain.module.css';
 import { Button, LinkButton } from '@/components/ui/Button';
 import { Callout, ErrorState, Loading } from '@/components/ui/Feedback';
@@ -50,9 +57,15 @@ export function RequestDetailView() {
         title={r.asset?.name ?? `Solicitud — ${r.producer.name}`}
         description={`${r.guaranteeType.name ?? r.guaranteeType.code} · solicitada por ${r.requester.name}`}
         breadcrumb={[{ href: '/requests', label: 'Solicitudes de garantía' }]}
-        badge={<RequestStageBadge stage={r.stage} />}
+        badge={
+          <span className={styles.inline}>
+            <RequestStageBadge stage={r.stage} />
+            {r.dataSource === 'DEMO' ? <DemoBadge /> : null}
+          </span>
+        }
       />
       <div className={styles.stack}>
+        {r.dataSource === 'DEMO' ? <DemoBanner scenario={demoName(r.demoScenario)} /> : null}
         <Panel
           title="1 · Declaración del productor"
           subtitle="Información aportada por el productor; la entidad no puede modificarla."
@@ -76,7 +89,10 @@ export function RequestDetailView() {
             </dd>
             <dt>Documentación / evidencia</dt>
             <dd>
-              {r.documentCount} documento(s) · {r.evidenceCount} imagen(es) de campo
+              {r.documentation
+                ? `${r.documentation.summary.consistent} de ${r.documentation.summary.total - r.documentation.summary.notApplicable} requisitos consistentes`
+                : `${r.documentCount} documento(s)`}{' '}
+              · {r.evidenceCount} imagen(es) de campo
             </dd>
             <dt>Enviada</dt>
             <dd>
@@ -108,6 +124,17 @@ export function RequestDetailView() {
             </div>
           ) : null}
         </Panel>
+
+        {r.documentation ? (
+          <DocumentationChecklist
+            requestId={r.id}
+            assetId={r.asset?.id ?? null}
+            documentation={r.documentation}
+            onChange={() => query.refetch()}
+          />
+        ) : null}
+
+        {r.dataLayers ? <DataLayersPanel layers={r.dataLayers} /> : null}
 
         <Panel
           title="2 · Verificación de AgroGarantías"
@@ -202,6 +229,14 @@ export function RequestDetailView() {
     </>
   );
 }
+
+const DEMO_NAMES: Record<string, string> = {
+  COMPLETE: 'Demo ganadera completa',
+  MISSING_DOCUMENTS: 'Demo con documentación faltante',
+  INCONSISTENT: 'Demo con inconsistencia documental',
+  READY: 'Demo lista para verificar',
+};
+const demoName = (code?: string | null) => (code ? (DEMO_NAMES[code] ?? code) : null);
 
 const SOURCE_STATE = {
   CONSISTENT: { label: 'Consistente', tone: 'success' },
@@ -333,7 +368,7 @@ function InformationRequestsPanel({
   return (
     <Panel
       title="Pedidos de información al productor"
-      subtitle="El productor lo recibe como tarea en su portal. Lo que aporte queda como evidencia nueva; la declaración no cambia."
+      subtitle="Los requisitos del checklist se piden desde Documentación. Acá podés pedir más fotos u otro documento; el productor lo recibe como tarea y su declaración no cambia."
     >
       {r.informationRequests.length > 0 ? (
         <ul className={styles.stackTight} style={{ marginBottom: 12 }}>
@@ -343,10 +378,14 @@ function InformationRequestsPanel({
                 {i.status === 'OPEN' ? 'Pendiente' : 'Respondido'}
               </Badge>
               <span>
-                {i.kind === 'EVIDENCE'
-                  ? 'Evidencia'
-                  : `Documento (${DOCUMENT_TYPE_LABELS[i.documentType ?? ''] ?? 'cualquiera'})`}
-                : {i.message}
+                <strong>
+                  {i.kind === 'EVIDENCE'
+                    ? 'Evidencia'
+                    : (r.documentation?.items.find((x) => x.code === i.requirementCode)?.name ??
+                      DOCUMENT_TYPE_LABELS[i.documentType ?? ''] ??
+                      'Documento')}
+                </strong>
+                {i.requirementCode ? null : ` — ${i.message}`}
               </span>
               <span className={styles.muted}>
                 {new Date(i.createdAt).toLocaleDateString('es-AR')}

@@ -117,3 +117,30 @@ export const SimulatedBadge = () => (
     Simulado
   </Badge>
 );
+
+const REQUIREMENT: Record<string, [Tone, IconName, string]> = {
+  PENDING: ['neutral', 'clock', 'Pendiente'],
+  UPLOADED: ['info', 'document', 'Cargado'],
+  PROCESSING: ['info', 'refresh', 'Procesando'],
+  CONSISTENT: ['success', 'check', 'Consistente'],
+  INCONSISTENT: ['critical', 'critical', 'Inconsistente'],
+  REVIEW_REQUIRED: ['warning', 'warning', 'Requiere revisión'],
+  NOT_APPLICABLE: ['outline', 'x', 'No aplica'],
+};
+
+/** Estado de un requisito documental (siempre con ícono y texto). */
+export const RequirementStatusBadge = ({ status }: { status: string }) => {
+  const [tone, icon, label] = REQUIREMENT[status] ?? ['neutral', 'info', status];
+  return (
+    <Badge tone={tone} icon={icon}>
+      {label}
+    </Badge>
+  );
+};
+
+/** Marca de datos de demostración (nunca se confunde con datos reales). */
+export const DemoBadge = ({ label = 'DEMO' }: { label?: string }) => (
+  <Badge tone="warning" icon="info" title="Datos ficticios de demostración">
+    {label}
+  </Badge>
+);

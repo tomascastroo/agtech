@@ -119,6 +119,28 @@ export class PortfolioService {
       ) as Promise<Record<string, unknown>[]>,
     ]);
 
+    // Indicadores operativos: qué está pendiente y de quién.
+    const [ops] = (await this.dataSource.query(
+      `SELECT
+         (SELECT count(*)::int FROM guarantee_requests
+           WHERE organization_id = $1 AND status IN ('INVITED','IN_PROGRESS')) AS "waitingProducer",
+         (SELECT count(*)::int FROM guarantee_requests
+           WHERE organization_id = $1 AND data_source = 'DEMO') AS "demoRequests",
+         (SELECT count(*)::int FROM information_requests
+           WHERE organization_id = $1 AND status = 'OPEN') AS "openInformationRequests",
+         (SELECT count(*)::int FROM documents d JOIN document_analyses da ON da.document_id = d.id
+           WHERE d.organization_id = $1 AND d.deleted_at IS NULL AND d.status = 'PENDING_REVIEW'
+             AND da.status IN ('REVIEW_REQUIRED','FAILED')) AS "documentsToReview",
+         (SELECT count(*)::int FROM verification_runs
+           WHERE organization_id = $1 AND status IN ('PENDING','PROCESSING')) AS "verificationsInProgress",
+         (SELECT count(*)::int FROM verification_runs
+           WHERE organization_id = $1 AND status = 'COMPLETED'
+             AND completed_at > now() - interval '30 days') AS "verificationsCompleted30d",
+         (SELECT count(DISTINCT producer_tax_id)::int FROM guarantee_requests
+           WHERE organization_id = $1 AND data_source = 'REAL') AS producers`,
+      [organizationId],
+    )) as Record<string, number>[];
+
     const scored = rows.filter(
       (r) => r.lastScore !== null && r.declaredValue !== null && r.currency === 'USD',
     );
@@ -166,6 +188,7 @@ export class PortfolioService {
         monitoredAssets: rows.length,
         openAlerts: alertCounts.reduce((acc, a) => acc + a.count, 0),
       },
+      operations: ops ?? {},
       alertsBySeverity: Object.fromEntries(alertCounts.map((a) => [a.severity, a.count])),
       risk: {
         weightedScore,

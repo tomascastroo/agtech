@@ -3,8 +3,8 @@ export const ASSET_STATUS_LABELS: Record<string, string> = {
   DRAFT: 'En alta',
   PENDING_VERIFICATION: 'En verificación',
   VERIFIED: 'Verificado',
-  OBSERVED: 'Con observaciones',
-  REJECTED: 'No satisfactorio',
+  OBSERVED: 'Requiere revisión',
+  REJECTED: 'Inconsistencia detectada',
 };
 
 export const PORTFOLIO_STATE_LABELS: Record<string, string> = {
@@ -14,10 +14,14 @@ export const PORTFOLIO_STATE_LABELS: Record<string, string> = {
   OBSERVADO: 'Observado',
 };
 
+/**
+ * Resultado de una verificación. Un resultado parcial nunca se presenta como rechazo: la falta de
+ * evidencia es NO CONCLUYENTE, y una contradicción con lo declarado es INCONSISTENCIA DETECTADA.
+ */
 export const OUTCOME_LABELS: Record<string, string> = {
   VERIFIED: 'Verificado',
-  OBSERVED: 'Con observaciones',
-  REJECTED: 'No satisfactorio',
+  OBSERVED: 'Requiere revisión',
+  REJECTED: 'Inconsistencia detectada',
   INCONCLUSIVE: 'No concluyente',
 };
 
@@ -59,6 +63,11 @@ export const DOCUMENT_TYPE_LABELS: Record<string, string> = {
   ID_CUIT: 'DNI / CUIT del titular',
   SANITARY_CERTIFICATE: 'Certificado sanitario',
   INSURANCE_POLICY: 'Póliza de seguro',
+  MIPYME_CERTIFICATE: 'Certificado MiPyME',
+  STOCK_CERTIFICATE: 'Existencias (SENASA)',
+  BRAND_TITLE: 'Boleto de marca y señal',
+  FEEDLOT_REGISTRATION: 'Registro de engorde a corral',
+  FINANCIAL_STATEMENTS: 'Información financiera',
   OTHER: 'Documentación adicional',
 };
 

@@ -255,11 +255,8 @@ describe('Documentación de crédito, OCR y simulación de solicitudes', () => {
       status: 'PENDING',
       requested: expect.anything(),
     });
-    // La entidad pide además el certificado sanitario (requisito del checklist).
-    await as(ctx, maria)
-      .post(`/api/guarantee-requests/${id}/information-requests`)
-      .send({ kind: 'DOCUMENT', requirementCode: 'SANITARY_CERTIFICATE' })
-      .expect(201);
+    // La demo ya pidió también el certificado sanitario (requisito del checklist).
+    expect(item(c.documentation.items, 'SANITARY_CERTIFICATE').requested).toBeTruthy();
 
     // Productor ficticio: ve las tareas con qué falta y por qué.
     const producer = await login(

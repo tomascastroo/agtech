@@ -69,7 +69,7 @@ export const DEMO_SCENARIOS: DemoScenario[] = [
     system: 'CRIA',
     documents: ['constancia-cuit'],
     photos: 3,
-    requestRequirements: ['RENSPA'],
+    requestRequirements: ['RENSPA', 'SANITARY_CERTIFICATE'],
     submit: false,
   },
   {

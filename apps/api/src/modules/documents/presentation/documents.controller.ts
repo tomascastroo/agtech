@@ -99,6 +99,7 @@ export function presentDocument(doc: DocumentEntity, analysis?: DocumentAnalysis
     scope: doc.assetId ? 'ASSET' : 'ESTABLISHMENT',
     uploadedAt: doc.createdAt,
     reviewedAt: doc.reviewedAt,
+    dataSource: doc.dataSource,
     analysis: presentAnalysis(analysis),
   };
 }
