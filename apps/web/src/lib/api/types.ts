@@ -766,7 +766,13 @@ export interface RequestCreationOptions {
     name: string;
     taxId: string;
     email: string | null;
-    establishments: { id: string; name: string; province: string; locality: string | null; renspa: string | null }[];
+    establishments: {
+      id: string;
+      name: string;
+      province: string;
+      locality: string | null;
+      renspa: string | null;
+    }[];
   }[];
 }
 

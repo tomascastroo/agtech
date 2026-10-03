@@ -275,6 +275,11 @@ producción). Las mutaciones requieren el header `x-csrf-token`.
 | `POST /verifications/:id/reports` · `GET /reports` · `POST /reports/:id/generate` · `GET /reports/:id/download?format=PDF\|CSV\|JSON` | Informes |
 | `GET /organization/scoring` · `PUT /organization/scoring/weights` | Pesos del score |
 | `GET /integrations` · `GET /users` · `GET /audit-logs` | Proveedores/modelos, usuarios y auditoría |
+| `GET /guarantee-requests/new/options?assetTypeCode=` | Productos de crédito y requisitos documentales para el alta |
+| `PATCH /guarantee-requests/:id/requirements/:code` | Marcar un requisito como NO APLICA (o volver a aplicarlo) |
+| `POST /guarantee-requests/:id/information-requests` (`requirementCode`) | Pedir al productor un requisito puntual |
+| `POST /documents/:id/analyze` | Volver a procesar un documento (OCR + reglas) |
+| `GET /demo/scenarios` · `POST /demo/guarantee-requests` | Simular una solicitud con datos ficticios (`DEMO_MODE=enabled`) |
 | `GET /health/live` · `GET /health/ready` | Liveness y readiness (DB, Redis, almacenamiento) |
 
 ## Modelo de datos
@@ -323,6 +328,20 @@ Lint y formato: oxlint, ESLint, Prettier y Ruff sin errores; `tsc --noEmit` sin 
 - **Imágenes satelitales**: el análisis NDVI y de cambios es simulado. El adaptador STAC
   (`SATELLITE_PROVIDER=stac`) hace búsquedas y obtiene metadatos reales de Sentinel-2, pero no
   calcula índices y lo informa como capacidad no disponible.
+
+**Documentación de crédito y modo demo:**
+
+- Requisitos documentales: catálogo extensible `CreditProduct → DocumentationRequirement[]`
+  (`apps/api/src/modules/documents/domain/document-requirements.ts`). Las fuentes y lo que no se
+  pudo confirmar están en [`docs/credit-documentation-research.md`](docs/credit-documentation-research.md).
+  Las líneas de referencia (BICE, BNA) son información pública, no la lista oficial de la entidad.
+- OCR **real** (RapidOCR / capa de texto del PDF) con extracción determinista por reglas; se guarda
+  valor leído, normalizado, confianza y texto OCR. No se usa un LLM.
+- "Simular solicitud" crea solicitudes **DEMO** (datos ficticios: Juan Pérez, CUIT
+  20-00000001-9, RENSPA 99.001.0.00001/00) con los mismos servicios que una real. Los documentos
+  de demostración se generan con `apps/ai-service/scripts/generate_demo_documents.py` y llevan la
+  leyenda "DOCUMENTO DE DEMOSTRACIÓN – SIN VALOR".
+- SENASA como fuente oficial: preparado (`OfficialDataProvider`) y **no conectado**.
 
 **Limitaciones del MVP:**
 

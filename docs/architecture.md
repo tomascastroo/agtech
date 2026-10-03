@@ -482,3 +482,82 @@ Detalle completo, resultados medidos (solo sintéticos) y cómo probarlo desde u
     resultado es **no concluyente** (cobertura parcial) en lugar de rechazado. El puntaje
     numérico no cambia: cambia la interpretación.
   - Las anomalías críticas mantienen el rechazo o la observación.
+
+## 15. Documentación de crédito, OCR y modo demo
+
+### 15.1 Requisitos documentales
+
+- Catálogo en `documents/domain/document-requirements.ts`. Cada `CreditProduct` define sus
+  `DocumentationRequirement`:
+  - código y categoría;
+  - obligatoriedad (obligatorio / condicional / a evaluar);
+  - para qué se pide y cómo obtenerlo;
+  - tipos de documento aceptados, validación y fuentes.
+- Productos:
+  - `LIVESTOCK_GUARANTEE_BASE`, el producto por defecto de bovinos;
+  - dos líneas de **referencia pública**, `REF_BICE_VALOR_NOVILLO` y `REF_BNA_FEEDLOT`, con su
+    fecha de consulta.
+- La investigación que respalda el catálogo está en
+  [`credit-documentation-research.md`](credit-documentation-research.md). No es una lista
+  universal: depende de la línea y de la entidad.
+- `guarantee_request_requirements` guarda por solicitud el producto elegido y los requisitos
+  marcados NO APLICA. El estado de cada requisito se **calcula** (`evaluateRequirement`) y no se
+  almacena. Se usa este orden:
+  1. la revisión de la entidad;
+  2. el resultado del OCR;
+  3. si no hay ninguno de los dos, el estado de carga.
+
+  Los estados son: PENDIENTE, CARGADO, PROCESANDO, CONSISTENTE, INCONSISTENTE, REQUIERE
+  REVISIÓN y NO APLICA.
+- La entidad pide un requisito al productor con `information_requests.requirement_code`. El
+  productor ve qué falta, por qué, quién lo pide y cómo cargarlo.
+
+### 15.2 OCR determinista
+
+`agro-docs/1.1.0` funciona así:
+
+- Lee el documento con la capa de texto del PDF o con RapidOCR, línea por línea y con confianza.
+- Extrae los campos con expresiones regulares y normalizadores:
+  - RENSPA, CUIT y titular;
+  - establecimiento, localidad y provincia;
+  - fechas, cabezas y vacuna.
+- Por cada campo devuelve el valor leído, el normalizado, la confianza y la línea.
+- La API guarda `ocr_text`, `field_entries` y la declaración contra la que comparó (`declared`).
+- Una diferencia con lo declarado deja el documento en REQUIERE REVISIÓN.
+- No hay LLM y nada se completa por inferencia.
+
+### 15.3 Capas de datos
+
+El detalle de la solicitud separa cuatro capas:
+
+| Capa | Origen |
+|---|---|
+| Declarado | Lo que cargó el productor o la entidad |
+| Extraído (OCR) | Lo que leyó el OCR |
+| Verificado internamente | La comparación entre lo declarado y lo extraído |
+| Verificado por fuente oficial | `OfficialDataProvider` |
+
+La última capa queda vacía mientras SENASA esté `NOT_CONNECTED`
+(ver [`integrations/senasa.md`](integrations/senasa.md)).
+
+### 15.4 Modo demo
+
+- `POST /demo/guarantee-requests` está habilitado con `DEMO_MODE=enabled`. Escenarios:
+  - `COMPLETE`;
+  - `MISSING_DOCUMENTS`;
+  - `INCONSISTENT`;
+  - `READY`.
+- Recorre los **mismos** servicios que una solicitud real:
+  1. crear la solicitud;
+  2. aceptar la invitación;
+  3. dar de alta el establecimiento y el activo;
+  4. cargar los documentos, que pasan por el OCR real;
+  5. cargar la evidencia;
+  6. hacer los pedidos de información;
+  7. enviar la solicitud.
+- Todo queda con `data_source = DEMO` en solicitudes, establecimientos, activos y documentos. La
+  UI muestra "DATOS DE DEMOSTRACIÓN" y "Documento de demostración".
+- No hay base de datos paralela ni componentes exclusivos de la demo.
+- Los datos son ficticios: CUIT 20-00000001-9 y RENSPA 99.001.0.00001/00.
+- El índice único de nombre de establecimiento y la reutilización por RENSPA aplican solo a datos
+  REAL.

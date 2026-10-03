@@ -7,6 +7,15 @@
 | `MockLivestockRegistryProvider` (`mock-senasa`) | `mock` (default) | Fichas **SIMULADAS** para los establecimientos demo. Cada consulta queda en `external_data_snapshots` con `is_simulated = true` y la UI la marca SIMULADO. |
 | `OfficialSenasaRegistryProvider` (`senasa-official`) | `senasa` | Placeholder. **No consulta nada.** Sin credenciales responde `ERROR: credenciales no configuradas`. Con credenciales responde `ERROR: falta la especificación del servicio`. |
 
+Además existe `OfficialDataProvider` (`apps/api/src/modules/external-data/domain/official-data.provider.ts`),
+el puerto que alimenta la capa **Verificado por fuente oficial** del detalle de la solicitud. Su
+único adapter, `SenasaOfficialDataProvider`, responde `NOT_CONNECTED` con el motivo. Por eso esa
+capa queda vacía y la UI muestra "NO CONECTADA". Nada se presenta como verificado por SENASA.
+
+El registro mock solo conoce los RENSPA de los establecimientos semilla. Ante cualquier otro
+RENSPA (por ejemplo, los de las solicitudes de demostración) responde `ERROR: Sin conexión con
+SENASA` en lugar de `NOT_FOUND`, para no afirmar que un RENSPA no existe.
+
 Ambos implementan el puerto `LivestockRegistryProvider.lookupByRenspa(renspa)`
 (`apps/api/src/modules/external-data/domain/livestock-registry.provider.ts`), que devuelve:
 
