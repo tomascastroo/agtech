@@ -118,7 +118,10 @@ export class DemoService {
     await this.requests.assetFor(
       await this.entity(created.id),
       {
-        name: scenario.system === 'FEEDLOT' ? 'Feedlot La Esperanza' : 'Rodeo de cría La Esperanza',
+        name:
+          scenario.system === 'FEEDLOT'
+            ? 'Feedlot La Esperanza (demo)'
+            : 'Rodeo de cría La Esperanza (demo)',
         declaredQuantity: 1500,
         metadata: {
           sistema_productivo: scenario.system === 'FEEDLOT' ? 'Feedlot' : 'Cría',

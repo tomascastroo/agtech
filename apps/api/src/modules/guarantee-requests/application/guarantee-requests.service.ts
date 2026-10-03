@@ -943,8 +943,10 @@ export class GuaranteeRequestsService {
       this.documentation.checklist(request, options),
       options.forProducer ? Promise.resolve(null) : this.documentation.dataLayers(request),
     ]);
-    const missingDocuments: { name: string }[] = documentation
-      ? documentation.items.filter((i) => i.obligation === 'MANDATORY' && i.status === 'PENDING')
+    const missingDocuments: { name: string; requested?: boolean }[] = documentation
+      ? documentation.items
+          .filter((i) => i.obligation === 'MANDATORY' && i.status === 'PENDING')
+          .map((i) => ({ name: i.name, requested: Boolean(i.requested) }))
       : requiredDocuments
           .filter((r) => !r.satisfied)
           .map((r) => ({ name: r.alternatives.join(' o ') }));
@@ -1036,7 +1038,7 @@ export class GuaranteeRequestsService {
         title: requirement
           ? `${requesterName} solicita: ${requirement.name}`
           : `${requesterName} solicita ${i.kind === 'EVIDENCE' ? 'más evidencia' : 'documentación adicional'}`,
-        description: i.message,
+        description: requirement ? `${requirement.purpose} ${requirement.howTo}` : i.message,
         informationRequestId: i.id,
         documentType: i.documentType,
         requirementCode: i.requirementCode,
@@ -1063,11 +1065,13 @@ export class GuaranteeRequestsService {
             description:
               (type?.evidenceGuidance as string | undefined) ?? 'Agregá fotos del activo.',
           });
-        if (missingDocuments.length > 0)
+        // Lo que la entidad ya pidió aparece como su propia tarea: no se repite acá.
+        const notRequested = missingDocuments.filter((d) => !d.requested);
+        if (notRequested.length > 0)
           tasks.push({
             kind: 'DOCUMENTS',
             title: 'Completar documentación',
-            description: `Falta: ${missingDocuments.map((d) => d.name).join(', ')}.`,
+            description: `Falta: ${notRequested.map((d) => d.name).join(', ')}.`,
           });
         if (missing.length === 0)
           tasks.push({

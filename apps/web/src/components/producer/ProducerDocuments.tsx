@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { DocumentAnalysisNote } from '@/components/domain/DocumentAnalysisNote';
 import { DocumentStatusBadge } from '@/components/domain/StatusBadges';
 import { Button } from '@/components/ui/Button';
@@ -8,7 +8,7 @@ import { Callout } from '@/components/ui/Feedback';
 import { Field, FormRow, Input, Select } from '@/components/ui/Field';
 import { Icon } from '@/components/ui/Icon';
 import { api, ApiError } from '@/lib/api/client';
-import type { DocumentItem, GuaranteeRequest } from '@/lib/api/types';
+import type { DocumentItem, GuaranteeRequest, RequirementItem } from '@/lib/api/types';
 import { DOCUMENT_TYPE_LABELS } from '@/lib/labels';
 import styles from './producer.module.css';
 
@@ -40,7 +40,9 @@ export function ProducerDocuments({
   onUploaded: () => unknown;
   suggestedType?: string | null;
 }) {
-  const firstMissing = request.requiredDocuments.find((r) => !r.satisfied)?.alternatives[0];
+  const firstMissing =
+    request.documentation?.items.find((r) => r.status === 'PENDING')?.documentTypes[0]?.code ??
+    request.requiredDocuments.find((r) => !r.satisfied)?.alternatives[0];
   const [open, setOpen] = useState(false);
   const [type, setType] = useState(suggestedType ?? firstMissing ?? 'OTHER');
   const [expiresAt, setExpiresAt] = useState('');
@@ -48,6 +50,11 @@ export function ProducerDocuments({
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  // Al abrir el formulario desde un requisito, llevarlo a la vista (en el celular queda abajo).
+  useEffect(() => {
+    if (open) formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [open, type]);
 
   const start = (preset?: string) => {
     setType(preset ?? suggestedType ?? firstMissing ?? 'OTHER');
@@ -81,7 +88,23 @@ export function ProducerDocuments({
 
   return (
     <div className={styles.list}>
-      {request.requiredDocuments.length > 0 ? (
+      {request.documentation ? (
+        <div className={styles.list} data-testid="producer-requirements">
+          <p className={styles.sectionTitle}>Documentación requerida</p>
+          {request.documentation.items
+            .filter((r) => r.status !== 'NOT_APPLICABLE')
+            // Primero lo obligatorio y lo que la entidad ya pidió.
+            .sort((a, b) => priority(a) - priority(b))
+            .map((r) => (
+              <RequirementCard
+                key={r.code}
+                item={r}
+                requester={request.requester.name}
+                onUpload={() => start(r.documentTypes[0]?.code)}
+              />
+            ))}
+        </div>
+      ) : request.requiredDocuments.length > 0 ? (
         <div>
           <p className={styles.sectionTitle}>Documentación requerida</p>
           {request.requiredDocuments.map((r) => (
@@ -110,7 +133,7 @@ export function ProducerDocuments({
               <span className={`${styles.docMark} ${styles.docOk}`}>
                 <Icon name="document" size={14} />
               </span>
-              <span style={{ flex: 1, minWidth: 0 }}>
+              <span className={styles.docInfo}>
                 <strong style={{ display: 'block' }}>{d.title}</strong>
                 <span className={styles.muted}>
                   {label(d.type)} · {fmtDate(d.uploadedAt)}
@@ -133,7 +156,12 @@ export function ProducerDocuments({
       ) : null}
 
       {open ? (
-        <form onSubmit={submit} className={styles.card} aria-label="Agregar documento">
+        <form
+          ref={formRef}
+          onSubmit={submit}
+          className={styles.card}
+          aria-label="Agregar documento"
+        >
           <FormRow columns={2}>
             <Field label="Tipo de documento">
               {(p) => (
@@ -196,3 +224,102 @@ export function ProducerDocuments({
     </div>
   );
 }
+
+const PRODUCER_STATUS: Record<
+  RequirementItem['status'],
+  {
+    text: string;
+    tone: 'ok' | 'warn' | 'error' | 'neutral';
+    icon: 'check' | 'warning' | 'critical' | 'clock' | 'info';
+  }
+> = {
+  PENDING: { text: 'Pendiente', tone: 'warn', icon: 'warning' },
+  UPLOADED: { text: 'Documento cargado · en revisión', tone: 'ok', icon: 'check' },
+  PROCESSING: { text: 'Documento cargado · leyendo…', tone: 'ok', icon: 'clock' },
+  CONSISTENT: { text: 'Datos consistentes', tone: 'ok', icon: 'check' },
+  INCONSISTENT: { text: 'No coincide con lo declarado', tone: 'error', icon: 'critical' },
+  REVIEW_REQUIRED: { text: 'La entidad lo revisa', tone: 'warn', icon: 'warning' },
+  NOT_APPLICABLE: { text: 'No aplica', tone: 'ok', icon: 'check' },
+};
+
+/** Un requisito para el productor: qué falta, por qué, quién lo pide y cómo cargarlo. */
+function RequirementCard({
+  item,
+  requester,
+  onUpload,
+}: {
+  item: RequirementItem;
+  requester: string;
+  onUpload: () => void;
+}) {
+  // Un requisito condicional o según evaluación que nadie pidió no es una tarea pendiente.
+  const optional = item.status === 'PENDING' && item.obligation !== 'MANDATORY' && !item.requested;
+  const state = optional
+    ? { text: `Solo si ${requester} lo pide`, tone: 'neutral' as const, icon: 'info' as const }
+    : PRODUCER_STATUS[item.status];
+  const toneClass =
+    state.tone === 'ok'
+      ? styles.reqOk
+      : state.tone === 'error'
+        ? styles.reqError
+        : state.tone === 'neutral'
+          ? styles.muted
+          : styles.reqWarn;
+  const cardClass =
+    item.status === 'CONSISTENT'
+      ? styles.reqCardOk
+      : item.status === 'INCONSISTENT'
+        ? styles.reqCardError
+        : (item.status === 'PENDING' && !optional) || item.status === 'REVIEW_REQUIRED'
+          ? styles.reqCardAttention
+          : '';
+  const needsUpload = (item.status === 'PENDING' && !optional) || item.status === 'INCONSISTENT';
+  return (
+    <div
+      className={`${styles.reqCard} ${cardClass}`}
+      data-testid={`producer-requirement-${item.code}`}
+    >
+      <div className={styles.reqHead}>
+        <span className={styles.reqName}>{item.name}</span>
+        <span className={styles.chip}>{item.obligationLabel}</span>
+      </div>
+      {item.document ? (
+        <span className={`${styles.reqLine} ${styles.reqOk}`}>
+          <Icon name="check" size={16} /> Documento cargado
+        </span>
+      ) : null}
+      <span className={`${styles.reqLine} ${toneClass}`} data-status={item.status}>
+        <Icon name={state.icon} size={16} /> {state.text}
+        {item.status === 'INCONSISTENT' ? ` · ${item.reason}` : ''}
+      </span>
+      <p className={styles.muted}>
+        <strong>Por qué:</strong> {item.purpose}
+      </p>
+      <p className={styles.muted}>
+        <strong>Lo solicita:</strong> {requester}
+        {item.requested
+          ? ` · pedido el ${new Date(item.requested.at).toLocaleDateString('es-AR')}`
+          : item.condition
+            ? ` · ${item.condition}`
+            : ''}
+      </p>
+      {needsUpload ? (
+        <>
+          <p className={styles.muted}>
+            <strong>Cómo:</strong> {item.howTo}
+          </p>
+          <button
+            type="button"
+            className={`${styles.bigButton} ${styles.bigButtonSecondary}`}
+            onClick={onUpload}
+          >
+            <Icon name="upload" size={20} /> Subí una foto o PDF
+          </button>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+const priority = (r: RequirementItem) =>
+  r.requested || r.status === 'INCONSISTENT' ? 0 : r.obligation === 'MANDATORY' ? 1 : 2;

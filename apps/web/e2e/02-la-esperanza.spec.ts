@@ -12,7 +12,9 @@ test('La Esperanza: verificación de punta a punta', async ({ page, context }) =
 
   await page.goto('/assets');
   await page.getByPlaceholder(/Buscar por activo/).fill('Esperanza');
-  await page.getByText('Rodeo de cría La Esperanza').click();
+  await page
+    .getByRole('cell', { name: /^Rodeo de cría La Esperanza La Esperanza · Rauch/ })
+    .click();
   await expect(page.getByTestId('asset-declared')).toContainText('1.500');
   await expect(page.getByTestId('asset-declared')).toContainText('cabezas');
 
@@ -71,7 +73,7 @@ test('La Esperanza: verificación de punta a punta', async ({ page, context }) =
     await expect(page.getByText('Confirmado como garantía')).toBeVisible();
   }
   await page.goto('/monitoring');
-  await expect(page.getByRole('row', { name: /Rodeo de cría La Esperanza/ })).toContainText(
-    'Activa',
-  );
+  await expect(
+    page.getByRole('row', { name: /Rodeo de cría La Esperanza(?! \(demo)/ }),
+  ).toContainText('Activa');
 });

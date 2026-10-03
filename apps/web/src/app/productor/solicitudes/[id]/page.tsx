@@ -107,7 +107,12 @@ export default function ProducerRequestPage() {
           <Section
             id="documentacion"
             title="Documentación"
-            done={r.requiredDocuments.every((d) => d.satisfied)}
+            done={
+              r.documentation
+                ? r.documentation.summary.mandatoryMissing === 0 &&
+                  r.documentation.summary.attention === 0
+                : r.requiredDocuments.every((d) => d.satisfied)
+            }
             subtitle={`${r.documentCount} documento${r.documentCount === 1 ? '' : 's'}`}
           >
             <ProducerDocuments
@@ -210,6 +215,7 @@ function InfoRequestCard({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const evidence = info.kind === 'EVIDENCE';
+  const requirement = r.documentation?.items.find((x) => x.code === info.requirementCode);
   const respond = async () => {
     setBusy(true);
     setError(null);
@@ -227,10 +233,19 @@ function InfoRequestCard({
   return (
     <section className={styles.card} style={{ borderLeft: '4px solid var(--data-1)' }}>
       <p className={styles.cardTitle}>
-        {r.requester.name} solicita {evidence ? 'más evidencia' : 'documentación adicional'}
+        {requirement
+          ? `${r.requester.name} solicita: ${requirement.name}`
+          : `${r.requester.name} solicita ${evidence ? 'más evidencia' : 'documentación adicional'}`}
       </p>
-      <p>{info.message}</p>
-      {!evidence && info.documentType ? (
+      {requirement ? (
+        <>
+          <p>{requirement.purpose}</p>
+          <p className={styles.muted}>{requirement.howTo}</p>
+        </>
+      ) : (
+        <p>{info.message}</p>
+      )}
+      {!evidence && !requirement && info.documentType ? (
         <span className={styles.chip}>
           {DOCUMENT_TYPE_LABELS[info.documentType] ?? info.documentType}
         </span>

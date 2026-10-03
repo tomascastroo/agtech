@@ -341,8 +341,9 @@
 
 .docRow {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2) var(--space-3);
   padding: var(--space-2) 0;
   border-bottom: 1px solid var(--border);
 }
@@ -404,4 +405,53 @@
   margin-top: 2px;
   font-size: var(--text-xs);
   color: var(--text-muted);
+}
+
+.docInfo {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+
+/* Documentación requerida (checklist de la solicitud) */
+.reqCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+}
+.reqCardAttention {
+  border-left: 4px solid var(--warning-mark);
+}
+.reqCardError {
+  border-left: 4px solid var(--critical-mark);
+}
+.reqCardOk {
+  border-left: 4px solid var(--success-mark);
+}
+.reqHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.reqName {
+  font-weight: 600;
+}
+.reqLine {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-sm);
+}
+.reqOk {
+  color: var(--success-fg);
+}
+.reqWarn {
+  color: var(--warning-fg);
+}
+.reqError {
+  color: var(--critical-fg);
 }
