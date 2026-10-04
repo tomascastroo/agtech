@@ -58,17 +58,26 @@ export function TaskCard({
 }
 
 export function ProgressBar({ progress }: { progress: GuaranteeRequest['progress'] }) {
+  const done = progress.filter((p) => p.state === 'DONE').length;
+  const missing = progress.filter((p) => p.state !== 'DONE').map((p) => p.label);
   return (
-    <div className={styles.progress} aria-label="Progreso de la solicitud">
-      {progress.map((p) => (
-        <div key={p.key} className={`${styles.progressStep} ${styles[`state${p.state}`] ?? ''}`}>
-          <span className={styles.progressBar} />
-          <span>
-            {p.label}
-            {p.state === 'DONE' ? ' ✓' : p.state === 'PENDING' ? ' ⚠' : ''}
-          </span>
-        </div>
-      ))}
+    <div aria-label="Progreso de la solicitud">
+      <div className={styles.progress}>
+        {progress.map((p) => (
+          <div key={p.key} className={`${styles.progressStep} ${styles[`state${p.state}`] ?? ''}`}>
+            <span className={styles.progressBar} />
+            <span className={styles.progressLabel}>
+              {p.label}
+              {p.state === 'DONE' ? ' ✓' : p.state === 'PENDING' ? ' ⚠' : ''}
+            </span>
+          </div>
+        ))}
+      </div>
+      {/* En pantallas angostas los nombres de cada paso no entran: se resume en una línea. */}
+      <p className={styles.progressSummary} aria-hidden="true">
+        {done} de {progress.length} pasos completos
+        {missing.length ? ` · Falta: ${missing.join(', ')}` : ''}
+      </p>
     </div>
   );
 }

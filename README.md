@@ -309,11 +309,15 @@ Resumen (detalle en [`docs/architecture.md`](docs/architecture.md#9-decisiones-d
 
 | Suite | Herramienta | Resultado |
 |---|---|---|
-| API — unitarios (scoring, alertas, metadata, firmas de archivo, geo, entorno, CSV, satélite, filtro de errores) | Vitest | **43/43** |
-| API — integración (auth y sesión, multi-tenancy y RBAC, activos/documentos/dispositivos, flujo completo de verificación) | Vitest + Supertest sobre PostgreSQL/Redis/MinIO reales | **34/34** |
-| Frontend — componentes y librerías (metadata por JSON Schema, score, badges, progreso, cliente HTTP, formatos, login) | Vitest + Testing Library | **26/26** |
-| Servicio de visión (calidad, conteo, cambios, API) | pytest | **16/16** |
-| E2E (login/logout, La Esperanza de punta a punta, alta de activo → documento → dispositivo → evidencia → verificación → alerta → informe) | Playwright contra `docker compose up` | **5/5** |
+| API — unitarios e integración (scoring, alertas, metadata, OCR y requisitos documentales, demo, auth, multi-tenancy y RBAC, solicitudes, portal del productor, escáner, manga + RFID, flujo de verificación) | Vitest + Supertest sobre PostgreSQL/Redis/MinIO reales | **196/196** |
+| Frontend — componentes y librerías | Vitest + Testing Library | **76/76** |
+| Servicio de visión (calidad, conteo, tracking, documentos/OCR, API) | pytest | **59/59** |
+| E2E — 7 archivos, 12 tests (login, La Esperanza, alta de activo, escáner fijo/corral/foto, manga + RFID, documentación de crédito y demo) | Playwright contra el build de producción, base recién creada | **12/12** |
+
+Los E2E se corren contra el build de producción (`docker compose up` o `pnpm build` + `pnpm start`),
+sobre una base recién inicializada. Con `next dev`, el indicador de errores de desarrollo de
+Next.js puede tapar botones en la vista de celular del escáner. Los escáneres necesitan los videos
+`.y4m` de cámara falsa (ver `docs/scanner.md`).
 
 Lint y formato: oxlint, ESLint, Prettier y Ruff sin errores; `tsc --noEmit` sin errores.
 

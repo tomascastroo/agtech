@@ -251,15 +251,43 @@
 }
 
 .progress {
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
   gap: 4px;
-  overflow-x: auto;
   padding-bottom: 2px;
 }
 
+.progressLabel {
+  overflow-wrap: anywhere;
+  hyphens: auto;
+  line-height: 1.25;
+}
+
+.progressSummary {
+  display: none;
+  margin: 6px 0 0;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+@media (max-width: 419px) {
+  .progressLabel {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .progressSummary {
+    display: block;
+  }
+}
+
 .progressStep {
-  flex: 1 0 auto;
-  min-width: 82px;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 6px;

@@ -53,7 +53,8 @@ export const DEMO_SCENARIOS: DemoScenario[] = [
     name: 'Demo ganadera completa',
     description:
       'Rodeo de cría de 1.500 bovinos con documentación consistente, enviado a verificar.',
-    shows: 'Flujo completo: documentos leídos por OCR, datos consistentes y verificación.',
+    shows:
+      'Flujo completo: documentos leídos por OCR, datos consistentes y verificación con el motor real. Tres fotos no alcanzan para contar 1.500 cabezas: el resultado muestra cuánto se vio y pide revisión.',
     system: 'CRIA',
     documents: ['constancia-cuit', 'renspa', 'certificado-vacunacion', 'contrato-arrendamiento'],
     photos: 3,
