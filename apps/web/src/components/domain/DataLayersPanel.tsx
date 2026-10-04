@@ -91,13 +91,18 @@ export function DataLayersPanel({ layers }: { layers: DataLayers }) {
 }
 
 /** Aviso fijo en toda pantalla con datos de demostración. */
-export function DemoBanner({ scenario }: { scenario?: string | null }) {
+export function DemoBanner({
+  scenario,
+  message = 'Productor, CUIT, RENSPA y documentos son ficticios y no tienen validez. Generado con “Simular solicitud” para probar el flujo.',
+}: {
+  scenario?: string | null;
+  message?: string;
+}) {
   return (
     <div className={styles.demoBanner} role="note" data-testid="demo-banner">
       <div>
         <strong>DATOS DE DEMOSTRACIÓN</strong>
-        {scenario ? ` · ${scenario}` : ''}. Productor, CUIT, RENSPA y documentos son ficticios y no
-        tienen validez. Generado con “Simular solicitud” para probar el flujo.
+        {scenario ? ` · ${scenario}` : ''}. {message}
       </div>
     </div>
   );

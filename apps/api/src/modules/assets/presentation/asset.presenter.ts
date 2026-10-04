@@ -23,6 +23,7 @@ export function presentAssetSummary(asset: AssetEntity) {
     id: asset.id,
     name: asset.name,
     status: asset.status,
+    dataSource: asset.dataSource,
     declaredQuantity: asset.declaredQuantity,
     unit: asset.unit,
     declaredValue: asset.declaredValue,

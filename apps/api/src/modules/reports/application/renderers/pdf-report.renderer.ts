@@ -61,6 +61,7 @@ export class PdfReportRenderer {
     });
 
     this.header(doc, data);
+    this.demoNotice(doc, data);
     this.title(doc, data);
     this.kpis(doc, data);
     this.summary(doc, data);
@@ -105,6 +106,29 @@ export class PdfReportRenderer {
       align: 'right',
     });
     doc.y = 100;
+  }
+
+  private demoNotice(doc: Doc, data: GuaranteeReportData) {
+    if (!data.demo) return;
+    doc.rect(MARGIN, doc.y, CONTENT_WIDTH, 34).fill('#FFF4D6');
+    doc
+      .fillColor(COLORS.amber)
+      .font('Helvetica-Bold')
+      .fontSize(10)
+      .text('DATOS DE DEMOSTRACIÓN – INFORME SIN VALOR', MARGIN + 10, doc.y + 7, {
+        width: CONTENT_WIDTH - 20,
+      });
+    doc
+      .fillColor(COLORS.text)
+      .font('Helvetica')
+      .fontSize(8)
+      .text(
+        'Generado con “Simular solicitud”: productor, CUIT, RENSPA y documentos son ficticios. No respalda ninguna garantía real.',
+        MARGIN + 10,
+        doc.y + 1,
+        { width: CONTENT_WIDTH - 20 },
+      );
+    doc.y += 14;
   }
 
   private title(doc: Doc, data: GuaranteeReportData) {
@@ -415,7 +439,7 @@ export class PdfReportRenderer {
         .font('Helvetica')
         .fontSize(7)
         .text(
-          `AgroGarantías · Informe ${data.reportId.slice(0, 8)} · Verificación ${data.verificationId}`,
+          `${data.demo ? 'DEMOSTRACIÓN – SIN VALOR · ' : ''}AgroGarantías · Informe ${data.reportId.slice(0, 8)} · Verificación ${data.verificationId}`,
           MARGIN,
           y,
           {

@@ -144,3 +144,13 @@ export const DemoBadge = ({ label = 'DEMO' }: { label?: string }) => (
     {label}
   </Badge>
 );
+
+/** Nombre de un activo/establecimiento con la marca DEMO cuando viene de "Simular solicitud". */
+export const DemoName = ({ name, dataSource }: { name: string; dataSource?: string }) =>
+  dataSource === 'DEMO' ? (
+    <span className="demo-name">
+      {name} <DemoBadge />
+    </span>
+  ) : (
+    <>{name}</>
+  );

@@ -51,6 +51,7 @@ function presentReport(report: ReportEntity) {
     asset: report.asset
       ? {
           name: report.asset.name,
+          dataSource: report.asset.dataSource,
           typeName: report.asset.assetType?.name ?? null,
           establishmentName: report.asset.establishment?.name ?? null,
         }

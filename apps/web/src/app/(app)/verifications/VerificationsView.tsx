@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { OutcomeBadge, RunStatusBadge } from '@/components/domain/StatusBadges';
+import { DemoName, OutcomeBadge, RunStatusBadge } from '@/components/domain/StatusBadges';
 import styles from '@/components/domain/domain.module.css';
 import { Button } from '@/components/ui/Button';
 import { EmptyState, ErrorState, Loading } from '@/components/ui/Feedback';
@@ -69,7 +69,13 @@ export function VerificationsView() {
                 header: 'Activo',
                 render: (r) => (
                   <CellTitle
-                    title={r.asset?.name ?? r.assetId}
+                    title={
+                      r.asset ? (
+                        <DemoName name={r.asset.name} dataSource={r.asset.dataSource} />
+                      ) : (
+                        r.assetId
+                      )
+                    }
                     subtitle={
                       r.asset
                         ? `${r.asset.typeName ?? ''} · ${r.asset.establishmentName ?? ''}`

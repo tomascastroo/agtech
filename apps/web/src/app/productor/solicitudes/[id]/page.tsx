@@ -1,5 +1,6 @@
 'use client';
 
+import { DemoBanner } from '@/components/domain/DataLayersPanel';
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { ProgressBar, ProducerStatusBadge } from '@/components/producer/Cards';
@@ -43,6 +44,13 @@ export default function ProducerRequestPage() {
 
   return (
     <>
+      {r.dataSource === 'DEMO' ? (
+        <DemoBanner
+          message={
+            'Esta cuenta y sus solicitudes son ficticias. Los documentos cargados acá no tienen validez y nada se envía a una entidad real.'
+          }
+        />
+      ) : null}
       <section className={styles.card}>
         <div className={styles.cardHead}>
           <div>

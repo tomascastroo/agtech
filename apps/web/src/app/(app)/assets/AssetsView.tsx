@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useDeferredValue, useState } from 'react';
-import { AssetStatusBadge, SeverityBadge } from '@/components/domain/StatusBadges';
+import { AssetStatusBadge, DemoName, SeverityBadge } from '@/components/domain/StatusBadges';
 import styles from '@/components/domain/domain.module.css';
 import { Badge } from '@/components/ui/Badge';
 import { Button, LinkButton } from '@/components/ui/Button';
@@ -112,7 +112,7 @@ export function AssetsView() {
                 header: 'Activo',
                 render: (a) => (
                   <CellTitle
-                    title={a.name}
+                    title={<DemoName name={a.name} dataSource={a.dataSource} />}
                     subtitle={
                       a.establishment
                         ? `${a.establishment.name} · ${a.establishment.locality ?? a.establishment.province}`

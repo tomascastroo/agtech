@@ -3,11 +3,13 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, type ReactNode } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loading } from '@/components/ui/Feedback';
 import { Icon, type IconName } from '@/components/ui/Icon';
 import { api } from '@/lib/api/client';
 import { useSession } from '@/lib/api/queries';
+import type { ProducerOverview } from '@/lib/api/types';
+import { producerKeys } from './data';
 import { registerServiceWorker } from '@/lib/scanner/offline';
 import { startAutoSync } from '@/lib/scanner/sync';
 import styles from './producer.module.css';
@@ -27,6 +29,13 @@ export function ProducerShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const client = useQueryClient();
   const role = session.data?.role;
+  // Cuenta de demostración: la marca queda visible en todas las pantallas del portal.
+  const overview = useQuery({
+    queryKey: producerKeys.overview,
+    queryFn: () => api<ProducerOverview>('/producer/me'),
+    enabled: role === 'PRODUCER',
+  });
+  const demo = overview.data?.requests.some((r) => r.dataSource === 'DEMO') ?? false;
 
   // Escáner de bovinos: escaneos guardados sin señal se sincronizan solos al volver la conexión.
   useEffect(() => {
@@ -53,7 +62,14 @@ export function ProducerShell({ children }: { children: ReactNode }) {
     <div className={styles.app}>
       <header className={styles.topbar}>
         <div className={styles.brand}>
-          <strong>AgroGarantías</strong>
+          <strong>
+            AgroGarantías
+            {demo ? (
+              <mark className={styles.demoTag} data-testid="producer-demo-tag">
+                DEMO
+              </mark>
+            ) : null}
+          </strong>
           <span>Portal del productor · {session.data?.fullName}</span>
         </div>
         <button

@@ -69,6 +69,17 @@ export const keys = {
 export const useSession = () =>
   useQuery({ queryKey: keys.me, queryFn: () => api<SessionUser>('/auth/me'), staleTime: 60_000 });
 
+/** ¿Está habilitado "Simular solicitud" (DEMO_MODE) en este entorno? */
+export const useDemoMode = (allowed = true) => {
+  const query = useQuery({
+    queryKey: ['demo-scenarios'],
+    queryFn: () => api<{ enabled: boolean }>('/demo/scenarios'),
+    enabled: allowed,
+    staleTime: 5 * 60_000,
+  });
+  return query.data?.enabled === true;
+};
+
 export const useDashboard = () =>
   useQuery({
     queryKey: keys.dashboard,

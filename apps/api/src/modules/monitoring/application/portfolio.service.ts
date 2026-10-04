@@ -26,6 +26,8 @@ export interface PortfolioRow {
   declaredValue: number | null;
   currency: string;
   location: unknown;
+  /** DEMO = creado con "Simular solicitud" (datos ficticios). */
+  dataSource: 'REAL' | 'DEMO';
 }
 
 function state(status: string, highestSeverity: string | null): PortfolioState {
@@ -45,7 +47,7 @@ export class PortfolioService {
       `SELECT a.id AS asset_id, a.name AS asset_name, t.code AS type_code, t.name AS type_name,
               e.id AS establishment_id, e.name AS establishment_name, e.holder_name, e.province,
               a.declared_quantity, a.last_detected_quantity, a.unit, a.status, a.last_verified_at, a.last_score,
-              a.declared_value, a.currency, ST_AsGeoJSON(a.location)::json AS location,
+              a.declared_value, a.currency, ST_AsGeoJSON(a.location)::json AS location, a.data_source,
               r.risk_level,
               (SELECT count(*) FROM alerts al WHERE al.asset_id = a.id AND al.status <> 'RESOLVED')::int AS open_alerts,
               (SELECT al.severity FROM alerts al WHERE al.asset_id = a.id AND al.status <> 'RESOLVED'
@@ -82,15 +84,22 @@ export class PortfolioService {
       declaredValue: r.declared_value === null ? null : Number(r.declared_value),
       currency: r.currency as string,
       location: r.location,
+      dataSource: r.data_source as 'REAL' | 'DEMO',
     }));
   }
 
+  /**
+   * Indicadores de la cartera. Solo cuentan datos REALES: las solicitudes de demostración se
+   * informan aparte (`operations.demoRequests`) para que nunca se mezclen con la cartera real.
+   */
   async dashboard(organizationId: string) {
-    const rows = await this.rows(organizationId);
+    const rows = (await this.rows(organizationId)).filter((r) => r.dataSource === 'REAL');
     const [alertCounts, latestVerifications, recentAlerts] = await Promise.all([
       this.dataSource.query(
-        `SELECT severity, count(*)::int AS count FROM alerts
-          WHERE organization_id = $1 AND status <> 'RESOLVED' GROUP BY severity`,
+        `SELECT al.severity, count(*)::int AS count FROM alerts al
+           JOIN assets a ON a.id = al.asset_id
+          WHERE al.organization_id = $1 AND al.status <> 'RESOLVED' AND a.data_source = 'REAL'
+          GROUP BY al.severity`,
         [organizationId],
       ) as Promise<{ severity: string; count: number }[]>,
       this.dataSource.query(
@@ -102,7 +111,7 @@ export class PortfolioService {
            JOIN asset_types t ON t.id = a.asset_type_id
            JOIN establishments e ON e.id = a.establishment_id
            LEFT JOIN verification_results r ON r.verification_run_id = vr.id
-          WHERE vr.organization_id = $1
+          WHERE vr.organization_id = $1 AND a.data_source = 'REAL'
           ORDER BY vr.created_at DESC LIMIT 6`,
         [organizationId],
       ) as Promise<Record<string, unknown>[]>,
@@ -112,7 +121,7 @@ export class PortfolioService {
            FROM alerts al
            JOIN assets a ON a.id = al.asset_id
            JOIN establishments e ON e.id = a.establishment_id
-          WHERE al.organization_id = $1 AND al.status <> 'RESOLVED'
+          WHERE al.organization_id = $1 AND al.status <> 'RESOLVED' AND a.data_source = 'REAL'
           ORDER BY CASE al.severity WHEN 'CRITICAL' THEN 0 WHEN 'WARNING' THEN 1 ELSE 2 END, al.created_at DESC
           LIMIT 6`,
         [organizationId],
@@ -123,19 +132,23 @@ export class PortfolioService {
     const [ops] = (await this.dataSource.query(
       `SELECT
          (SELECT count(*)::int FROM guarantee_requests
-           WHERE organization_id = $1 AND status IN ('INVITED','IN_PROGRESS')) AS "waitingProducer",
+           WHERE organization_id = $1 AND data_source = 'REAL'
+             AND status IN ('INVITED','IN_PROGRESS')) AS "waitingProducer",
          (SELECT count(*)::int FROM guarantee_requests
            WHERE organization_id = $1 AND data_source = 'DEMO') AS "demoRequests",
-         (SELECT count(*)::int FROM information_requests
-           WHERE organization_id = $1 AND status = 'OPEN') AS "openInformationRequests",
+         (SELECT count(*)::int FROM information_requests ir
+           JOIN guarantee_requests gr ON gr.id = ir.guarantee_request_id
+           WHERE ir.organization_id = $1 AND ir.status = 'OPEN' AND gr.data_source = 'REAL') AS "openInformationRequests",
          (SELECT count(*)::int FROM documents d JOIN document_analyses da ON da.document_id = d.id
            WHERE d.organization_id = $1 AND d.deleted_at IS NULL AND d.status = 'PENDING_REVIEW'
+             AND d.data_source = 'REAL'
              AND da.status IN ('REVIEW_REQUIRED','FAILED')) AS "documentsToReview",
-         (SELECT count(*)::int FROM verification_runs
-           WHERE organization_id = $1 AND status IN ('PENDING','PROCESSING')) AS "verificationsInProgress",
-         (SELECT count(*)::int FROM verification_runs
-           WHERE organization_id = $1 AND status = 'COMPLETED'
-             AND completed_at > now() - interval '30 days') AS "verificationsCompleted30d",
+         (SELECT count(*)::int FROM verification_runs vr JOIN assets a ON a.id = vr.asset_id
+           WHERE vr.organization_id = $1 AND a.data_source = 'REAL'
+             AND vr.status IN ('PENDING','PROCESSING')) AS "verificationsInProgress",
+         (SELECT count(*)::int FROM verification_runs vr JOIN assets a ON a.id = vr.asset_id
+           WHERE vr.organization_id = $1 AND a.data_source = 'REAL' AND vr.status = 'COMPLETED'
+             AND vr.completed_at > now() - interval '30 days') AS "verificationsCompleted30d",
          (SELECT count(DISTINCT producer_tax_id)::int FROM guarantee_requests
            WHERE organization_id = $1 AND data_source = 'REAL') AS producers`,
       [organizationId],

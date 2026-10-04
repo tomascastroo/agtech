@@ -75,9 +75,12 @@ export interface MonitoringConfig {
   lastRunAt: string | null;
 }
 
+export type DataSource = 'REAL' | 'DEMO';
+
 export interface AssetSummary {
   id: string;
   name: string;
+  dataSource?: DataSource;
   status: AssetStatus;
   declaredQuantity: number;
   unit: Unit;
@@ -127,6 +130,7 @@ export interface AssetDetail extends Omit<AssetSummary, 'assetType' | 'establish
 export interface EstablishmentSummary {
   id: string;
   name: string;
+  dataSource?: DataSource;
   holderName: string;
   province: string;
   locality: string | null;
@@ -273,6 +277,7 @@ export interface VerificationRun {
   asset: {
     id: string;
     name: string;
+    dataSource?: DataSource;
     unit: Unit;
     typeCode: string | null;
     typeName: string | null;
@@ -355,6 +360,7 @@ export interface AlertItem {
   asset: {
     id: string;
     name: string;
+    dataSource?: DataSource;
     typeName: string | null;
     establishmentName: string | null;
   } | null;
@@ -370,7 +376,12 @@ export interface ReportItem {
   status: 'PENDING' | 'GENERATING' | 'READY' | 'FAILED';
   verificationId: string;
   assetId: string;
-  asset: { name: string; typeName: string | null; establishmentName: string | null } | null;
+  asset: {
+    name: string;
+    dataSource?: DataSource;
+    typeName: string | null;
+    establishmentName: string | null;
+  } | null;
   generatedAt: string | null;
   failureReason: string | null;
   createdAt: string;
@@ -410,6 +421,7 @@ export interface DeviceInstallation {
 export interface PortfolioRow {
   assetId: string;
   assetName: string;
+  dataSource?: DataSource;
   assetTypeCode: string;
   assetTypeName: string;
   establishmentId: string;

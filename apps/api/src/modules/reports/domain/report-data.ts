@@ -28,6 +28,8 @@ export interface GuaranteeReportData {
   reportVersion: number;
   verificationId: string;
   generatedAt: string;
+  /** Generado a partir de una solicitud de demostración (datos ficticios, sin validez). */
+  demo: boolean;
   organization: { name: string };
   establishment: {
     name: string;

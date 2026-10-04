@@ -18,7 +18,9 @@ import {
   OutcomeBadge,
   RunStatusBadge,
   SimulatedBadge,
+  DemoBadge,
 } from '@/components/domain/StatusBadges';
+import { DemoBanner } from '@/components/domain/DataLayersPanel';
 import styles from '@/components/domain/domain.module.css';
 import { MapLegend, MapView, type MapPoint, type MapPolygon } from '@/components/map/MapView';
 import { Badge } from '@/components/ui/Badge';
@@ -559,7 +561,12 @@ export function AssetDetailView() {
       <PageHeader
         breadcrumb={[{ href: '/assets', label: 'Activos y garantías' }]}
         title={a.name}
-        badge={<AssetStatusBadge status={a.status} />}
+        badge={
+          <>
+            <AssetStatusBadge status={a.status} />
+            {a.dataSource === 'DEMO' ? <DemoBadge /> : null}
+          </>
+        }
         description={`${a.assetType.name} · ${a.establishment.name} · ${a.establishment.locality ? `${a.establishment.locality}, ` : ''}${a.establishment.province}`}
         actions={
           <>
@@ -580,6 +587,7 @@ export function AssetDetailView() {
           </>
         }
       />
+      {a.dataSource === 'DEMO' ? <DemoBanner /> : null}
       <StatRow>
         <Stat
           label="Declarado"

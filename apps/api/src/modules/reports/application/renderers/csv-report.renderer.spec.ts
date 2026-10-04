@@ -16,6 +16,7 @@ describe('CsvReportRenderer', () => {
       evidence: [],
       history: [],
       simulatedSources: [],
+      demo: false,
     } as unknown as GuaranteeReportData;
     const csv = new CsvReportRenderer().render(data).toString('utf8');
     expect(csv).toContain(`"'=HYPERLINK(""http://x"")"`);

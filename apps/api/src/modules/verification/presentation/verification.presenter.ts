@@ -39,6 +39,7 @@ export function presentRun(run: VerificationRunEntity) {
       ? {
           id: run.asset.id,
           name: run.asset.name,
+          dataSource: run.asset.dataSource,
           unit: run.asset.unit,
           typeCode: run.asset.assetType?.code ?? null,
           typeName: run.asset.assetType?.name ?? null,

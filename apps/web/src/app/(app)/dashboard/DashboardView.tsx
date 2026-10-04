@@ -13,12 +13,12 @@ import {
 } from '@/components/domain/StatusBadges';
 import styles from '@/components/domain/domain.module.css';
 import { LinkButton } from '@/components/ui/Button';
-import { EmptyState, ErrorState, Skeleton } from '@/components/ui/Feedback';
+import { Callout, EmptyState, ErrorState, Skeleton } from '@/components/ui/Feedback';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Grid, Panel } from '@/components/ui/Panel';
 import { Stat, StatRow } from '@/components/ui/Stat';
 import { CellTitle, DataTable } from '@/components/ui/Table';
-import { useDashboard, useSession } from '@/lib/api/queries';
+import { useDashboard, useDemoMode, useSession } from '@/lib/api/queries';
 import { api } from '@/lib/api/client';
 import type { DashboardSummary, GuaranteeRequest } from '@/lib/api/types';
 import {
@@ -38,6 +38,7 @@ export function DashboardView() {
   const can = useCan();
   const session = useSession();
   const { data, isPending, error } = useDashboard();
+  const demoMode = useDemoMode(can('assets:write'));
   const ops = data?.operations;
 
   return (
@@ -51,7 +52,9 @@ export function DashboardView() {
           <>
             {can('assets:write') ? (
               <>
-                <LinkButton href="/requests/new?modo=demo">Simular solicitud</LinkButton>
+                {demoMode ? (
+                  <LinkButton href="/requests/new?modo=demo">Simular solicitud</LinkButton>
+                ) : null}
                 <LinkButton href="/requests/new" variant="primary" icon="plus">
                   Nueva solicitud
                 </LinkButton>
@@ -113,14 +116,23 @@ export function DashboardView() {
             <Stat
               label="Productores"
               value={formatNumber(ops?.producers ?? 0)}
-              caption={
-                ops?.demoRequests
-                  ? `+ ${plural(ops.demoRequests, 'solicitud', 'solicitudes')} de demostración`
-                  : 'con solicitudes en la entidad'
-              }
+              caption="con solicitudes en la entidad"
               testId="kpi-producers"
             />
           </StatRow>
+          {ops?.demoRequests ? (
+            <Callout tone="info">
+              <span data-testid="dashboard-demo-note">
+                Los indicadores, el riesgo y el valor de la cartera incluyen solo datos reales.{' '}
+                {plural(
+                  ops.demoRequests,
+                  'solicitud de demostración',
+                  'solicitudes de demostración',
+                )}{' '}
+                quedan fuera y se listan marcadas como DEMO.
+              </span>
+            </Callout>
+          ) : null}
 
           <Grid columns="main-side">
             <ActionRequests />

@@ -23,6 +23,7 @@ export class CsvReportRenderer {
     add('informe', 'version', data.reportVersion);
     add('informe', 'esquema', data.schemaVersion);
     add('informe', 'generado', data.generatedAt);
+    add('informe', 'datos_demostracion', data.demo ? 'SI' : 'NO');
     add('informe', 'verificacion_id', data.verificationId);
     add('informe', 'organizacion', data.organization.name);
     for (const [key, value] of Object.entries(data.establishment))

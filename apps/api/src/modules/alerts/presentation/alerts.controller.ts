@@ -78,6 +78,7 @@ export function presentAlert(alert: AlertEntity) {
       ? {
           id: alert.asset.id,
           name: alert.asset.name,
+          dataSource: alert.asset.dataSource,
           typeName: alert.asset.assetType?.name ?? null,
           establishmentName: alert.asset.establishment?.name ?? null,
         }

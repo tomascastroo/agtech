@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { downloadReport, type ReportFormat } from '@/components/domain/ReportActions';
 import styles from '@/components/domain/domain.module.css';
+import { DemoName } from '@/components/domain/StatusBadges';
 import { Badge, type Tone } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Callout, EmptyState, ErrorState, Loading } from '@/components/ui/Feedback';
@@ -70,7 +71,12 @@ export function ReportsView() {
                       </Link>
                     }
                     subtitle={
-                      r.asset ? `${r.asset.name} · ${r.asset.establishmentName ?? ''}` : undefined
+                      r.asset ? (
+                        <>
+                          <DemoName name={r.asset.name} dataSource={r.asset.dataSource} /> ·{' '}
+                          {r.asset.establishmentName ?? ''}
+                        </>
+                      ) : undefined
                     }
                   />
                 ),

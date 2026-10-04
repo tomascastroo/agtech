@@ -2,6 +2,7 @@ import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { AppConfig } from '../src/config/app-config.js';
 import {
   as,
   login,
@@ -397,5 +398,54 @@ describe('Documentación de crédito, OCR y simulación de solicitudes', () => {
       .post('/api/demo/guarantee-requests')
       .send({ scenario: 'NO_EXISTE' })
       .expect(422);
+  });
+
+  it('el panel de cartera cuenta solo datos reales; los listados marcan lo DEMO', async () => {
+    await as(ctx, maria)
+      .post('/api/demo/guarantee-requests')
+      .send({ scenario: 'READY' })
+      .expect(201);
+    const [counts] = (await ctx.dataSource.query(
+      `SELECT count(*) FILTER (WHERE data_source = 'REAL')::int AS real,
+              count(*) FILTER (WHERE data_source = 'DEMO')::int AS demo
+         FROM assets WHERE deleted_at IS NULL
+          AND organization_id = (SELECT organization_id FROM users WHERE email = $1)`,
+      [USERS.maria],
+    )) as { real: number; demo: number }[];
+    expect(counts!.demo).toBeGreaterThan(0);
+    const summary = await as(ctx, maria).get('/api/dashboard/summary').expect(200);
+    expect(summary.body.kpis.monitoredAssets).toBe(counts!.real);
+    expect(summary.body.operations.demoRequests).toBeGreaterThan(0);
+    const bovines = summary.body.byAssetType.find((t: { code: string }) => t.code === 'BOVINOS');
+    expect(bovines.count).toBeLessThanOrEqual(counts!.real);
+    for (const v of summary.body.latestVerifications as { assetName: string }[])
+      expect(v.assetName).not.toMatch(/\(demo\)/);
+    // Los listados sí muestran lo DEMO, marcado.
+    const assets = await as(ctx, maria).get('/api/assets?pageSize=100').expect(200);
+    const demoAssets = (assets.body.items as { name: string; dataSource: string }[]).filter(
+      (a) => a.dataSource === 'DEMO',
+    );
+    expect(demoAssets.length).toBe(counts!.demo);
+    expect(demoAssets.every((a) => a.name.endsWith('(demo)'))).toBe(true);
+    const portfolio = await as(ctx, maria).get('/api/monitoring/portfolio').expect(200);
+    expect(
+      (portfolio.body as { dataSource: string }[]).filter((r) => r.dataSource === 'DEMO').length,
+    ).toBe(counts!.demo);
+  });
+
+  it('con DEMO_MODE=disabled no se puede simular (y se informa deshabilitado)', async () => {
+    const config = ctx.app.get(AppConfig);
+    const previous = config.env.DEMO_MODE;
+    Object.assign(config.env, { DEMO_MODE: 'disabled' });
+    try {
+      const scenarios = await as(ctx, maria).get('/api/demo/scenarios').expect(200);
+      expect(scenarios.body.enabled).toBe(false);
+      await as(ctx, maria)
+        .post('/api/demo/guarantee-requests')
+        .send({ scenario: 'COMPLETE' })
+        .expect(403);
+    } finally {
+      Object.assign(config.env, { DEMO_MODE: previous });
+    }
   });
 });

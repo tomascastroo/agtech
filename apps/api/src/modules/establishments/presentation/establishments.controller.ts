@@ -17,6 +17,7 @@ function present(establishment: EstablishmentEntity) {
   return {
     id: establishment.id,
     name: establishment.name,
+    dataSource: establishment.dataSource,
     holderName: establishment.holderName,
     holderTaxId: establishment.holderTaxId,
     renspa: establishment.renspa,

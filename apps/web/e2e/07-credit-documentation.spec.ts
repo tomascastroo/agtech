@@ -57,6 +57,9 @@ test('demo con documentación faltante: OCR, pedido al productor, carga y result
     .fill(producerPassword);
   await pp.getByRole('button', { name: 'Ingresar' }).click();
   await pp.waitForURL('**/productor**');
+  // La cuenta de demostración se identifica en todo el portal.
+  await expect(pp.getByTestId('producer-demo-tag')).toBeVisible();
+  await expect(pp.getByTestId('demo-banner')).toContainText('DATOS DE DEMOSTRACIÓN');
   await expect(pp.getByText('Banco del Campo solicita: RENSPA')).toBeVisible();
   await pp.getByText('Banco del Campo solicita: RENSPA').click();
 
@@ -74,6 +77,10 @@ test('demo con documentación faltante: OCR, pedido al productor, carga y result
     timeout: 90_000,
   });
   await producer.close();
+
+  // El panel de cartera no mezcla la demo con la cartera real.
+  await page.goto('/dashboard');
+  await expect(page.getByTestId('dashboard-demo-note')).toContainText('solo datos reales');
 
   // 13. La entidad reprocesa y ve el resultado actualizado.
   await page.goto(requestUrl);

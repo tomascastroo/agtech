@@ -3,7 +3,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
-import { AssetStatusBadge, RunStatusBadge } from '@/components/domain/StatusBadges';
+import { AssetStatusBadge, DemoBadge, RunStatusBadge } from '@/components/domain/StatusBadges';
 import { VerificationProgress } from '@/components/domain/VerificationProgress';
 import { VerificationResultView } from '@/components/domain/VerificationResult';
 import styles from '@/components/domain/domain.module.css';
@@ -165,11 +165,14 @@ export function VerificationView() {
         ]}
         title="Verificación"
         badge={
-          run.data ? (
-            <RunStatusBadge status={run.data.status} />
-          ) : (
-            <AssetStatusBadge status={a.status} />
-          )
+          <>
+            {run.data ? (
+              <RunStatusBadge status={run.data.status} />
+            ) : (
+              <AssetStatusBadge status={a.status} />
+            )}
+            {a.dataSource === 'DEMO' ? <DemoBadge /> : null}
+          </>
         }
         description={`${a.name} · ${a.assetType.name} · ${a.establishment.name}`}
         actions={

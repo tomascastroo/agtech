@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { DemoBanner } from '@/components/domain/DataLayersPanel';
 import { RequestCard, TaskCard } from '@/components/producer/Cards';
 import { useProducerOverview } from '@/components/producer/data';
 import styles from '@/components/producer/producer.module.css';
@@ -32,6 +33,13 @@ export default function ProducerHome() {
             : `Tenés ${tasks.length} tarea${tasks.length === 1 ? '' : 's'} pendiente${tasks.length === 1 ? '' : 's'}.`}
         </p>
       </div>
+      {requests.some((r) => r.dataSource === 'DEMO') ? (
+        <DemoBanner
+          message={
+            'Esta cuenta y sus solicitudes son ficticias. Los documentos cargados acá no tienen validez y nada se envía a una entidad real.'
+          }
+        />
+      ) : null}
 
       {tasks.length > 0 ? (
         <section className={styles.list} aria-label="Tareas pendientes">

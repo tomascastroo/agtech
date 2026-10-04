@@ -14,6 +14,7 @@ import { CellTitle, DataTable } from '@/components/ui/Table';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Panel } from '@/components/ui/Panel';
 import { api } from '@/lib/api/client';
+import { useDemoMode } from '@/lib/api/queries';
 import type { GuaranteeRequest, Unit } from '@/lib/api/types';
 import { formatNumber, formatRelative, unitLabel } from '@/lib/format';
 
@@ -43,6 +44,7 @@ export function RequestsView() {
   const router = useRouter();
   const [filter, setFilter] = useState<Filter>('ALL');
   const [text, setText] = useState('');
+  const demoMode = useDemoMode();
   const query = useQuery({
     queryKey: ['guarantee-requests'],
     queryFn: () => api<GuaranteeRequest[]>('/guarantee-requests'),
@@ -55,9 +57,11 @@ export function RequestsView() {
         description="El productor declara su activo y aporta evidencia; AgroGarantías verifica y la entidad evalúa el resultado."
         actions={
           <div className={domain.inline}>
-            <LinkButton href="/requests/new?modo=demo" variant="secondary">
-              Simular solicitud
-            </LinkButton>
+            {demoMode ? (
+              <LinkButton href="/requests/new?modo=demo" variant="secondary">
+                Simular solicitud
+              </LinkButton>
+            ) : null}
             <LinkButton href="/requests/new" icon="plus" variant="primary">
               Nueva solicitud
             </LinkButton>

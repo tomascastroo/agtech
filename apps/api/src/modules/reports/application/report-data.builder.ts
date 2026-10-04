@@ -139,6 +139,7 @@ export class ReportDataBuilder {
       reportVersion: version,
       verificationId: run.id,
       generatedAt: new Date().toISOString(),
+      demo: asset.dataSource === 'DEMO',
       organization: { name: organization.name },
       establishment: {
         name: establishment.name,

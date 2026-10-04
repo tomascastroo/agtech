@@ -14,7 +14,7 @@ import { Icon } from '@/components/ui/Icon';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Panel } from '@/components/ui/Panel';
 import { api, ApiError } from '@/lib/api/client';
-import { useApiMutation, useAssetTypes } from '@/lib/api/queries';
+import { useApiMutation, useAssetTypes, useDemoMode } from '@/lib/api/queries';
 import type {
   DemoCreated,
   DemoScenarioOption,
@@ -35,7 +35,10 @@ const NEW_PRODUCER = '__new__';
  */
 export function NewRequestForm() {
   const params = useSearchParams();
-  const [mode, setMode] = useState<Mode>(params.get('modo') === 'demo' ? 'demo' : 'create');
+  const [chosenMode, setMode] = useState<Mode>(params.get('modo') === 'demo' ? 'demo' : 'create');
+  const demoMode = useDemoMode();
+  // Con DEMO_MODE=disabled no se ofrece la simulación (y la API la rechaza igual).
+  const mode: Mode = demoMode ? chosenMode : 'create';
   return (
     <>
       <PageHeader
@@ -44,21 +47,23 @@ export function NewRequestForm() {
         breadcrumb={[{ href: '/requests', label: 'Solicitudes de garantía' }]}
       />
       <div className={styles.stack}>
-        <div className={`${styles.optionGrid} ${styles.optionWide}`} role="radiogroup">
-          <ModeCard
-            active={mode === 'create'}
-            onClick={() => setMode('create')}
-            title="Crear solicitud"
-            text="Para un productor real. Se genera un link de invitación personal."
-          />
-          <ModeCard
-            active={mode === 'demo'}
-            onClick={() => setMode('demo')}
-            title="Simular solicitud"
-            text="Datos ficticios precargados para probar o presentar el sistema."
-            badge={<DemoBadge />}
-          />
-        </div>
+        {demoMode ? (
+          <div className={`${styles.optionGrid} ${styles.optionWide}`} role="radiogroup">
+            <ModeCard
+              active={mode === 'create'}
+              onClick={() => setMode('create')}
+              title="Crear solicitud"
+              text="Para un productor real. Se genera un link de invitación personal."
+            />
+            <ModeCard
+              active={mode === 'demo'}
+              onClick={() => setMode('demo')}
+              title="Simular solicitud"
+              text="Datos ficticios precargados para probar o presentar el sistema."
+              badge={<DemoBadge />}
+            />
+          </div>
+        ) : null}
         {mode === 'create' ? <CreateRequest /> : <SimulateRequest />}
       </div>
     </>

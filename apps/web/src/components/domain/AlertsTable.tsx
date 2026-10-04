@@ -12,7 +12,7 @@ import { keys, useApiMutation } from '@/lib/api/queries';
 import type { AlertItem } from '@/lib/api/types';
 import { formatDateTime, formatRelative } from '@/lib/format';
 import { useCan } from '@/lib/permissions';
-import { AlertStatusBadge, SeverityBadge } from './StatusBadges';
+import { AlertStatusBadge, DemoName, SeverityBadge } from './StatusBadges';
 import styles from './domain.module.css';
 
 /** Alertas con acciones de seguimiento y resolución (la resolución exige una nota). */
@@ -93,7 +93,11 @@ export function AlertsTable({
                   render: (a: AlertItem) =>
                     a.asset ? (
                       <CellTitle
-                        title={<Link href={`/assets/${a.assetId}`}>{a.asset.name}</Link>}
+                        title={
+                          <Link href={`/assets/${a.assetId}`}>
+                            <DemoName name={a.asset.name} dataSource={a.asset.dataSource} />
+                          </Link>
+                        }
                         subtitle={a.asset.establishmentName ?? undefined}
                       />
                     ) : (

@@ -3,7 +3,12 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
-import { PortfolioStateBadge, RiskBadge, SeverityBadge } from '@/components/domain/StatusBadges';
+import {
+  DemoName,
+  PortfolioStateBadge,
+  RiskBadge,
+  SeverityBadge,
+} from '@/components/domain/StatusBadges';
 import styles from '@/components/domain/domain.module.css';
 import { MapLegend, MapView, STATE_COLORS } from '@/components/map/MapView';
 import { Badge } from '@/components/ui/Badge';
@@ -62,7 +67,7 @@ function EventsTimeline({ assetId }: { assetId?: string }) {
 function SelectedAsset({ row, onClose }: { row: PortfolioRow; onClose: () => void }) {
   return (
     <Panel
-      title={row.assetName}
+      title={<DemoName name={row.assetName} dataSource={row.dataSource} />}
       subtitle={`${row.assetTypeName} · ${row.establishmentName}`}
       actions={
         <Button variant="ghost" size="sm" icon="x" onClick={onClose} aria-label="Cerrar detalle" />
@@ -220,7 +225,7 @@ export function MonitoringView() {
                   id: r.assetId,
                   coordinates: r.location.coordinates,
                   color: STATE_COLORS[r.state] ?? '#5b6670',
-                  label: `${r.assetName} · ${PORTFOLIO_STATE_LABELS[r.state]}`,
+                  label: `${r.assetName}${r.dataSource === 'DEMO' ? ' (DEMO)' : ''} · ${PORTFOLIO_STATE_LABELS[r.state]}`,
                   selected: r.assetId === selectedId,
                 }))}
                 onSelect={setSelectedId}
@@ -259,7 +264,7 @@ export function MonitoringView() {
                   header: 'Activo',
                   render: (r) => (
                     <CellTitle
-                      title={r.assetName}
+                      title={<DemoName name={r.assetName} dataSource={r.dataSource} />}
                       subtitle={`${r.establishmentName} · ${r.holderName}`}
                     />
                   ),
