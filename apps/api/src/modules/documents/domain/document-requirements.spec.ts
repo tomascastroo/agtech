@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   CREDIT_PRODUCTS,
   evaluateRequirement,
+  evaluateRequirements,
   REQUIREMENT_CATALOG,
   type RequirementDocument,
 } from './document-requirements.js';
@@ -82,5 +83,27 @@ describe('requisitos documentales', () => {
       const mandatory = p.requirements.filter((r) => r.obligation === 'MANDATORY');
       expect(mandatory.length).toBeLessThan(Object.keys(REQUIREMENT_CATALOG).length);
     }
+  });
+
+  it('cada documento respalda un solo requisito (no se verifican todos juntos)', () => {
+    const reqs = (['ACTIVITY_HISTORY', 'FINANCIAL_STATEMENTS', 'RENSPA', 'TAX_ID'] as const).map(
+      (code, sortOrder) => ({ code, definition: REQUIREMENT_CATALOG[code], sortOrder }),
+    );
+    // Un único documento de información financiera: lo toma el requisito específico, no ambos.
+    const one = evaluateRequirements(reqs, [doc({ id: 'fin', type: 'FINANCIAL_STATEMENTS' })]);
+    expect(one.get('FINANCIAL_STATEMENTS')!.documentId).toBe('fin');
+    expect(one.get('ACTIVITY_HISTORY')!.documentId).toBeNull();
+    expect(one.get('ACTIVITY_HISTORY')!.status).toBe('PENDING');
+    // Con dos documentos, cada requisito tiene el suyo; RENSPA y CUIT no se tocan.
+    const two = evaluateRequirements(reqs, [
+      doc({ id: 'fin', type: 'FINANCIAL_STATEMENTS' }),
+      doc({ id: 'hist', type: 'OTHER' }),
+      doc({ id: 'ren', type: 'RENSPA', analysis: null }),
+    ]);
+    expect(two.get('ACTIVITY_HISTORY')!.documentId).toBe('hist');
+    expect(two.get('RENSPA')!.status).toBe('PROCESSING');
+    expect(two.get('TAX_ID')!.status).toBe('PENDING');
+    const used = [...two.values()].map((e) => e.documentId).filter(Boolean);
+    expect(new Set(used).size).toBe(used.length);
   });
 });

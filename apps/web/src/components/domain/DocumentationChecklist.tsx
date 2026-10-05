@@ -46,6 +46,8 @@ export function DocumentationChecklist({
 }) {
   const [open, setOpen] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Acción en curso por fila: el "procesando" se ve solo en el botón tocado.
+  const [busy, setBusy] = useState<string | null>(null);
   const docs = useQuery({
     queryKey: ['asset-documents', assetId],
     queryFn: () => api<{ documents: DocumentItem[] }>(`/assets/${assetId}/documents`),
@@ -59,13 +61,16 @@ export function DocumentationChecklist({
       ['asset-documents', assetId],
     ],
   );
-  const act = async (action: () => Promise<unknown>) => {
+  const act = async (key: string, action: () => Promise<unknown>) => {
     setError(null);
+    setBusy(key);
     try {
       await run.mutateAsync(action);
       await onChange();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No fue posible completar la acción.');
+    } finally {
+      setBusy(null);
     }
   };
   const byId = new Map((docs.data?.documents ?? []).map((d) => [d.id, d]));
@@ -184,9 +189,10 @@ export function DocumentationChecklist({
                             <Button
                               size="sm"
                               variant="ghost"
-                              loading={run.isPending}
+                              loading={busy === `analyze-${item.code}`}
+                              disabled={busy !== null}
                               onClick={() =>
-                                act(() =>
+                                act(`analyze-${item.code}`, () =>
                                   api(`/documents/${item.document!.id}/analyze`, {
                                     method: 'POST',
                                   }),
@@ -203,8 +209,10 @@ export function DocumentationChecklist({
                           <Button
                             size="sm"
                             variant="secondary"
+                            loading={busy === `request-${item.code}`}
+                            disabled={busy !== null}
                             onClick={() =>
-                              act(() =>
+                              act(`request-${item.code}`, () =>
                                 api(`/guarantee-requests/${requestId}/information-requests`, {
                                   method: 'POST',
                                   body: { kind: 'DOCUMENT', requirementCode: item.code },
@@ -218,8 +226,10 @@ export function DocumentationChecklist({
                         <Button
                           size="sm"
                           variant="ghost"
+                          loading={busy === `applicability-${item.code}`}
+                          disabled={busy !== null}
                           onClick={() =>
-                            act(() =>
+                            act(`applicability-${item.code}`, () =>
                               api(`/guarantee-requests/${requestId}/requirements/${item.code}`, {
                                 method: 'PATCH',
                                 body: { notApplicable: item.status !== 'NOT_APPLICABLE' },

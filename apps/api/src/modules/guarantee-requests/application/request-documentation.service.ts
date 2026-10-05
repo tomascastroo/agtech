@@ -10,7 +10,7 @@ import { AUDIT_ACTIONS } from '../../audit/application/audit.types.js';
 import { DocumentAnalysisService } from '../../documents/application/document-analysis.service.js';
 import {
   creditProduct,
-  evaluateRequirement,
+  evaluateRequirements,
   OBLIGATION_LABELS,
   REQUIREMENT_CATALOG,
   REQUIREMENT_CATEGORIES,
@@ -99,56 +99,60 @@ export class RequestDocumentationService {
       where: { guaranteeRequestId: request.id, status: 'OPEN' },
     });
     const product = request.creditProductCode ? creditProduct(request.creditProductCode) : null;
-    const items = rows
-      .filter((row) => row.requirementCode in REQUIREMENT_CATALOG)
-      .map((row) => {
-        const def = REQUIREMENT_CATALOG[row.requirementCode as RequirementCode];
-        const evaluation = evaluateRequirement(
-          def,
-          docs.map((d) => ({
-            id: d.id,
-            type: d.type,
-            status: d.status,
-            createdAt: d.createdAt,
-            analysis: analyses.get(d.id) ?? null,
-          })),
-          { notApplicable: row.notApplicable },
-        );
-        const doc = docs.find((d) => d.id === evaluation.documentId);
-        const pending = open.find((i) => i.requirementCode === row.requirementCode);
-        return {
-          code: def.code,
-          name: def.name,
-          description: def.description,
-          purpose: def.purpose,
-          howTo: def.howTo,
-          category: def.category,
-          categoryLabel: REQUIREMENT_CATEGORIES[def.category],
-          obligation: row.obligation,
-          obligationLabel: OBLIGATION_LABELS[row.obligation],
-          condition: row.condition,
-          documentTypes: def.documentTypes.map((t) => ({ code: t, name: DOCUMENT_TYPE_NAMES[t] })),
-          validation: def.validation,
-          status: evaluation.status,
-          statusLabel: REQUIREMENT_STATUS_LABELS[evaluation.status],
-          reason: evaluation.reason,
-          note: row.note,
-          document: doc
-            ? {
-                id: doc.id,
-                title: doc.title,
-                type: doc.type,
-                uploadedAt: doc.createdAt,
-                demo: doc.dataSource === 'DEMO',
-              }
-            : null,
-          requested: pending
-            ? { informationRequestId: pending.id, at: pending.createdAt, message: pending.message }
-            : null,
-          sources: options.forProducer ? undefined : def.sources,
-          officialVerification: def.officialVerification,
-        };
-      });
+    const known = rows.filter((row) => row.requirementCode in REQUIREMENT_CATALOG);
+    const evaluations = evaluateRequirements(
+      known.map((row) => ({
+        code: row.requirementCode,
+        definition: REQUIREMENT_CATALOG[row.requirementCode as RequirementCode],
+        notApplicable: row.notApplicable,
+        sortOrder: row.sortOrder,
+      })),
+      docs.map((d) => ({
+        id: d.id,
+        type: d.type,
+        status: d.status,
+        createdAt: d.createdAt,
+        analysis: analyses.get(d.id) ?? null,
+      })),
+    );
+    const items = known.map((row) => {
+      const def = REQUIREMENT_CATALOG[row.requirementCode as RequirementCode];
+      const evaluation = evaluations.get(row.requirementCode)!;
+      const doc = docs.find((d) => d.id === evaluation.documentId);
+      const pending = open.find((i) => i.requirementCode === row.requirementCode);
+      return {
+        code: def.code,
+        name: def.name,
+        description: def.description,
+        purpose: def.purpose,
+        howTo: def.howTo,
+        category: def.category,
+        categoryLabel: REQUIREMENT_CATEGORIES[def.category],
+        obligation: row.obligation,
+        obligationLabel: OBLIGATION_LABELS[row.obligation],
+        condition: row.condition,
+        documentTypes: def.documentTypes.map((t) => ({ code: t, name: DOCUMENT_TYPE_NAMES[t] })),
+        validation: def.validation,
+        status: evaluation.status,
+        statusLabel: REQUIREMENT_STATUS_LABELS[evaluation.status],
+        reason: evaluation.reason,
+        note: row.note,
+        document: doc
+          ? {
+              id: doc.id,
+              title: doc.title,
+              type: doc.type,
+              uploadedAt: doc.createdAt,
+              demo: doc.dataSource === 'DEMO',
+            }
+          : null,
+        requested: pending
+          ? { informationRequestId: pending.id, at: pending.createdAt, message: pending.message }
+          : null,
+        sources: options.forProducer ? undefined : def.sources,
+        officialVerification: def.officialVerification,
+      };
+    });
     const count = (s: RequirementStatus) => items.filter((i) => i.status === s).length;
     return {
       product: product

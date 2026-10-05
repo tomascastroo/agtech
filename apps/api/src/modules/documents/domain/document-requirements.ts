@@ -424,3 +424,37 @@ export function evaluateRequirement(
     ...at,
   };
 }
+
+/**
+ * Evalúa varios requisitos a la vez asignando cada documento a UN solo requisito: primero los que
+ * aceptan un único tipo, después los que aceptan varios (p. ej. "Otro" o "Información
+ * financiera"), con los documentos que quedaron libres. Así un mismo archivo no cambia el estado
+ * de varios requisitos a la vez.
+ */
+export function evaluateRequirements(
+  requirements: {
+    code: string;
+    definition: Pick<RequirementDefinition, 'documentTypes' | 'validation'>;
+    notApplicable?: boolean;
+    sortOrder: number;
+  }[],
+  documents: RequirementDocument[],
+): Map<string, RequirementEvaluation> {
+  const claimed = new Set<string>();
+  const result = new Map<string, RequirementEvaluation>();
+  const ordered = [...requirements].sort(
+    (a, b) =>
+      a.definition.documentTypes.length - b.definition.documentTypes.length ||
+      a.sortOrder - b.sortOrder,
+  );
+  for (const r of ordered) {
+    const evaluation = evaluateRequirement(
+      r.definition,
+      documents.filter((d) => !claimed.has(d.id)),
+      { notApplicable: r.notApplicable },
+    );
+    if (evaluation.documentId) claimed.add(evaluation.documentId);
+    result.set(r.code, evaluation);
+  }
+  return result;
+}
