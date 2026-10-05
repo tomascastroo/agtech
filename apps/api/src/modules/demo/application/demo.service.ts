@@ -7,7 +7,11 @@ import { Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../../../common/auth/authenticated-user.js';
 import type { RequestContext } from '../../../common/auth/decorators.js';
 import { randomToken } from '../../../common/crypto/hashing.js';
-import { ForbiddenActionError, ValidationFailedError } from '../../../common/domain/errors.js';
+import {
+  CapabilityNotAvailableError,
+  ForbiddenActionError,
+  ValidationFailedError,
+} from '../../../common/domain/errors.js';
 import { AppConfig } from '../../../config/app-config.js';
 import { AuditService } from '../../audit/application/audit.service.js';
 import { AUDIT_ACTIONS } from '../../audit/application/audit.types.js';
@@ -68,6 +72,8 @@ export class DemoService {
     if (!this.enabled) throw new ForbiddenActionError('El modo demostración está desactivado');
     const scenario = demoScenario(scenarioCode);
     if (!scenario) throw new ValidationFailedError('Escenario de demostración inexistente');
+    // Se leen todos los archivos ANTES de crear nada: si faltan, no queda una demo a medias.
+    const files = await this.loadFiles(scenario.documents, scenario.photos);
     const suffix = randomToken(4)
       .toLowerCase()
       .replace(/[^a-z0-9]/g, 'x');
@@ -132,9 +138,8 @@ export class DemoService {
     );
 
     // 4. Documentos de demostración (OCR real) y fotos.
-    const dir = this.assetsDir();
     for (const doc of scenario.documents) {
-      const buffer = await readFile(join(dir, 'demo-documents', `${doc}.png`));
+      const buffer = files.documents.get(doc)!;
       await this.requests.documentFor(
         await this.entity(created.id),
         { buffer, originalname: `${doc}-demo.png`, mimetype: 'image/png', size: buffer.length },
@@ -146,8 +151,7 @@ export class DemoService {
         context,
       );
     }
-    for (const photo of DEMO_PHOTOS.slice(0, scenario.photos)) {
-      const buffer = await readFile(join(dir, 'cameras', photo));
+    for (const [photo, buffer] of files.photos) {
       await this.requests.evidenceFor(
         await this.entity(created.id),
         { buffer, originalname: `demo-${photo}`, mimetype: 'image/jpeg', size: buffer.length },
@@ -193,6 +197,26 @@ export class DemoService {
 
   private entity(id: string) {
     return this.entities.findOneByOrFail({ id });
+  }
+
+  private async loadFiles(documents: string[], photos: number) {
+    const dir = this.assetsDir();
+    const read = async (path: string) => {
+      try {
+        return await readFile(join(dir, path));
+      } catch {
+        throw new CapabilityNotAvailableError(
+          `Faltan los archivos de demostración (${path}). Configurá SEED_ASSETS_DIR con la carpeta infra/seed-assets.`,
+        );
+      }
+    };
+    const loadedDocuments = new Map<string, Buffer>();
+    for (const doc of documents)
+      loadedDocuments.set(doc, await read(join('demo-documents', `${doc}.png`)));
+    const loadedPhotos: [string, Buffer][] = [];
+    for (const photo of DEMO_PHOTOS.slice(0, photos))
+      loadedPhotos.push([photo, await read(join('cameras', photo))]);
+    return { documents: loadedDocuments, photos: loadedPhotos };
   }
 
   private assetsDir(): string {

@@ -41,6 +41,10 @@ x-api-env: &api-env
   RATE_LIMIT_PER_MINUTE: ${RATE_LIMIT_PER_MINUTE:-300}
   RATE_LIMIT_LOGIN_PER_MINUTE: ${RATE_LIMIT_LOGIN_PER_MINUTE:-10}
   SEED_DEMO_PASSWORD: ${SEED_DEMO_PASSWORD:-AgroDemo2026!}
+  # Imágenes y documentos de demostración (copiados en la imagen de la API).
+  SEED_ASSETS_DIR: /app/seed-assets
+  # "Simular solicitud": enabled | disabled
+  DEMO_MODE: ${DEMO_MODE:-enabled}
 
 services:
   postgres:
@@ -115,7 +119,6 @@ services:
     command: ["node", "dist/database/bootstrap.js"]
     environment:
       <<: *api-env
-      SEED_ASSETS_DIR: /app/seed-assets
     depends_on:
       postgres:
         condition: service_healthy
