@@ -23,3 +23,7 @@ apps/ai-service/.cache/
 # Escáner de bovinos: runtime ONNX y modelo copiados/descargados en el build
 apps/web/public/ort/
 apps/web/public/models/
+
+# Generados por `next dev`
+apps/web/AGENTS.md
+apps/web/CLAUDE.md
