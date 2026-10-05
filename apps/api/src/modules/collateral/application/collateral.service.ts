@@ -60,6 +60,17 @@ export type CollateralActor =
 
 const SISTEMA = 'AgroGarantías (sistema)';
 
+const TRIGGER_LABELS: Record<AssessmentTrigger, string> = {
+  VERIFICACION: 'verificación',
+  INSPECCION: 'inspección',
+  MOVIMIENTO: 'movimiento',
+  DECLARACION: 'declaración',
+  DOCUMENTO: 'documento',
+  DATOS_GARANTIA: 'datos de la garantía',
+  RECALCULO: 'recálculo',
+  PROGRAMADO: 'monitoreo programado',
+};
+
 /** Producción declarada (`sistema_productivo` del rodeo) → tipo de producción de la garantía. */
 export function productionFromMetadata(metadata: Record<string, unknown> | null): ProductionType {
   switch (metadata?.sistema_productivo) {
@@ -434,7 +445,7 @@ export class CollateralService {
           newState: assessment.state,
           summary: (changed
             ? `${STATE_LABELS[g.state]} → ${STATE_LABELS[assessment.state]}: ${assessment.stateReason}`
-            : `Evaluación (${trigger.toLowerCase()}): ${STATE_LABELS[assessment.state]}. ${assessment.stateReason}`
+            : `Evaluación (${TRIGGER_LABELS[trigger]}): ${STATE_LABELS[assessment.state]}. ${assessment.stateReason}`
           ).slice(0, 600),
           payload: { snapshotId: snapshot.id, trigger },
         });

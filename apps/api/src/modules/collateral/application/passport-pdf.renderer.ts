@@ -42,6 +42,19 @@ const s = (v: unknown): string =>
       ? JSON.stringify(v)
       : String(v as string | number | boolean);
 
+/**
+ * Las fuentes estándar del PDF (Helvetica, WinAnsi) no tienen algunos símbolos que usa la app:
+ * se reemplazan para que no salgan caracteres rotos.
+ */
+const PDF_SAFE: [RegExp, string][] = [
+  [/→/g, '»'],
+  [/−/g, '-'],
+  [/≥/g, '>='],
+  [/≤/g, '<='],
+  [/±/g, '±'],
+];
+export const pdfSafe = (text: string) => PDF_SAFE.reduce((t, [re, to]) => t.replace(re, to), text);
+
 const stateColor = (state: string) =>
   state === 'VERIFICADA' || state === 'EN_MONITOREO'
     ? C.green
@@ -64,6 +77,12 @@ export function renderPassportPdf(p: Passport, generatedBy: string): Promise<Buf
       Subject: 'Verificación continua de garantía bovina',
     },
   });
+  // Todo texto pasa por pdfSafe.
+  const rawText = doc.text.bind(doc) as (text: string, ...rest: unknown[]) => typeof doc;
+  (doc as unknown as { text: (text: unknown, ...rest: unknown[]) => typeof doc }).text = (
+    text: unknown,
+    ...rest: unknown[]
+  ) => rawText(typeof text === 'string' ? pdfSafe(text) : String(text), ...rest);
   const chunks: Buffer[] = [];
   doc.on('data', (c: Buffer) => chunks.push(c));
   const done = new Promise<Buffer>((resolve, reject) => {
@@ -312,7 +331,7 @@ export function renderPassportPdf(p: Passport, generatedBy: string): Promise<Buf
 
   section('Verificaciones');
   table(
-    ['Fecha', 'Método', 'Decl.', 'Esper.', 'Obs.', 'Verif.', 'Calidad', 'Resultado'],
+    ['Fecha', 'Método', 'Decl.', 'Esper.', 'Obs.', 'Verif.', 'Calidad', 'Estado resultante'],
     [70, 90, 40, 40, 40, 40, 60, W - 380],
     (p.verifications as Row[]).map((v) => [
       dt(v.verifiedAt),
@@ -435,6 +454,9 @@ export function renderPassportPdf(p: Passport, generatedBy: string): Promise<Buf
   const range = doc.bufferedPageRange();
   for (let i = range.start; i < range.start + range.count; i++) {
     doc.switchToPage(i);
+    // El pie va dentro del margen inferior: sin esto pdfkit agrega una página en blanco.
+    const bottom = doc.page.margins.bottom;
+    doc.page.margins.bottom = 0;
     doc
       .fillColor(C.muted)
       .font('Helvetica')
@@ -443,8 +465,9 @@ export function renderPassportPdf(p: Passport, generatedBy: string): Promise<Buf
         `${demo ? 'DATOS DE DEMOSTRACIÓN · ' : ''}AgroGarantías verifica y monitorea; no presta, no custodia ni emite títulos. Garantía ${p.header.code} · página ${i + 1} de ${range.count}`,
         M,
         doc.page.height - M + 10,
-        { width: W, align: 'center' },
+        { width: W, align: 'center', lineBreak: false },
       );
+    doc.page.margins.bottom = bottom;
   }
   doc.end();
   return done;

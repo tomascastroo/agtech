@@ -127,6 +127,28 @@ const LEGAL_FIELDS = [
   'qualityFactor',
 ] as const;
 
+const FIELD_LABELS: Record<string, string> = {
+  legalInstrument: 'instrumento',
+  legalIdentifier: 'n° de inscripción',
+  legalStatus: 'estado registral',
+  lienPriority: 'prioridad',
+  immobilizationStatus: 'inmovilización',
+  immobilizationReference: 'referencia de inmovilización',
+  amount: 'monto',
+  debtAmount: 'deuda',
+  currency: 'moneda',
+  grantedAt: 'otorgamiento',
+  expiresAt: 'vencimiento',
+  productionType: 'tipo de producción',
+  averageWeightKg: 'peso promedio',
+  weightSource: 'fuente del peso',
+  pricePerKg: 'precio por kg',
+  priceCurrency: 'moneda del precio',
+  priceSource: 'fuente del precio',
+  priceDate: 'fecha del precio',
+  qualityFactor: 'factor de calidad',
+};
+
 /** Tipos de documento que respaldan un movimiento (DT-e) o una fuente oficial. */
 const MOVEMENT_DOCUMENT_TYPES = new Set(['DTE', 'TRAZA_REPORT', 'STOCK_CERTIFICATE', 'OTHER']);
 
@@ -179,7 +201,9 @@ export class CollateralCommandsService {
         source: 'ENTIDAD',
         actorId: user.userId,
         actorLabel: user.fullName,
-        summary: `Datos de la garantía actualizados: ${Object.keys(after).join(', ')}.`,
+        summary: `Datos de la garantía actualizados: ${Object.keys(after)
+          .map((k) => FIELD_LABELS[k] ?? k)
+          .join(', ')}.`,
         payload: { before, after },
       });
       await this.audit.record(

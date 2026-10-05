@@ -683,7 +683,7 @@ function Section({
               },
               {
                 key: 'r',
-                header: 'Resultado',
+                header: 'Estado resultante',
                 render: (r) => <StateBadge state={r.resultState as CollateralState} />,
               },
               {
