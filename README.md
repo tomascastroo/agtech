@@ -1,7 +1,13 @@
 # AgroGarantías
 
+**Infraestructura de verificación continua de garantías bovinas** para bancos, SGR,
+warranteras y aseguradoras: verifica, monitorea, cruza evidencia, detecta inconsistencias, alerta,
+conserva un historial auditable y decide cuándo hace falta una inspección. AgroGarantías **no
+presta, no compra, no custodia ni emite warrants**; la IA es una fuente de evidencia, no el
+producto. Ver [`docs/bovine-collateral-verification.md`](docs/bovine-collateral-verification.md).
+
 Plataforma para la **verificación remota y recurrente de activos agropecuarios usados como
-garantía** (bancos, aseguradoras). Combina cámaras en campo, imágenes satelitales y visión
+garantía**. Combina cámaras en campo, imágenes satelitales y visión
 computacional para producir, en cada verificación, un resultado **explicable, trazable e
 inmutable**: cantidad detectada frente a la declarada, evidencia vinculada, controles cruzados,
 score con sus componentes, alertas e informe PDF/CSV/JSON.
@@ -75,6 +81,21 @@ Existe una segunda organización (Pampa Seguros) para verificar el aislamiento m
 
 ## Recorrido funcional
 
+0. **Garantías bovinas** (`/guarantees`): la cartera responde en segundos "¿puedo confiar hoy en
+   esta garantía?"; KPIs solo con datos reales. Cada garantía tiene su **Asset Passport**:
+   - declarado / esperado / observado / verificado;
+   - evidencia con origen, GPS y hash;
+   - RFID;
+   - fuentes oficiales SIN CONEXIÓN, con carga de documentos;
+   - movimientos;
+   - verificaciones;
+   - score con compuertas;
+   - cobertura en pesos;
+   - riesgo y agenda;
+   - alertas explicadas;
+   - inspecciones firmadas;
+   - historial inmutable;
+   - PDF "ASSET PASSPORT — GARANTÍA BOVINA".
 1. **Login** → **Panel de cartera**: activos, garantías activas, valor declarado por tipo, score
    ponderado, distribución de riesgo, últimas verificaciones y alertas.
 2. **Activos y garantías** → *Rodeo de cría La Esperanza*: 1.500 cabezas declaradas, mapa con el
@@ -280,6 +301,10 @@ producción). Las mutaciones requieren el header `x-csrf-token`.
 | `POST /guarantee-requests/:id/information-requests` (`requirementCode`) | Pedir al productor un requisito puntual |
 | `POST /documents/:id/analyze` | Volver a procesar un documento (OCR + reglas) |
 | `GET /demo/scenarios` · `POST /demo/guarantee-requests` | Simular una solicitud con datos ficticios (`DEMO_MODE=enabled`) |
+| `GET /bovine-guarantees` · `GET /bovine-guarantees/:id[/passport\|/passport.pdf\|/timeline\|/score\|/coverage\|/alerts\|/verifications\|/movements\|/inspections]` | Garantías bovinas: cartera y Asset Passport |
+| `PATCH /bovine-guarantees/:id` · `POST /bovine-guarantees/:id/{declaration,movements,verify,evidence,documents,inspection,recalculate,finalize}` | Datos legales y valuación, corrección versionada, movimientos, verificación, evidencia, documentos oficiales, inspección firmada |
+| `GET/PUT /bovine-guarantees/policies` | Frecuencias de verificación por tipo de producción y riesgo (configurables) |
+| `GET /producer/me/requests/:id/declaration` · `POST .../declaration/corrections` | Productor: declaración congelada y correcciones |
 | `GET /health/live` · `GET /health/ready` | Liveness y readiness (DB, Redis, almacenamiento) |
 
 ## Modelo de datos
@@ -289,7 +314,11 @@ Núcleo: `assets` + `asset_types` (estrategia, documentos requeridos y JSON Sche
 `asset_metadata` versionada; `verification_runs` → `verification_results`,
 `verification_metrics`, `verification_evidence` (evidencia + versión de modelo usada) y
 `external_data_snapshots`; `alerts`/`alert_rules`; `reports`/`report_documents`; `guarantees`;
-`monitoring_configurations`/`monitoring_events`; `audit_logs`. Preparado para identidad
+`monitoring_configurations`/`monitoring_events`; `audit_logs`. Garantía bovina:
+`bovine_guarantees`, `collateral_declarations` (inmutable, versionada), `collateral_movements`,
+`collateral_verifications` y `collateral_score_snapshots` (inmutables), `collateral_events`
+(historial inmutable), `collateral_inspections` (bloqueada al firmarse),
+`collateral_monitoring_policies` y `monitoring_schedules`. Preparado para identidad
 individual: `animals`, `animal_identifications`, `animal_observations`.
 
 ## Decisiones de arquitectura
@@ -309,10 +338,10 @@ Resumen (detalle en [`docs/architecture.md`](docs/architecture.md#9-decisiones-d
 
 | Suite | Herramienta | Resultado |
 |---|---|---|
-| API — unitarios e integración (scoring, alertas, metadata, OCR y requisitos documentales, demo, auth, multi-tenancy y RBAC, solicitudes, portal del productor, escáner, manga + RFID, flujo de verificación) | Vitest + Supertest sobre PostgreSQL/Redis/MinIO reales | **196/196** |
+| API — unitarios e integración (garantía bovina: motor, compuertas, cobertura, ciclo de vida e inmutabilidad; scoring, alertas, metadata, OCR y requisitos documentales, demo, auth, multi-tenancy y RBAC, solicitudes, portal del productor, escáner, manga + RFID, flujo de verificación) | Vitest + Supertest sobre PostgreSQL/Redis/MinIO reales | **235/235** |
 | Frontend — componentes y librerías | Vitest + Testing Library | **76/76** |
 | Servicio de visión (calidad, conteo, tracking, documentos/OCR, API) | pytest | **59/59** |
-| E2E — 7 archivos, 12 tests (login, La Esperanza, alta de activo, escáner fijo/corral/foto, manga + RFID, documentación de crédito y demo) | Playwright contra el build de producción, base recién creada | **12/12** |
+| E2E — 8 archivos, 14 tests (login, La Esperanza, alta de activo, escáner fijo/corral/foto, manga + RFID, documentación de crédito y demo, garantía bovina) | Playwright contra el build de producción, base recién creada | **13/14** en la suite completa; el de manga + RFID es inestable bajo carga (la detección en el navegador con cámara falsa descarta a veces el segundo animal) y pasa corrido solo |
 
 Los E2E se corren contra el build de producción (`docker compose up` o `pnpm build` + `pnpm start`),
 sobre una base recién inicializada. Con `next dev`, el indicador de errores de desarrollo de

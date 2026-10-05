@@ -561,3 +561,52 @@ La última capa queda vacía mientras SENASA esté `NOT_CONNECTED`
 - Los datos son ficticios: CUIT 20-00000001-9 y RENSPA 99.001.0.00001/00.
 - El índice único de nombre de establecimiento y la reutilización por RENSPA aplican solo a datos
   REAL.
+
+## 16. Garantía bovina con verificación continua (Asset Passport)
+
+Detalle funcional, alcance real y limitaciones:
+[`bovine-collateral-verification.md`](bovine-collateral-verification.md).
+
+**Módulos.**
+- `collateral/domain`: motor puro y determinista con tests unitarios:
+  - consistencia;
+  - calidad de evidencia;
+  - score con compuertas y eslabón más débil;
+  - riesgo;
+  - cobertura;
+  - agenda;
+  - alertas.
+- `CollateralCoreModule` (`CollateralService`): junta la evidencia que ya registra la plataforma y
+  persiste cada evaluación. Lo importan tres módulos, sin dependencias circulares:
+  - solicitudes, que crean la garantía y congelan la declaración;
+  - el worker de verificación, que evalúa al terminar cada corrida del pipeline;
+  - el monitoreo programado, que hace el barrido de evidencia vencida y verificaciones debidas.
+- `CollateralModule`: API HTTP, comandos, consultas y PDF.
+
+**Reutilización.** No se duplicaron entidades:
+- la evidencia sale de `evidence` + `verification_evidence` + `verification_metrics`, que dice si
+  el conteo es censo o cota inferior;
+- la identidad individual, de `chute_captures` / `bovine_individuals`;
+- los documentos, de `documents` + `document_analyses` y del checklist de la solicitud;
+- las alertas, de la tabla `alerts`, que suma la garantía, el responsable, la acción y los estados
+  `IN_REVIEW` y `DISMISSED`;
+- la auditoría, de `audit_logs`.
+
+**Inmutabilidad en la base.**
+- Tienen triggers `forbid_mutation` las tablas `collateral_declarations`,
+  `collateral_score_snapshots`, `collateral_verifications` y `collateral_events`.
+- `collateral_inspections` se bloquea al pasar a `REALIZADA`.
+- Cada evaluación se serializa por garantía con `pg_advisory_xact_lock`.
+
+**Observación vigente.** Es el censo más reciente dentro de la antigüedad máxima (escáner fijo,
+manga o inspección con conteo completo). Si no hay, es la observación más reciente. Una vista
+parcial posterior no pisa un censo vigente.
+
+**Índices.**
+- `bovine_guarantees`: (organization_id, state), asset_id, establishment_id y
+  next_verification_at (parcial, sobre las garantías activas).
+- Eventos, snapshots, verificaciones, movimientos e inspecciones: (guarantee_id, fecha DESC).
+- `monitoring_schedules`: next_verification_at.
+- `alerts`: bovine_guarantee_id.
+- Las ubicaciones de las inspecciones usan PostGIS: se valida la geocerca contra
+  `establishment_locations`.
