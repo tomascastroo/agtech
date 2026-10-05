@@ -342,7 +342,9 @@ export class ScanSessionEngine {
           if (!blob) return resolve();
           void sha256Hex(blob)
             .then((sha256) => putFrame({ scanId: this.id, kind, index, capturedMs, sha256, blob }))
-            .catch(() => this.warnings.add('No se pudo guardar un cuadro en el teléfono'))
+            .catch((error: unknown) =>
+              this.warnings.add(`No se pudo guardar un cuadro en el teléfono (${describe(error)})`),
+            )
             .finally(resolve);
         },
         'image/jpeg',
@@ -451,4 +453,11 @@ export class ScanSessionEngine {
       updatedAt: new Date().toISOString(),
     };
   }
+}
+
+/** Nombre y mensaje del error del navegador (para que el aviso diga por qué falló). */
+function describe(error: unknown): string {
+  if (error instanceof Error || (error && typeof error === 'object' && 'name' in error))
+    return `${(error as { name: string }).name}: ${(error as { message?: string }).message ?? ''}`.trim();
+  return String(error);
 }

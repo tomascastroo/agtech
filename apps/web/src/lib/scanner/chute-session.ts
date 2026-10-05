@@ -356,8 +356,9 @@ export class ChuteSessionEngine {
         this.samples += 1;
         frames.push({ ...r.frame, index });
       }
-    } catch {
-      this.warnings.add('No se pudo guardar un cuadro en el teléfono');
+    } catch (error) {
+      const detail = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+      this.warnings.add(`No se pudo guardar un cuadro en el teléfono (${detail})`);
     }
     if (!frames.length) {
       // Sin cuadros no hay respaldo: la lectura no se asocia ni se envía como captura.

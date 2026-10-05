@@ -114,6 +114,32 @@ export interface LocalFrame {
   blob: Blob;
 }
 
+/**
+ * Lo que queda guardado de cada cuadro: los BYTES de la imagen, no el Blob. Safari en iOS falla
+ * al guardar Blobs en IndexedDB ("Error preparing Blob/File data to be stored in object store",
+ * siempre en navegación privada y en algunas versiones también fuera de ella), y entonces el
+ * escaneo terminaba sin ningún cuadro. Los registros viejos con `blob` se siguen leyendo.
+ */
+interface StoredFrame extends Omit<LocalFrame, 'blob'> {
+  bytes?: ArrayBuffer;
+  type?: string;
+  blob?: Blob;
+}
+
+async function toStored(frame: LocalFrame): Promise<StoredFrame> {
+  const { blob, ...rest } = frame;
+  return { ...rest, bytes: await blob.arrayBuffer(), type: blob.type || 'image/jpeg' };
+}
+
+function fromStored(stored: StoredFrame | undefined): LocalFrame | undefined {
+  if (!stored) return undefined;
+  const { bytes, type, blob, ...rest } = stored;
+  return {
+    ...rest,
+    blob: blob ?? new Blob([bytes ?? new ArrayBuffer(0)], { type: type ?? 'image/jpeg' }),
+  };
+}
+
 /** Escaneos que se están grabando en esta página (la sincronización no los toca). */
 export const activeScans = new Set<string>();
 
@@ -180,12 +206,17 @@ export async function updateScan(
 }
 
 export async function putFrame(frame: LocalFrame): Promise<void> {
-  await done((await store('frames', 'readwrite')).put(frame));
+  // Los bytes se leen ANTES de abrir la transacción: esperar algo que no es de IndexedDB dentro
+  // de una transacción la cierra sola.
+  const stored = await toStored(frame);
+  await done((await store('frames', 'readwrite')).put(stored));
 }
 
 export async function framesOf(scanId: string): Promise<LocalFrame[]> {
   const index = (await store('frames', 'readonly')).index('byScan');
-  const frames = (await done(index.getAll(IDBKeyRange.only(scanId)))) as LocalFrame[];
+  const frames = ((await done(index.getAll(IDBKeyRange.only(scanId)))) as StoredFrame[]).map(
+    (f) => fromStored(f)!,
+  );
   return frames.sort((a, b) =>
     a.kind === b.kind ? a.index - b.index : a.kind.localeCompare(b.kind),
   );
@@ -204,7 +235,9 @@ export async function frameKeysOf(scanId: string): Promise<FrameKey[]> {
 }
 
 export async function getFrame(key: FrameKey): Promise<LocalFrame | undefined> {
-  return done((await store('frames', 'readonly')).get(key) as IDBRequest<LocalFrame | undefined>);
+  return fromStored(
+    await done((await store('frames', 'readonly')).get(key) as IDBRequest<StoredFrame | undefined>),
+  );
 }
 
 export async function deleteFrames(scanId: string): Promise<void> {
@@ -227,9 +260,10 @@ export async function compactFrames(scanId: string): Promise<{ samples: number; 
     if (key[2] === target) continue;
     const frame = await getFrame(key);
     if (!frame) continue;
+    const stored = await toStored({ ...frame, index: target });
     const s = await store('frames', 'readwrite');
     await done(s.delete(key));
-    await done(s.put({ ...frame, index: target }));
+    await done(s.put(stored));
   }
   return { samples: count.SAMPLE, keys: count.KEY };
 }
