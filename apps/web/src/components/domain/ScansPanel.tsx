@@ -83,6 +83,11 @@ function ScanCard({ scan }: { scan: ScanDetail }) {
         ) : null}
         {official?.model.simulated ? <Badge tone="warning">SIMULADO</Badge> : null}
       </div>
+      {scan.status === 'FAILED' && scan.error ? (
+        <p className={styles.muted} data-testid="scan-error">
+          {scan.error}
+        </p>
+      ) : null}
       <dl className={styles.facts}>
         <dt>Conteo oficial (servidor)</dt>
         <dd data-testid="scan-official">

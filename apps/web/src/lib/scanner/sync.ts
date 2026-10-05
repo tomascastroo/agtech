@@ -298,8 +298,15 @@ export function syncPendingScans(): Promise<void> {
           });
           break;
         }
+        // El servidor rechazó el escaneo (datos inválidos, no existe o no corresponde): reintentar
+        // no lo arregla, así que se muestra el motivo en vez de quedar "sincronizando" para siempre.
+        const permanent = error instanceof ApiError && [400, 403, 404, 422].includes(error.status);
         await setState(scan.id, {
-          state: fresh.state === 'PROCESSING' ? 'PROCESSING' : 'PENDING_SYNC',
+          state: permanent
+            ? 'FAILED'
+            : fresh.state === 'PROCESSING'
+              ? 'PROCESSING'
+              : 'PENDING_SYNC',
           error: error instanceof Error ? error.message : String(error),
         });
       }

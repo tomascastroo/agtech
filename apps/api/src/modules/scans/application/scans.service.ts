@@ -73,9 +73,13 @@ export interface UploadFrameCommand {
   sha256: string;
 }
 
+/** Motivo visible para el productor y la entidad cuando un escaneo terminó sin imágenes. */
+export const NO_FRAMES_ERROR =
+  'El escaneo terminó sin imágenes: la cámara no llegó a capturar cuadros. Hacé un escaneo nuevo y esperá a ver los recuadros antes de finalizar.';
+
 export interface FinalizeScanCommand {
   endedAt: string;
-  durationS: number;
+  durationS?: number;
   expectedFrames: number;
   expectedKeyFrames: number;
   expectedCaptures?: number;
@@ -278,10 +282,26 @@ export class ScansService {
         missingKey: missing.KEY,
       });
     }
-    if (command.expectedFrames < 1) throw new ValidationFailedError('El escaneo no tiene cuadros');
+    if (command.expectedFrames < 1) {
+      // Sin imágenes no hay nada que contar: se cierra como fallido (con el motivo) en lugar de
+      // rechazarlo, para que ni el celular ni la entidad queden esperando para siempre.
+      await this.sessions.save(
+        Object.assign(session, {
+          status: 'FAILED' as const,
+          endedAt: new Date(command.endedAt),
+          durationS: command.durationS ?? null,
+          expectedFrames: 0,
+          expectedKeyFrames: 0,
+          clientResult: command.clientResult,
+          finalizedAt: new Date(),
+          error: NO_FRAMES_ERROR,
+        }),
+      );
+      return this.view(session);
+    }
     const maxDuration =
       session.mode === 'CHUTE' ? SCAN_LIMITS.maxChuteDurationS : SCAN_LIMITS.maxDurationS;
-    if (command.durationS > maxDuration + 60) {
+    if ((command.durationS ?? 0) > maxDuration + 60) {
       throw new ValidationFailedError('Duración del escaneo fuera de rango');
     }
     if (session.mode === 'CHUTE') await this.checkChuteComplete(session, command, received.SAMPLE);
@@ -289,7 +309,7 @@ export class ScansService {
       Object.assign(session, {
         status: 'PROCESSING' as const,
         endedAt: new Date(command.endedAt),
-        durationS: command.durationS,
+        durationS: command.durationS ?? null,
         expectedFrames: command.expectedFrames,
         expectedKeyFrames: command.expectedKeyFrames,
         clientResult: command.clientResult,

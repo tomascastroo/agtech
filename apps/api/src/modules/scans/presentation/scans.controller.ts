@@ -260,15 +260,18 @@ export class FinalizeScanDto {
   @IsISO8601()
   endedAt: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional({ description: 'Puede faltar si el escaneo no llegó a capturar nada' })
+  @IsOptional()
   @IsNumber()
   @Min(0)
   @Max(SCAN_LIMITS.maxChuteDurationS + 60)
-  durationS: number;
+  durationS?: number;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: '0 = el celular no capturó cuadros: el escaneo se cierra como FALLIDO',
+  })
   @IsInt()
-  @Min(1)
+  @Min(0)
   @Max(SCAN_LIMITS.maxChuteFrames)
   expectedFrames: number;
 

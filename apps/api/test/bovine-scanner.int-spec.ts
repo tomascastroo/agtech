@@ -372,6 +372,55 @@ describe('Escáner de corral y análisis de fotos', () => {
   });
   afterAll(() => ctx.close());
 
+  it('un escaneo sin cuadros se cierra como FALLIDO con el motivo (no queda sincronizando)', async () => {
+    const id = randomUUID();
+    await as(ctx, producer)
+      .post(`${base()}/scans`)
+      .send({
+        id,
+        mode: 'SWEEP',
+        startedAt: new Date().toISOString(),
+        sampledFps: 6,
+        frameWidth: 640,
+        frameHeight: 400,
+        line: { orientation: 'vertical', position: 0.5 },
+        device: { backend: 'wasm', model: 'yolox_nano' },
+      })
+      .expect(201);
+    // El celular no llegó a guardar ningún cuadro y no tiene duración.
+    const closed = await as(ctx, producer)
+      .post(`${base()}/scans/${id}/finalize`)
+      .send({
+        endedAt: new Date().toISOString(),
+        expectedFrames: 0,
+        expectedKeyFrames: 0,
+        clientResult: { preliminary: true },
+      })
+      .expect(201);
+    expect(closed.body.status).toBe('FAILED');
+    expect(closed.body.error).toContain('sin imágenes');
+    // Reintentar el cierre devuelve lo mismo (idempotente) y la entidad ve el motivo.
+    const again = await as(ctx, producer)
+      .post(`${base()}/scans/${id}/finalize`)
+      .send({
+        endedAt: new Date().toISOString(),
+        expectedFrames: 0,
+        expectedKeyFrames: 0,
+        clientResult: {},
+      })
+      .expect(201);
+    expect(again.body.status).toBe('FAILED');
+    const request = await as(ctx, maria).get(`/api/guarantee-requests/${requestId}`).expect(200);
+    const list = await as(ctx, maria)
+      .get(`/api/assets/${request.body.asset.id as string}/scans`)
+      .expect(200);
+    const seen = (list.body as { id: string; status: string; error: string | null }[]).find(
+      (s) => s.id === id,
+    )!;
+    expect(seen).toMatchObject({ status: 'FAILED' });
+    expect(seen.error).toContain('sin imágenes');
+  });
+
   it('el modo foto no exige tasa de muestreo, los modos con video sí', async () => {
     await as(ctx, producer)
       .post(`${base()}/scans`)
