@@ -1,95 +1,197 @@
 /* =============================================================================
-   AgroGarantías — design tokens
-   Verde agropecuario para acciones y estados positivos, azul oscuro institucional
-   para estructura, grises suaves para superficies. Sin gradientes ni sombras pesadas.
+   AgroGarantías — design system (tokens globales)
+   Lenguaje visual: paneles blancos sobre un fondo cálido muy claro, verde bosque para
+   acciones y estados positivos, salvia/oliva/crema como acentos suaves, gris cálido para
+   texto y bordes. Radios generosos, bordes casi invisibles y sombras muy suaves.
+   Regla: los componentes usan SOLO estos tokens (nunca HEX directos). Los colores que
+   necesita JavaScript (mapas, canvas) salen de src/lib/design/tokens.ts, que espeja esta paleta.
    ============================================================================= */
 :root {
-  /* Marca */
-  --navy-950: #0a1e2c;
-  --navy-900: #0f2a3d;
-  --navy-800: #163a52;
-  --navy-700: #1e4a66;
-  --navy-100: #e6edf2;
-  --green-800: #1d5534;
-  --green-700: #23633e;
-  --green-600: #2e7d4f;
-  --green-100: #e5f2ea;
-  --green-50: #f2f8f4;
+  /* ---- Paleta base -------------------------------------------------------- */
+  --forest-900: #1b3527;
+  --forest-800: #21412f;
+  --forest-700: #2a5239; /* verde bosque: primario */
+  --forest-600: #3a6b4a; /* verde medio */
+  --forest-500: #3f7f55;
+  --olive-600: #6b7440;
+  --olive-500: #858f52; /* oliva */
+  --sage-400: #a9bd98; /* salvia */
+  --sage-300: #c5d4b6;
+  --sage-200: #dbe5cf;
+  --sage-100: #e9f0e1; /* verde muy claro */
+  --sage-50: #f3f7ee;
+  --lime-100: #eef2d6; /* chip verde lima suave */
+  --cream-100: #f6f1e4; /* crema */
+  --cream-50: #faf8f2; /* blanco cálido */
+  --white: #ffffff;
+  --stone-50: #f6f5f1; /* fondo de página: gris cálido muy claro */
+  --stone-100: #efede7;
+  --stone-200: #e6e3dc;
+  --stone-300: #d6d2c8;
+  --stone-400: #aaa59a;
+  --stone-500: #7e796f;
+  --stone-600: #5f5b53;
+  --stone-700: #45423c;
+  --charcoal: #262622; /* carbón: texto principal */
 
-  /* Neutros */
-  --gray-0: #ffffff;
-  --gray-25: #fafbfb;
-  --gray-50: #f4f6f7;
-  --gray-100: #eceff1;
-  --gray-200: #dfe3e6;
-  --gray-300: #c9d0d5;
-  --gray-400: #9aa4ac;
-  --gray-500: #74808a;
-  --gray-600: #5b6670;
-  --gray-700: #3e4a54;
-  --gray-900: #1f2933;
+  /* Estados derivados de la paleta (siempre con ícono o texto, nunca color solo) */
+  --ochre-700: #85590f;
+  --ochre-500: #cf9a2a;
+  --ochre-100: #f7eed8;
+  --clay-700: #9c3a2c;
+  --clay-500: #b4443a;
+  --clay-100: #f8e7e1;
+  --slate-700: #3f5650;
+  --slate-500: #6f8a82;
+  --slate-100: #e8eeeb;
 
-  /* Estados (siempre acompañados de ícono o texto) */
-  --success-fg: #1b6e3a;
-  --success-bg: #e6f4ea;
-  --success-mark: #0ca30c;
-  --warning-fg: #8a5a00;
-  --warning-bg: #fdf3dc;
-  --warning-mark: #fab219;
-  --critical-fg: #b42318;
-  --critical-bg: #fdecea;
-  --critical-mark: #d03b3b;
-  --info-fg: #1f5a8f;
-  --info-bg: #e8f1fa;
+  /* ---- Roles (lo que usan los componentes) -------------------------------- */
+  --color-primary: var(--forest-700);
+  --color-primary-hover: var(--forest-800);
+  --color-primary-soft: var(--sage-100);
+  --color-primary-softer: var(--sage-50);
+  --color-on-primary: var(--white);
+  --color-secondary: var(--forest-600);
+  --color-accent: var(--olive-500);
+  --color-accent-soft: var(--lime-100);
+  --color-cream: var(--cream-100);
+  --color-background: var(--stone-50);
+  --color-surface: var(--white);
+  --color-surface-muted: var(--cream-50);
+  --color-surface-sunken: var(--stone-100);
+  --color-border: var(--stone-200);
+  --color-border-subtle: var(--stone-100);
+  --color-border-strong: var(--stone-300);
+  --color-text: var(--charcoal);
+  --color-text-secondary: var(--stone-600);
+  --color-text-muted: var(--stone-500);
+  --color-text-placeholder: var(--stone-400);
+  --color-inverse: var(--forest-900); /* tooltips, overlays sobre imagen */
+  --color-on-inverse: var(--white);
+  --color-on-inverse-muted: rgba(255, 255, 255, 0.72);
+  --color-scrim: rgba(27, 53, 39, 0.38);
+  --color-image-overlay: rgba(27, 53, 39, 0.78);
 
-  /* Datos (validado: contraste >= 3:1 sobre superficie clara) */
-  --data-1: #1f6fb2;
-  --data-1-soft: #d6e6f5;
-  --grid: #e5e8eb;
-  --axis: #c9d0d5;
+  --color-success: var(--forest-500);
+  --color-success-soft: var(--sage-100);
+  --color-success-text: var(--forest-700);
+  --color-success-border: var(--sage-300);
+  --color-warning: var(--ochre-500);
+  --color-warning-soft: var(--ochre-100);
+  --color-warning-text: var(--ochre-700);
+  --color-warning-border: #ead8ad;
+  --color-danger: var(--clay-500);
+  --color-danger-soft: var(--clay-100);
+  --color-danger-text: var(--clay-700);
+  --color-danger-border: #efcfc6;
+  --color-info: var(--slate-500);
+  --color-info-soft: var(--slate-100);
+  --color-info-text: var(--slate-700);
+  --color-info-border: #d3dfda;
+  --color-neutral-soft: var(--stone-100);
+  --color-neutral-text: var(--stone-700);
 
-  /* Roles */
-  --bg-page: var(--gray-50);
-  --bg-surface: var(--gray-0);
-  --bg-subtle: var(--gray-25);
-  --border: var(--gray-200);
-  --border-strong: var(--gray-300);
-  --text-primary: var(--gray-900);
-  --text-secondary: var(--gray-600);
-  --text-muted: var(--gray-500);
-  --accent: var(--green-700);
-  --accent-hover: var(--green-800);
-  --focus-ring: 0 0 0 3px rgba(46, 125, 79, 0.28);
+  /* Escáner (pantalla de cámara, fondo oscuro): misma familia verde, ajustada para video */
+  --color-camera-bg: #101a14;
+  --color-camera-panel: #16241b;
+  --color-camera-text: #f2f4ee;
+  --color-camera-muted: #b8c3b8;
+  --color-camera-accent: #93d3a8;
+  --color-camera-accent-soft: rgba(147, 211, 168, 0.1);
+  --color-camera-accent-border: rgba(147, 211, 168, 0.4);
+  --color-camera-glass: rgba(255, 255, 255, 0.12);
+  --color-camera-glass-border: rgba(255, 255, 255, 0.18);
+  --color-camera-shade: rgba(16, 26, 20, 0.72);
+  --color-camera-warning: rgba(133, 89, 15, 0.92);
+  --color-camera-danger-text: #f2b8ad;
 
-  /* Tipografía */
+  /* Datos (gráficos): un solo tono para magnitud; validado >= 3:1 sobre blanco */
+  --color-data-1: var(--forest-600);
+  --color-data-1-soft: var(--sage-200);
+  --color-data-2: var(--olive-500);
+  --color-grid: var(--stone-100);
+  --color-axis: var(--stone-300);
+
+  /* ---- Tipografía --------------------------------------------------------- */
   --font-sans:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    'Inter Variable', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial,
+    sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --text-2xs: 11px;
   --text-xs: 12px;
   --text-sm: 13px;
   --text-md: 14px;
   --text-lg: 16px;
-  --text-xl: 20px;
-  --text-2xl: 24px;
-  --text-3xl: 32px;
+  --text-xl: 18px;
+  --text-2xl: 22px;
+  --text-3xl: 28px;
+  --text-4xl: 34px;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  /* Escala tipográfica (font shorthand) */
+  --type-display: 600 var(--text-4xl) / 1.12 var(--font-sans);
+  --type-h1: 600 var(--text-2xl) / 1.25 var(--font-sans);
+  --type-h2: 600 var(--text-lg) / 1.35 var(--font-sans);
+  --type-h3: 600 var(--text-md) / 1.4 var(--font-sans);
+  --type-body: 400 var(--text-md) / 1.55 var(--font-sans);
+  --type-body-sm: 400 var(--text-sm) / 1.5 var(--font-sans);
+  --type-caption: 400 var(--text-xs) / 1.45 var(--font-sans);
+  --type-label: 500 var(--text-xs) / 1.3 var(--font-sans);
+  --type-numeric: 600 var(--text-3xl) / 1.1 var(--font-sans);
+  --type-numeric-sm: 600 var(--text-2xl) / 1.15 var(--font-sans);
+  --tracking-tight: -0.015em;
 
-  /* Espaciado (escala de 4 px) */
+  /* ---- Espaciado (escala de 4 px) ---------------------------------------- */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
   --space-4: 16px;
   --space-5: 20px;
   --space-6: 24px;
+  --space-7: 28px;
   --space-8: 32px;
   --space-10: 40px;
+  --space-12: 48px;
 
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.05);
-  --shadow-overlay: 0 12px 32px rgba(15, 42, 61, 0.18);
+  /* ---- Radios ------------------------------------------------------------- */
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-pill: 999px;
 
-  --sidebar-width: 232px;
-  --topbar-height: 56px;
+  /* ---- Bordes y sombras (muy suaves) ------------------------------------- */
+  --border-width: 1px;
+  --border-hairline: 1px solid var(--color-border-subtle);
+  --border-default: 1px solid var(--color-border);
+  --shadow-sm: 0 1px 2px rgba(38, 38, 34, 0.04);
+  --shadow-md: 0 2px 8px rgba(38, 38, 34, 0.05), 0 1px 2px rgba(38, 38, 34, 0.03);
+  --shadow-lg: 0 16px 40px rgba(27, 53, 39, 0.12), 0 2px 6px rgba(27, 53, 39, 0.05);
+  --focus-ring: 0 0 0 3px rgba(58, 107, 74, 0.25);
+
+  /* ---- Íconos (Lucide, trazo 1.75) --------------------------------------- */
+  --icon-xs: 14px;
+  --icon-sm: 16px;
+  --icon-md: 18px;
+  --icon-lg: 20px;
+  --icon-xl: 24px;
+
+  /* ---- Controles ---------------------------------------------------------- */
+  --control-height-sm: 32px;
+  --control-height: 38px;
+  --control-height-lg: 46px;
+
+  /* ---- Cards (SMALL / MEDIUM / LARGE) ------------------------------------- */
+  --card-padding-sm: var(--space-4);
+  --card-padding-md: var(--space-5);
+  --card-padding-lg: var(--space-6);
+
+  /* ---- Layout ------------------------------------------------------------- */
+  --sidebar-width: 240px;
+  --topbar-height: 60px;
+  --content-max: 1440px;
 }
 
 *,
@@ -105,12 +207,12 @@ body {
 }
 
 body {
-  background: var(--bg-page);
-  color: var(--text-primary);
-  font-family: var(--font-sans);
-  font-size: var(--text-md);
-  line-height: 1.5;
+  background: var(--color-background);
+  color: var(--color-text);
+  font: var(--type-body);
+  font-feature-settings: 'cv11', 'ss01';
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 h1,
@@ -118,19 +220,19 @@ h2,
 h3,
 h4 {
   margin: 0;
-  font-weight: 600;
-  line-height: 1.25;
-  color: var(--text-primary);
+  color: var(--color-text);
 }
 
 h1 {
-  font-size: var(--text-2xl);
+  font: var(--type-h1);
+  letter-spacing: var(--tracking-tight);
 }
 h2 {
-  font-size: var(--text-lg);
+  font: var(--type-h2);
 }
-h3 {
-  font-size: var(--text-md);
+h3,
+h4 {
+  font: var(--type-h3);
 }
 
 p {
@@ -138,11 +240,12 @@ p {
 }
 
 a {
-  color: var(--navy-700);
+  color: var(--color-primary);
   text-decoration: none;
 }
 a:hover {
   text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 button,
@@ -151,6 +254,15 @@ select,
 textarea {
   font: inherit;
   color: inherit;
+}
+
+::placeholder {
+  color: var(--color-text-placeholder);
+  opacity: 1;
+}
+
+::selection {
+  background: var(--sage-200);
 }
 
 :focus-visible {

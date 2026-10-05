@@ -2,9 +2,9 @@ import { RISK_LABELS } from '@/lib/labels';
 import styles from './charts.module.css';
 
 const LEVELS = [
-  { key: 'LOW', color: 'var(--success-mark)' },
-  { key: 'MEDIUM', color: 'var(--warning-mark)' },
-  { key: 'HIGH', color: 'var(--critical-mark)' },
+  { key: 'LOW', color: 'var(--color-success)' },
+  { key: 'MEDIUM', color: 'var(--color-warning)' },
+  { key: 'HIGH', color: 'var(--color-danger)' },
 ] as const;
 
 /** Parte-todo de niveles de riesgo (colores de estado, siempre con leyenda textual). */

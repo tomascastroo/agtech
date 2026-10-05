@@ -49,7 +49,7 @@ export function TaskCard({
       className={`${styles.task} ${info ? styles.taskInfo : ''}`}
     >
       <span className={styles.taskIcon}>
-        <Icon name={target.icon} size={20} />
+        <Icon name={target.icon} size="lg" />
       </span>
       <span className={styles.taskBody}>
         <strong>{task.title}</strong>
@@ -57,7 +57,7 @@ export function TaskCard({
         {context ? <span className={styles.taskContext}>{context}</span> : null}
       </span>
       <span className={styles.chevron} aria-hidden>
-        ›
+        <Icon name="chevronRight" size="md" />
       </span>
     </Link>
   );
@@ -74,7 +74,11 @@ export function ProgressBar({ progress }: { progress: GuaranteeRequest['progress
             <span className={styles.progressBar} />
             <span className={styles.progressLabel}>
               {p.label}
-              {p.state === 'DONE' ? ' ✓' : p.state === 'PENDING' ? ' ⚠' : ''}
+              {p.state === 'DONE' ? (
+                <Icon name="check" size="xs" className={styles.progressIcon} title="Completo" />
+              ) : p.state === 'PENDING' ? (
+                <Icon name="warning" size="xs" className={styles.progressIcon} title="Pendiente" />
+              ) : null}
             </span>
           </div>
         ))}

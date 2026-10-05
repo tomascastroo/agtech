@@ -1,5 +1,6 @@
 'use client';
 
+import { SCANNER_OVERLAY } from '@/lib/design/tokens';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/Badge';
@@ -140,7 +141,7 @@ function FrameWithBox({
             top: `${(frame.box.y / size.h) * 100}%`,
             width: `${(frame.box.width / size.w) * 100}%`,
             height: `${(frame.box.height / size.h) * 100}%`,
-            border: '2px solid #38d27a',
+            border: `2px solid ${SCANNER_OVERLAY.confirmed}`,
           }}
         />
       ) : null}

@@ -81,7 +81,7 @@ export function LineChart({
               x2={WIDTH - PAD.right}
               y1={geometry.sy(tick)}
               y2={geometry.sy(tick)}
-              stroke="var(--grid)"
+              stroke="var(--color-grid)"
               strokeWidth={1}
             />
             <text
@@ -99,7 +99,7 @@ export function LineChart({
           x2={WIDTH - PAD.right}
           y1={HEIGHT - PAD.bottom}
           y2={HEIGHT - PAD.bottom}
-          stroke="var(--axis)"
+          stroke="var(--color-axis)"
         />
         {[0, points.length - 1]
           .filter((v, i, a) => a.indexOf(v) === i)
@@ -114,15 +114,21 @@ export function LineChart({
               {formatX(points[i]!.x)}
             </text>
           ))}
-        <path d={path} fill="none" stroke="var(--data-1)" strokeWidth={2} strokeLinejoin="round" />
+        <path
+          d={path}
+          fill="none"
+          stroke="var(--color-data-1)"
+          strokeWidth={2}
+          strokeLinejoin="round"
+        />
         {geometry.coords.map(([x, y], i) => (
           <circle
             key={i}
             cx={x}
             cy={y}
             r={4}
-            fill="var(--data-1)"
-            stroke="var(--bg-surface)"
+            fill="var(--color-data-1)"
+            stroke="var(--color-surface)"
             strokeWidth={2}
           />
         ))}
@@ -133,14 +139,14 @@ export function LineChart({
               x2={activeCoords[0]}
               y1={PAD.top}
               y2={HEIGHT - PAD.bottom}
-              stroke="var(--axis)"
+              stroke="var(--color-axis)"
             />
             <circle
               cx={activeCoords[0]}
               cy={activeCoords[1]}
               r={6}
-              fill="var(--data-1)"
-              stroke="var(--bg-surface)"
+              fill="var(--color-data-1)"
+              stroke="var(--color-surface)"
               strokeWidth={2}
             />
           </>

@@ -1,5 +1,6 @@
 'use client';
 
+import { COLORS } from '@/lib/design/tokens';
 import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Field, FormRow, Input } from '@/components/ui/Field';
@@ -57,7 +58,7 @@ export function LocationPicker({
     if (ring.length >= 3) {
       list.push({
         id: 'drawn',
-        color: '#2e7d4f',
+        color: COLORS.secondary,
         geometry: { type: 'Polygon', coordinates: [[...ring, ring[0]!]] },
       });
     }
@@ -70,13 +71,13 @@ export function LocationPicker({
           {
             id: 'location',
             coordinates: [value.longitude, value.latitude] as [number, number],
-            color: '#0f2a3d',
+            color: COLORS.inverse,
             selected: true,
           },
         ]
       : []),
     ...(mode === 'polygon'
-      ? draft.map((c, i) => ({ id: `v${i}`, coordinates: c, color: '#2e7d4f' }))
+      ? draft.map((c, i) => ({ id: `v${i}`, coordinates: c, color: COLORS.secondary }))
       : []),
   ];
 

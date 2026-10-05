@@ -236,8 +236,8 @@ function CrossChecks({ run }: { run: VerificationDetail }) {
             <span
               className={`${styles.requirementName} ${row.ok === false ? styles.requirementMissing : row.ok ? styles.requirementOk : ''}`}
             >
-              <Icon name={row.ok === null ? 'info' : row.ok ? 'check' : 'warning'} size={16} />
-              <span style={{ color: 'var(--text-primary)' }}>{row.label}</span>
+              <Icon name={row.ok === null ? 'info' : row.ok ? 'check' : 'warning'} size="sm" />
+              <span style={{ color: 'var(--color-text)' }}>{row.label}</span>
               {row.simulated ? <SimulatedBadge /> : null}
             </span>
             <span className={styles.muted}>{row.detail}</span>

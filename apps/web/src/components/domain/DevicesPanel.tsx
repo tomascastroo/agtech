@@ -449,7 +449,7 @@ export function DevicesPanel({
               aria-pressed={mode === 'kit'}
             >
               <span className={styles.optionTitle}>
-                <Icon name="camera" size={18} />
+                <Icon name="camera" size="md" />
                 Quiero que me envíen el kit
               </span>
               <span className={styles.optionText}>
@@ -464,7 +464,7 @@ export function DevicesPanel({
               aria-pressed={mode === 'installed'}
             >
               <span className={styles.optionTitle}>
-                <Icon name="check" size={18} />
+                <Icon name="check" size="md" />
                 Ya instalé mis dispositivos
               </span>
               <span className={styles.optionText}>

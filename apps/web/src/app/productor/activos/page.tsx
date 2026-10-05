@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useProducerOverview } from '@/components/producer/data';
 import styles from '@/components/producer/producer.module.css';
 import { ErrorState, Loading } from '@/components/ui/Feedback';
+import { Icon } from '@/components/ui/Icon';
 import type { Unit } from '@/lib/api/types';
 import { formatNumber, unitLabel } from '@/lib/format';
 
@@ -32,7 +33,9 @@ export default function ProducerAssets() {
                 {a.guaranteeType.name ?? a.guaranteeType.code} · {formatNumber(a.declaredQuantity)}{' '}
                 {unitLabel(a.unit as Unit, a.declaredQuantity)} declarados
               </p>
-              <span className={styles.chip}>Agregar fotos o ver evidencia ›</span>
+              <span className={styles.chip}>
+                Agregar fotos o ver evidencia <Icon name="chevronRight" size="xs" />
+              </span>
             </Link>
           ))}
         </section>

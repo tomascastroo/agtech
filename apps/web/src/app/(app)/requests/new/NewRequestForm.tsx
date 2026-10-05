@@ -97,7 +97,7 @@ function ModeCard({
       <span className={styles.optionText}>{text}</span>
       {active ? (
         <span className={styles.optionCheck}>
-          <Icon name="check" size={18} />
+          <Icon name="check" size="md" />
         </span>
       ) : null}
     </button>

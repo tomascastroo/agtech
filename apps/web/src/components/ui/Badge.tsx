@@ -21,7 +21,7 @@ export function Badge({
   return (
     <span className={`${styles.badge} ${styles[tone]}`} title={title}>
       {icon ? (
-        <Icon name={icon} size={13} />
+        <Icon name={icon} size="xs" />
       ) : dot ? (
         <span className={styles.dot} aria-hidden />
       ) : null}

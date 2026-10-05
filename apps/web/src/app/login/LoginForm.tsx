@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Feedback';
 import { Field, Input } from '@/components/ui/Field';
 import { api, ApiError } from '@/lib/api/client';
+import { safeInternalPath } from '@/lib/security/safe-redirect';
 import styles from './login.module.css';
 
 export interface DemoCredentials {
@@ -35,8 +36,7 @@ function Form({ demo }: { demo: DemoCredentials | null }) {
       queryClient.clear();
       // El productor entra a su portal; la entidad, al panel institucional.
       const home = session.user.role === 'PRODUCER' ? '/productor' : '/dashboard';
-      const next = params.get('next');
-      const safeNext = next && next.startsWith('/') && !next.startsWith('//') ? next : null;
+      const safeNext = safeInternalPath(params.get('next'));
       const allowed = safeNext && safeNext.startsWith('/productor') === (home === '/productor');
       router.replace(allowed ? safeNext : home);
     } catch (err) {

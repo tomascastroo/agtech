@@ -78,7 +78,7 @@ export function DashboardView() {
               label="Esperando al productor"
               value={formatNumber(ops?.waitingProducer ?? 0)}
               caption={<Link href="/requests">solicitudes en carga</Link>}
-              accent="var(--warning-mark)"
+              accent="var(--color-warning)"
               testId="kpi-waiting"
             />
             <Stat
@@ -88,14 +88,14 @@ export function DashboardView() {
                 plural(ops?.openInformationRequests ?? 0, 'pedido abierto', 'pedidos abiertos') +
                 ' al productor'
               }
-              accent="var(--critical-mark)"
+              accent="var(--color-danger)"
               testId="kpi-documents"
             />
             <Stat
               label="Verificaciones en curso"
               value={formatNumber(ops?.verificationsInProgress ?? 0)}
               caption={`${plural(ops?.verificationsCompleted30d ?? 0, 'completada', 'completadas')} en 30 días`}
-              accent="var(--data-1)"
+              accent="var(--color-data-1)"
             />
             <Stat
               label="Alertas abiertas"
@@ -105,7 +105,7 @@ export function DashboardView() {
                   {plural(data.kpis.withAlerts, 'activo con alertas', 'activos con alertas')}
                 </Link>
               }
-              accent="var(--critical-mark)"
+              accent="var(--color-danger)"
             />
             <Stat
               label="Activos monitoreados"
@@ -247,7 +247,7 @@ export function DashboardView() {
                   {(['CRITICAL', 'WARNING', 'INFO'] as const).map((s) => (
                     <Link key={s} href={`/alerts?severity=${s}`} style={{ textDecoration: 'none' }}>
                       <SeverityBadge severity={s} />{' '}
-                      <strong className="tabular" style={{ color: 'var(--text-primary)' }}>
+                      <strong className="tabular" style={{ color: 'var(--color-text)' }}>
                         {data.alertsBySeverity[s] ?? 0}
                       </strong>
                     </Link>

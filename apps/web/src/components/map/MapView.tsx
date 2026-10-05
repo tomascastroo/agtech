@@ -1,5 +1,6 @@
 'use client';
 
+import { COLORS } from '@/lib/design/tokens';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { useEffect, useRef, type ReactNode } from 'react';
 import type { GeoJSONSource, Map as MapLibreMap, StyleSpecification } from 'maplibre-gl';
@@ -41,7 +42,7 @@ function baseStyle(): StyleSpecification | string {
       },
     },
     layers: [
-      { id: 'background', type: 'background', paint: { 'background-color': '#e8ebe4' } },
+      { id: 'background', type: 'background', paint: { 'background-color': COLORS.mapBackground } },
       {
         id: 'osm',
         type: 'raster',
@@ -194,7 +195,7 @@ export function MapView({
           paint: {
             'circle-radius': 7,
             'circle-color': ['get', 'color'],
-            'circle-stroke-color': '#ffffff',
+            'circle-stroke-color': COLORS.markerRing,
             'circle-stroke-width': 2,
           },
         });
@@ -267,8 +268,8 @@ export function MapToolbar({ children }: { children: ReactNode }) {
 }
 
 export const STATE_COLORS: Record<string, string> = {
-  OK: '#1b8f3a',
-  ALERTA: '#d03b3b',
-  EN_REVISION: '#1f6fb2',
-  OBSERVADO: '#c98500',
+  OK: COLORS.success,
+  ALERTA: COLORS.danger,
+  EN_REVISION: COLORS.info,
+  OBSERVADO: COLORS.warning,
 };

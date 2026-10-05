@@ -27,7 +27,7 @@ export function PageHeader({
                 style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
               >
                 <Link href={crumb.href}>{crumb.label}</Link>
-                <Icon name="chevronRight" size={14} />
+                <Icon name="chevronRight" size="xs" />
               </span>
             ))}
           </nav>

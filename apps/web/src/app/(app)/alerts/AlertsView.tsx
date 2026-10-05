@@ -32,17 +32,17 @@ export function AlertsView() {
           <Stat
             label="Críticas activas"
             value={formatNumber(count('CRITICAL'))}
-            accent="var(--critical-mark)"
+            accent="var(--color-danger)"
           />
           <Stat
             label="Advertencias activas"
             value={formatNumber(count('WARNING'))}
-            accent="var(--warning-mark)"
+            accent="var(--color-warning)"
           />
           <Stat
             label="Informativas activas"
             value={formatNumber(count('INFO'))}
-            accent="var(--data-1)"
+            accent="var(--color-data-1)"
           />
         </StatRow>
         <div className={styles.filters} style={{ marginBottom: 0 }}>

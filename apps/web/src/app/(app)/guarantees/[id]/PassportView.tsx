@@ -2,8 +2,10 @@
 
 import { useState } from 'react';
 import styles from '@/components/domain/domain.module.css';
-import { DemoBadge } from '@/components/domain/StatusBadges';
-import { Badge } from '@/components/ui/Badge';
+import { MovementKind } from '@/components/domain/MovementKind';
+import { DemoBadge, RequirementStatusBadge } from '@/components/domain/StatusBadges';
+import { Badge, type Tone } from '@/components/ui/Badge';
+import type { IconName } from '@/components/ui/Icon';
 import { Button, LinkButton } from '@/components/ui/Button';
 import { Callout, EmptyState, ErrorState, Loading } from '@/components/ui/Feedback';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -25,10 +27,27 @@ import {
 } from '@/lib/api/collateral';
 import { useCan } from '@/lib/permissions';
 import { formatDate, formatDateTime, formatMoney, formatNumber } from '@/lib/format';
+import { ALERT_STATUS_LABELS, DOCUMENT_TYPE_LABELS, LOCATION_SOURCE_LABELS } from '@/lib/labels';
 import { StateBadge } from '../GuaranteesView';
 import { PassportForm, type FormKind } from './PassportForms';
 
 type Row = Record<string, unknown>;
+const EVIDENCE_TYPE_LABELS: Record<string, string> = {
+  IMAGE: 'Foto',
+  VIDEO: 'Video',
+  SCAN: 'Escaneo',
+};
+const INSPECTION_STATUS: Record<string, [Tone, string]> = {
+  SOLICITADA: ['warning', 'Solicitada'],
+  REALIZADA: ['success', 'Realizada'],
+  CANCELADA: ['neutral', 'Cancelada'],
+};
+const INSPECTION_RESULT: Record<string, [Tone, IconName, string]> = {
+  CONFORME: ['success', 'check', 'Conforme'],
+  CON_OBSERVACIONES: ['warning', 'warning', 'Con observaciones'],
+  NO_CONFORME: ['critical', 'critical', 'No conforme'],
+  NO_DETERMINABLE: ['neutral', 'info', 'No determinable'],
+};
 const s = (v: unknown) => (v === null || v === undefined || v === '' ? '—' : String(v as string));
 
 type FormState = {
@@ -85,7 +104,7 @@ export function PassportView({ id }: { id: string }) {
     <>
       <PageHeader
         breadcrumb={[{ href: '/guarantees', label: 'Garantías bovinas' }]}
-        title={<span data-testid="passport-code">GARANTÍA #{h.code}</span>}
+        title={<span data-testid="passport-code">Garantía #{h.code}</span>}
         badge={
           <>
             <StateBadge state={h.state} />
@@ -112,7 +131,7 @@ export function PassportView({ id }: { id: string }) {
       />
       <div className={styles.stack}>
         {h.dataSource === 'DEMO' ? (
-          <Callout tone="warning" title="DATOS DE DEMOSTRACIÓN">
+          <Callout tone="warning" title="Datos de demostración">
             Garantía ficticia: no tiene valor como respaldo y no cuenta en los indicadores.
           </Callout>
         ) : null}
@@ -128,8 +147,8 @@ export function PassportView({ id }: { id: string }) {
           <Stat
             testId="passport-score"
             label="Score"
-            value={h.score === null ? '—' : `${h.score}/100`}
-            small
+            value={h.score === null ? '—' : h.score}
+            unit={h.score === null ? undefined : '/100'}
           />
           <Stat
             testId="passport-coverage"
@@ -144,7 +163,7 @@ export function PassportView({ id }: { id: string }) {
                 ? `Valor verificable ${formatMoney(h.coverage.verifiableValue, h.coverage.currency)}`
                 : undefined
             }
-            small
+            small={!(h.coverage.status === 'DETERMINADA' && h.coverage.ratio !== null)}
           />
           <Stat
             label="Riesgo"
@@ -459,7 +478,8 @@ function Section({
                 {
                   key: 't',
                   header: 'Tipo',
-                  render: (r) => `${s(r.type)}${r.scanMode ? ` · ${s(r.scanMode)}` : ''}`,
+                  render: (r) =>
+                    `${EVIDENCE_TYPE_LABELS[s(r.type)] ?? s(r.type)}${r.scanMode ? ` · ${s(r.scanMode)}` : ''}`,
                 },
                 {
                   key: 'o',
@@ -482,7 +502,7 @@ function Section({
                   header: 'GPS',
                   render: (r) =>
                     r.location
-                      ? `${s(r.locationSource)}${r.accuracyM ? ` ±${formatNumber(r.accuracyM as number)} m` : ''}`
+                      ? `${LOCATION_SOURCE_LABELS[s(r.locationSource)] ?? s(r.locationSource)}${r.accuracyM ? ` ±${formatNumber(r.accuracyM as number)} m` : ''}`
                       : 'Sin GPS',
                 },
                 {
@@ -557,8 +577,7 @@ function Section({
               {
                 key: 'd',
                 header: 'Tipo',
-                render: (r) =>
-                  `${r.direction === 'EGRESO' ? 'Egreso' : 'Ingreso'} · ${s(r.kind).toLowerCase()}`,
+                render: (r) => <MovementKind direction={s(r.direction)} kind={s(r.kind)} />,
               },
               {
                 key: 'h',
@@ -657,7 +676,7 @@ function Section({
                             : 'warning'
                       }
                     >
-                      {o.statusLabel.toUpperCase()}
+                      {o.statusLabel}
                     </Badge>
                     {o.action ? (
                       <Button
@@ -682,10 +701,23 @@ function Section({
               rowKey={(r) => String(r.id)}
               empty={<EmptyState title="Sin documentos" />}
               columns={[
-                { key: 't', header: 'Tipo', render: (r) => s(r.type) },
+                {
+                  key: 't',
+                  header: 'Tipo',
+                  render: (r) => DOCUMENT_TYPE_LABELS[s(r.type)] ?? s(r.type),
+                },
                 { key: 'n', header: 'Título', render: (r) => s(r.title) },
                 { key: 'at', header: 'Cargado', render: (r) => formatDate(r.createdAt as string) },
-                { key: 'a', header: 'Lectura OCR', render: (r) => s(r.analysisStatus) },
+                {
+                  key: 'a',
+                  header: 'Lectura OCR',
+                  render: (r) =>
+                    r.analysisStatus ? (
+                      <RequirementStatusBadge status={s(r.analysisStatus)} />
+                    ) : (
+                      '—'
+                    ),
+                },
                 {
                   key: 'h',
                   header: 'SHA-256',
@@ -824,7 +856,7 @@ function Section({
                 ]}
               />
             ) : (
-              <Callout tone="warning" title="COBERTURA NO DETERMINABLE">
+              <Callout tone="warning" title="Cobertura no determinable">
                 Falta: {(p.coverage?.missing ?? ['evaluación']).join(', ')}. No se estiman pesos,
                 precios ni valuaciones.
               </Callout>
@@ -900,7 +932,7 @@ function Section({
                         ? 'critical'
                         : 'warning'
                   }
-                  title={`${s(a.title)} · ${s(a.status)}`}
+                  title={`${s(a.title)} · ${ALERT_STATUS_LABELS[s(a.status)] ?? s(a.status)}`}
                 >
                   <div data-testid={`alert-${s(a.type)}`}>
                     <div>
@@ -948,7 +980,18 @@ function Section({
                 header: 'Solicitada',
                 render: (r) => `${formatDate(r.requestedAt as string)} · ${s(r.reason)}`,
               },
-              { key: 'st', header: 'Estado', render: (r) => s(r.status) },
+              {
+                key: 'st',
+                header: 'Estado',
+                render: (r) => {
+                  const [tone, label] = INSPECTION_STATUS[s(r.status)] ?? ['neutral', s(r.status)];
+                  return (
+                    <Badge tone={tone} dot>
+                      {label}
+                    </Badge>
+                  );
+                },
+              },
               {
                 key: 'pf',
                 header: 'Realizada',
@@ -964,14 +1007,36 @@ function Section({
                     ? '—'
                     : `${formatNumber(r.observedHeads as number)}${r.fullCount ? '' : ' (parcial)'}`,
               },
-              { key: 'rs', header: 'Resultado', render: (r) => s(r.result) },
+              {
+                key: 'rs',
+                header: 'Resultado',
+                render: (r) => {
+                  if (!r.result) return '—';
+                  const [tone, icon, label] = INSPECTION_RESULT[s(r.result)] ?? [
+                    'neutral',
+                    'info',
+                    s(r.result),
+                  ];
+                  return (
+                    <Badge tone={tone} icon={icon}>
+                      {label}
+                    </Badge>
+                  );
+                },
+              },
               {
                 key: 'sg',
                 header: 'Firma',
                 render: (r) =>
                   r.signatureHash ? (
-                    <span className={styles.mono}>
-                      {s(r.signatureName)} · {s(r.signatureHash).slice(0, 10)}
+                    <span>
+                      {s(r.signatureName)}
+                      <span
+                        className={`${styles.mono} ${styles.small}`}
+                        style={{ display: 'block' }}
+                      >
+                        {s(r.signatureHash).slice(0, 10)}
+                      </span>
                     </span>
                   ) : (
                     '—'

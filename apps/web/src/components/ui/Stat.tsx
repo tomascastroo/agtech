@@ -12,6 +12,7 @@ export function Stat({
   caption,
   accent,
   small,
+  unit,
   testId,
 }: {
   label: string;
@@ -19,6 +20,8 @@ export function Stat({
   caption?: ReactNode;
   accent?: string;
   small?: boolean;
+  /** Unidad editorial junto al número (p. ej. "/100", "cabezas"). */
+  unit?: ReactNode;
   testId?: string;
 }) {
   return (
@@ -29,7 +32,10 @@ export function Stat({
         ) : null}
         {label}
       </div>
-      <div className={`${styles.value} ${small ? styles.valueSmall : ''}`}>{value}</div>
+      <div className={`${styles.value} ${small ? styles.valueSmall : ''}`}>
+        {value}
+        {unit ? <span className={styles.unit}>{unit}</span> : null}
+      </div>
       {caption ? <div className={styles.caption}>{caption}</div> : null}
     </div>
   );

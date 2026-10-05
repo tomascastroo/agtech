@@ -78,7 +78,7 @@ export function ProducerShell({ children }: { children: ReactNode }) {
           onClick={logout}
           aria-label="Cerrar sesión"
         >
-          <Icon name="logout" size={18} />
+          <Icon name="logout" size="md" />
         </button>
       </header>
       <nav className={styles.tabbar} aria-label="Navegación del productor">
@@ -89,7 +89,7 @@ export function ProducerShell({ children }: { children: ReactNode }) {
             className={`${styles.tab} ${active(item.href) ? styles.tabActive : ''}`}
             aria-current={active(item.href) ? 'page' : undefined}
           >
-            <Icon name={item.icon} size={20} />
+            <Icon name={item.icon} size="lg" />
             {item.label}
           </Link>
         ))}

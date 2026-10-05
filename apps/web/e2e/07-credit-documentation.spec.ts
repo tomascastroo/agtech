@@ -24,7 +24,7 @@ test('demo con documentación faltante: OCR, pedido al productor, carga y result
   // 2-5. Abrir la solicitud: datos de demostración, productor, establecimiento y activo.
   await page.getByRole('button', { name: 'Abrir solicitud' }).click();
   await page.waitForURL('**/requests/**');
-  await expect(page.getByTestId('demo-banner')).toContainText('DATOS DE DEMOSTRACIÓN');
+  await expect(page.getByTestId('demo-banner')).toContainText('Datos de demostración');
   await expect(page.getByText('Juan Pérez · CUIT 20-00000001-9')).toBeVisible();
   await expect(page.getByText(/La Esperanza · Villaguay/)).toBeVisible();
   await expect(page.getByText(/Rodeo de cría La Esperanza \(demo\) · 1\.500/)).toBeVisible();
@@ -60,7 +60,7 @@ test('demo con documentación faltante: OCR, pedido al productor, carga y result
   await pp.waitForURL('**/productor**');
   // La cuenta de demostración se identifica en todo el portal.
   await expect(pp.getByTestId('producer-demo-tag')).toBeVisible();
-  await expect(pp.getByTestId('demo-banner')).toContainText('DATOS DE DEMOSTRACIÓN');
+  await expect(pp.getByTestId('demo-banner')).toContainText('Datos de demostración');
   await expect(pp.getByText('Banco del Campo solicita: RENSPA')).toBeVisible();
   await pp.getByText('Banco del Campo solicita: RENSPA').click();
 

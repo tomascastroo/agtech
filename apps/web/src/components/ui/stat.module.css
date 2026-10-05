@@ -1,43 +1,55 @@
+/* Métrica editorial: label chico, número grande, contexto y un indicador pequeño. */
 .row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: var(--space-4);
 }
 .stat {
-  padding: var(--space-4) var(--space-5);
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  padding: var(--card-padding-md);
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   min-width: 0;
 }
 .label {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: var(--text-xs);
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
+  gap: 8px;
+  font: var(--type-label);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
 }
 .value {
-  margin-top: 6px;
-  font-size: var(--text-3xl);
-  font-weight: 600;
-  line-height: 1.1;
-  color: var(--text-primary);
+  margin-top: var(--space-3);
+  font: var(--type-numeric);
+  letter-spacing: var(--tracking-tight);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
 }
+/* Valores de texto (estado, fechas): más chicos que los números. */
 .valueSmall {
-  font-size: var(--text-2xl);
+  font: var(--type-h2);
+  font-size: var(--text-xl);
+  letter-spacing: var(--tracking-tight);
 }
 .caption {
-  margin-top: 4px;
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
+  margin-top: 6px;
+  font: var(--type-body-sm);
+  color: var(--color-text-muted);
 }
 .accent {
   width: 8px;
   height: 8px;
-  border-radius: 2px;
+  border-radius: var(--radius-pill);
+}
+.unit {
+  margin-left: 4px;
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+  letter-spacing: 0;
+  color: var(--color-text-muted);
 }

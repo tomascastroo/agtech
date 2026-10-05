@@ -1,5 +1,6 @@
 'use client';
 
+import { SCANNER_OVERLAY } from '@/lib/design/tokens';
 import { useQuery } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/Badge';
 import { ErrorState, Loading } from '@/components/ui/Feedback';
@@ -258,7 +259,7 @@ function KeyFrame({ frame }: { frame: NonNullable<ScanDetail['keyFrames']>[numbe
               width={d.width}
               height={d.height}
               fill="none"
-              stroke="#38d27a"
+              stroke={SCANNER_OVERLAY.confirmed}
               strokeWidth={3}
               vectorEffect="non-scaling-stroke"
             />

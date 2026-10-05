@@ -81,7 +81,7 @@ export function Checkbox({
 export function SearchInput(props: InputHTMLAttributes<HTMLInputElement>) {
   return (
     <div className={styles.search}>
-      <Icon name="search" size={16} />
+      <Icon name="search" size="sm" />
       <input type="search" {...props} className={styles.control} />
     </div>
   );

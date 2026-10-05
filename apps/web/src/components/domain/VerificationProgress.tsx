@@ -53,7 +53,7 @@ export function VerificationProgress({
               className={`${styles.progressItem} ${state === 'done' ? styles.progressDone : state === 'active' ? styles.progressActive : ''}`}
             >
               <span className={styles.progressMark} aria-hidden>
-                {state === 'done' ? <Icon name="check" size={14} /> : null}
+                {state === 'done' ? <Icon name="check" size="xs" /> : null}
               </span>
               {step.label}
               <span className="visually-hidden">

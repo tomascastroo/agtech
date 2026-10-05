@@ -12,6 +12,7 @@ import {
 } from '@/lib/api/collateral';
 import { formatDate, formatNumber } from '@/lib/format';
 import { DeclarationVersions } from './DeclarationVersions';
+import { MovementIcon } from '@/components/domain/MovementKind';
 import styles from './producer.module.css';
 
 const STATE_TEXT: Record<string, string> = {
@@ -70,7 +71,7 @@ export function ProducerMonitoring({ requestId }: { requestId: string }) {
         <p className={styles.muted}>{m.status.text}</p>
         {next ? (
           <p data-testid="producer-next-verification">
-            <Icon name="clock" size={14} />{' '}
+            <Icon name="clock" size="xs" />{' '}
             {next.overdue ? (
               <strong>La verificación venció el {formatDate(next.at)}.</strong>
             ) : (
@@ -173,14 +174,15 @@ export function ProducerMonitoring({ requestId }: { requestId: string }) {
               setOpen(true);
             }}
           >
-            <Icon name="plus" size={20} /> Avisar un movimiento
+            <Icon name="plus" size="lg" /> Avisar un movimiento
           </button>
         )}
         {m.movements.length ? (
           <ul className={styles.list} data-testid="producer-movements">
             {m.movements.map((mv) => (
               <li key={mv.id} className={styles.docRow}>
-                <span>
+                <MovementIcon direction={mv.direction} kind={mv.kind} />
+                <span className={styles.docInfo}>
                   <strong>
                     {mv.direction === 'EGRESO' ? 'Salida' : 'Entrada'} de {formatNumber(mv.heads)} ·{' '}
                     {MOVEMENT_KIND_LABELS[mv.kind] ?? mv.kind}

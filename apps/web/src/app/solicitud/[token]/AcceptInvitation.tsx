@@ -74,7 +74,7 @@ export function AcceptInvitation() {
       <main className={styles.main}>
         <section className={styles.card}>
           <span className={styles.chip}>
-            <Icon name="shield" size={12} /> {r.requester.name} te invitó
+            <Icon name="shield" size="xs" /> {r.requester.name} te invitó
           </span>
           <h1 className={styles.hello}>Solicitud de garantía</h1>
           <p className={styles.lead}>

@@ -210,7 +210,7 @@ function Scoring() {
             style={
               Math.abs(total - 1) < 0.001
                 ? undefined
-                : { color: 'var(--critical-fg)', fontWeight: 600 }
+                : { color: 'var(--color-danger-text)', fontWeight: 600 }
             }
           >
             Suma: {formatNumber(total * 100)} %{' '}
@@ -265,7 +265,9 @@ function RuleRow({ rule, editable }: { rule: AlertRule; editable: boolean }) {
     <tr>
       <td>
         <CellTitle title={rule.name} subtitle={rule.description} />
-        {error ? <div style={{ color: 'var(--critical-fg)', fontSize: 12 }}>{error}</div> : null}
+        {error ? (
+          <div style={{ color: 'var(--color-danger-text)', fontSize: 12 }}>{error}</div>
+        ) : null}
       </td>
       <td>
         {editable ? (

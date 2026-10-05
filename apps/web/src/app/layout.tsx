@@ -1,5 +1,7 @@
+import { COLORS } from '@/lib/design/tokens';
 import type { Metadata, Viewport } from 'next';
 import { Providers } from './providers';
+import '@fontsource-variable/inter';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -13,7 +15,11 @@ export const metadata: Metadata = {
 // que Next.js lo aplique a sus scripts. La aplicación es autenticada; no hay contenido estático.
 export const dynamic = 'force-dynamic';
 
-export const viewport: Viewport = { width: 'device-width', initialScale: 1, themeColor: '#0f2a3d' };
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  themeColor: COLORS.inverse,
+};
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

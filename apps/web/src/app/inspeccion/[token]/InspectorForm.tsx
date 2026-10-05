@@ -142,7 +142,7 @@ export function InspectorForm() {
       <main className={styles.main} data-testid="inspection-done">
         <section className={styles.card}>
           <p className={styles.cardTitle}>
-            <Icon name="check" size={18} /> Acta firmada y enviada
+            <Icon name="check" size="md" /> Acta firmada y enviada
           </p>
           <p className={styles.muted}>
             La entidad ya ve el resultado. Este link dejó de servir: el acta no se puede modificar.
@@ -154,7 +154,7 @@ export function InspectorForm() {
   return (
     <main className={styles.main} data-testid="inspector-form">
       {v.guarantee.demo ? (
-        <Callout tone="warning" title="DATOS DE DEMOSTRACIÓN">
+        <Callout tone="warning" title="Datos de demostración">
           Esta inspección es de una garantía ficticia.
         </Callout>
       ) : null}
@@ -213,7 +213,7 @@ export function InspectorForm() {
           disabled={uploading}
           onClick={() => camera.current?.click()}
         >
-          <Icon name="camera" size={20} /> {uploading ? 'Subiendo…' : 'Tomar foto'}
+          <Icon name="camera" size="lg" /> {uploading ? 'Subiendo…' : 'Tomar foto'}
         </button>
         <p className={styles.muted} data-testid="inspection-photos">
           {photos.length + v.photos} foto(s) cargada(s) ·{' '}

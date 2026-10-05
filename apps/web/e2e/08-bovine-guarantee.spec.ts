@@ -98,7 +98,7 @@ test('garantía bovina: productor avisa egreso, banco acepta, inspector por link
   const row = list.items.find((i: { requestId: string }) => i.requestId === requestId);
   await page.getByTestId(`guarantee-row-${row.code}`).click();
   await page.waitForURL(`**/guarantees/${row.id}`);
-  await expect(page.getByTestId('passport-code')).toHaveText(`GARANTÍA #${row.code}`);
+  await expect(page.getByTestId('passport-code')).toHaveText(`Garantía #${row.code}`);
   await expect(page.getByTestId('passport-state')).toContainText('No determinable', {
     timeout: 90_000,
   });
@@ -195,7 +195,7 @@ test('garantía bovina: productor avisa egreso, banco acepta, inspector por link
 
   // Fuentes oficiales sin conexión.
   await page.getByRole('tab', { name: 'Fuentes y documentos' }).click();
-  await expect(page.getByTestId('source-RENSPA')).toContainText('SIN CONEXIÓN');
+  await expect(page.getByTestId('source-RENSPA')).toContainText('Sin conexión');
 
   // El productor ve la inspección como novedad, sin el resultado interno.
   await pp.reload();

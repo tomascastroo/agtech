@@ -1,7 +1,8 @@
+/* Card (MEDIUM por defecto): blanca, radio generoso, borde casi invisible, sombra muy suave. */
 .panel {
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   min-width: 0;
 }
@@ -10,33 +11,39 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  padding: var(--space-4) var(--space-5);
-  border-bottom: 1px solid var(--border);
+  padding: var(--card-padding-md) var(--card-padding-md) 0;
 }
 .titles {
   min-width: 0;
 }
 .title {
+  font: var(--type-h2);
   font-size: var(--text-md);
-  font-weight: 600;
 }
 .subtitle {
   margin-top: 2px;
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
+  font: var(--type-body-sm);
+  color: var(--color-text-secondary);
 }
 .body {
-  padding: var(--space-5);
+  padding: var(--card-padding-md);
+}
+.header + .body {
+  padding-top: var(--space-4);
 }
 .flush {
   padding: 0;
 }
+.header + .flush {
+  margin-top: var(--space-4);
+}
 .footer {
-  padding: var(--space-3) var(--space-5);
-  border-top: 1px solid var(--border);
-  background: var(--bg-subtle);
+  padding: var(--space-3) var(--card-padding-md);
+  border-top: var(--border-hairline);
+  background: var(--color-surface-muted);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
   font-size: var(--text-sm);
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
 }
 .grid {
   display: grid;
@@ -56,15 +63,15 @@
 .dl {
   display: grid;
   grid-template-columns: minmax(130px, 40%) 1fr;
-  gap: 10px var(--space-4);
+  gap: 12px var(--space-4);
   margin: 0;
   font-size: var(--text-sm);
 }
 .dl dt {
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
 }
 .dl dd {
   margin: 0;
-  font-weight: 500;
+  font-weight: var(--weight-medium);
   overflow-wrap: anywhere;
 }

@@ -1,18 +1,24 @@
 .wrap {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-3);
 }
 .bar {
   display: flex;
   gap: 2px;
   height: 8px;
-  border-radius: 4px;
+  border-radius: var(--radius-pill);
   overflow: hidden;
-  background: var(--gray-100);
+  background: var(--color-surface-sunken);
 }
 .segment {
   height: 100%;
+}
+.segment:first-child {
+  border-radius: var(--radius-pill) 0 0 var(--radius-pill);
+}
+.segment:last-child {
+  border-radius: 0 var(--radius-pill) var(--radius-pill) 0;
 }
 .legend {
   display: flex;
@@ -22,7 +28,7 @@
   padding: 0;
   list-style: none;
   font-size: var(--text-sm);
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
 }
 .legend li {
   display: inline-flex;
@@ -30,22 +36,22 @@
   gap: 6px;
 }
 .swatch {
-  width: 10px;
-  height: 10px;
-  border-radius: 2px;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-pill);
 }
 .success {
-  background: var(--success-mark);
+  background: var(--color-success);
 }
 .warning {
-  background: var(--warning-mark);
+  background: var(--color-warning);
 }
 .critical {
-  background: var(--critical-mark);
+  background: var(--color-danger);
 }
 .info {
-  background: var(--data-1);
+  background: var(--color-data-1);
 }
 .neutral {
-  background: var(--gray-300);
+  background: var(--color-border-strong);
 }

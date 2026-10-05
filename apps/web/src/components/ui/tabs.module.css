@@ -1,43 +1,63 @@
+/* Tabs livianas: texto mediano, indicador verde redondeado bajo la activa. */
 .tabs {
   display: flex;
-  gap: var(--space-1);
-  border-bottom: 1px solid var(--border);
+  gap: var(--space-5);
+  border-bottom: var(--border-width) solid var(--color-border);
   overflow-x: auto;
-  margin-bottom: var(--space-5);
+  scrollbar-width: none;
+  margin-bottom: var(--space-6);
+}
+.tabs::-webkit-scrollbar {
+  display: none;
 }
 .tab {
   position: relative;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 10px var(--space-3);
+  padding: 10px 2px 12px;
   border: none;
   background: none;
-  color: var(--text-secondary);
+  color: var(--color-text-muted);
   font-size: var(--text-md);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
   white-space: nowrap;
   cursor: pointer;
+  transition: color 140ms ease;
 }
 .tab:hover {
-  color: var(--text-primary);
+  color: var(--color-text);
 }
 .active {
-  color: var(--text-primary);
+  color: var(--color-primary);
 }
 .active::after {
   content: '';
   position: absolute;
-  left: var(--space-3);
-  right: var(--space-3);
+  left: 0;
+  right: 0;
   bottom: -1px;
   height: 2px;
-  background: var(--green-700);
+  border-radius: var(--radius-pill);
+  background: var(--color-primary);
 }
 .count {
-  padding: 0 6px;
-  border-radius: 9px;
-  background: var(--gray-100);
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
+  min-width: 20px;
+  padding: 1px 7px;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-sunken);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+.active .count {
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+/* Insinúa que hay más pestañas cuando no entran (se desplazan horizontalmente). */
+@media (max-width: 1600px) {
+  .tabs {
+    mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent);
+  }
 }

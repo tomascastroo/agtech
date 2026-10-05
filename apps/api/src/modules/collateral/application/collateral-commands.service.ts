@@ -157,6 +157,8 @@ const FIELD_LABELS: Record<string, string> = {
 
 /** Vigencia del link del inspector. */
 const INSPECTOR_LINK_DAYS = 14;
+/** Tope de fotos por link de inspector: el link es público hasta que se firma el acta. */
+const INSPECTOR_MAX_PHOTOS = 40;
 
 /** Tipos de documento que respaldan un movimiento (DT-e) o una fuente oficial. */
 const MOVEMENT_DOCUMENT_TYPES = new Set(['DTE', 'TRAZA_REPORT', 'STOCK_CERTIFICATE', 'OTHER']);
@@ -798,6 +800,10 @@ export class CollateralCommandsService {
     if (!g.assetId || !g.establishmentId)
       throw new InvalidStateError('La garantía no tiene rodeo declarado');
     if (!file) throw new ValidationFailedError('Adjuntá una foto');
+    if ((inspection.evidenceIds ?? []).length >= INSPECTOR_MAX_PHOTOS)
+      throw new InvalidStateError(
+        `Se alcanzó el máximo de ${INSPECTOR_MAX_PHOTOS} fotos para esta inspección`,
+      );
     const check = EVIDENCE_UPLOAD_POLICY.validate(file);
     if (!check.ok) throw new ValidationFailedError(check.reason);
     const location = resolveCaptureLocation(command, readExifGps(file.buffer));

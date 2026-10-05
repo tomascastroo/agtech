@@ -1,5 +1,6 @@
 'use client';
 
+import { SCANNER_OVERLAY } from '@/lib/design/tokens';
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -21,6 +22,7 @@ import {
 } from '@/lib/scanner/store';
 import { onScansChanged, syncPendingScans } from '@/lib/scanner/sync';
 import type { Box } from '@/lib/scanner/tracker';
+import { Icon } from '@/components/ui/Icon';
 import styles from './scanner.module.css';
 
 type Phase = 'setup' | 'loading' | 'scanning' | 'photo' | 'chute' | 'finishing' | 'summary';
@@ -292,7 +294,7 @@ export function BovineScanner({
           className={styles.close}
           aria-label="Salir del escáner"
         >
-          ✕
+          <Icon name="x" size="md" />
         </Link>
         <strong>Escáner de bovinos · {assetName}</strong>
         <span className={`${styles.chip} ${chipClass}`} data-testid="scanner-status">
@@ -729,10 +731,10 @@ function drawChute(canvas: HTMLCanvasElement | null, video: HTMLVideoElement, li
   ctx.setLineDash([unit * 4, unit * 3]);
   ctx.strokeStyle =
     live.state === 'WAITING_FOR_RFID' || live.state === 'CONFIRMED'
-      ? '#38d27a'
+      ? SCANNER_OVERLAY.confirmed
       : live.state === 'MULTIPLE_ANIMALS'
-        ? '#e5484d'
-        : 'rgba(255,255,255,0.9)';
+        ? SCANNER_OVERLAY.rejected
+        : SCANNER_OVERLAY.line;
   ctx.lineWidth = unit;
   ctx.strokeRect(
     x1 * canvas.width,
@@ -744,7 +746,7 @@ function drawChute(canvas: HTMLCanvasElement | null, video: HTMLVideoElement, li
   ctx.font = `bold ${unit * 7}px sans-serif`;
   for (const track of live.tracks) {
     const [bx1, by1, bx2, by2] = track.box;
-    ctx.strokeStyle = track.confirmed ? '#38d27a' : '#f5c542';
+    ctx.strokeStyle = track.confirmed ? SCANNER_OVERLAY.confirmed : SCANNER_OVERLAY.tentative;
     ctx.strokeRect(bx1, by1, bx2 - bx1, by2 - by1);
     ctx.fillStyle = ctx.strokeStyle;
     ctx.fillText(`#${track.id}`, bx1 + unit, Math.max(unit * 8, by1 - unit));
@@ -778,7 +780,7 @@ function ShotPreview({ shot }: { shot: PhotoShot }) {
 
 function drawBoxes(ctx: CanvasRenderingContext2D, boxes: readonly Box[], width: number) {
   const unit = Math.max(2, width / 320);
-  ctx.strokeStyle = '#38d27a';
+  ctx.strokeStyle = SCANNER_OVERLAY.confirmed;
   ctx.lineWidth = unit;
   for (const [x1, y1, x2, y2] of boxes) ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
 }
@@ -801,7 +803,7 @@ function draw(
   const unit = Math.max(2, canvas.width / 320);
   if (mode === 'FIXED' || mode === 'SWEEP') {
     ctx.setLineDash([unit * 4, unit * 3]);
-    ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+    ctx.strokeStyle = SCANNER_OVERLAY.line;
     ctx.lineWidth = unit;
     ctx.beginPath();
     ctx.moveTo(state.linePx, 0);
@@ -812,10 +814,10 @@ function draw(
   ctx.font = `bold ${unit * 7}px sans-serif`;
   for (const track of state.tracks) {
     const [x1, y1, x2, y2] = track.box;
-    ctx.strokeStyle = track.confirmed ? '#38d27a' : '#f5c542';
+    ctx.strokeStyle = track.confirmed ? SCANNER_OVERLAY.confirmed : SCANNER_OVERLAY.tentative;
     ctx.lineWidth = unit;
     ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
-    ctx.fillStyle = track.confirmed ? '#38d27a' : '#f5c542';
+    ctx.fillStyle = track.confirmed ? SCANNER_OVERLAY.confirmed : SCANNER_OVERLAY.tentative;
     ctx.fillText(`#${track.id}`, x1 + unit, Math.max(unit * 8, y1 - unit));
   }
 }

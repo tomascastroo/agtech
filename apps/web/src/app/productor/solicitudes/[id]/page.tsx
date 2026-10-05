@@ -181,7 +181,10 @@ function Section({
       <div className={styles.cardHead}>
         <div>
           <p className={styles.cardTitle}>
-            {title} {done ? '✓' : ''}
+            {title}{' '}
+            {done ? (
+              <Icon name="check" size="sm" className={styles.doneIcon} title="Completo" />
+            ) : null}
           </p>
           {subtitle ? <p className={styles.muted}>{subtitle}</p> : null}
         </div>
@@ -261,7 +264,7 @@ function InfoRequestCard({
     }
   };
   return (
-    <section className={styles.card} style={{ borderLeft: '4px solid var(--data-1)' }}>
+    <section className={styles.card} style={{ borderLeft: '4px solid var(--color-data-1)' }}>
       <p className={styles.cardTitle}>
         {requirement
           ? `${r.requester.name} solicita: ${requirement.name}`
@@ -282,12 +285,12 @@ function InfoRequestCard({
       ) : null}
       {evidence || !uploadType ? (
         <a href={evidence ? '#evidencia' : '#documentacion'} className={styles.bigButton}>
-          <Icon name={evidence ? 'camera' : 'upload'} size={20} />{' '}
+          <Icon name={evidence ? 'camera' : 'upload'} size="lg" />{' '}
           {evidence ? 'Agregar fotos' : 'Subir documento'}
         </a>
       ) : (
         <button type="button" className={styles.bigButton} onClick={() => onUpload(uploadType)}>
-          <Icon name="upload" size={20} /> Subir {uploadLabel}
+          <Icon name="upload" size="lg" /> Subir {uploadLabel}
         </button>
       )}
       <button
@@ -296,7 +299,7 @@ function InfoRequestCard({
         onClick={respond}
         disabled={busy}
       >
-        <Icon name="check" size={20} /> {busy ? 'Enviando…' : 'Listo, ya lo aporté'}
+        <Icon name="check" size="lg" /> {busy ? 'Enviando…' : 'Listo, ya lo aporté'}
       </button>
       <p className={styles.muted}>
         Lo que agregues queda como evidencia nueva: tu declaración original no cambia.
@@ -350,7 +353,7 @@ function SubmitCard({
       ) : null}
       {error ? <Callout tone="critical">{error}</Callout> : null}
       <button type="button" className={styles.bigButton} onClick={submit} disabled={!ready || busy}>
-        <Icon name="check" size={20} />
+        <Icon name="check" size="lg" />
         {busy ? 'Enviando…' : ready ? 'Enviar declaración' : `Falta: ${r.missing.join(', ')}`}
       </button>
     </div>

@@ -20,9 +20,9 @@ export default function LoginPage() {
       <section className={styles.brandPanel} aria-label="AgroGarantías">
         <div className={styles.brand}>
           <span className={styles.brandMark}>
-            <Icon name="leaf" size={18} />
+            <Icon name="leaf" size="md" />
           </span>
-          AGROGARANTÍAS
+          AgroGarantías
         </div>
         <div className={styles.statement}>
           <h1>Verificación remota y recurrente de activos agropecuarios en garantía.</h1>
@@ -49,7 +49,7 @@ export default function LoginPage() {
           className={styles.contour}
           viewBox="0 0 400 400"
           fill="none"
-          stroke="#ffffff"
+          stroke="currentColor"
           strokeWidth="1.2"
           aria-hidden
         >

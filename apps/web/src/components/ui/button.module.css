@@ -1,21 +1,24 @@
+/* Botones: PRIMARY verde bosque, SECONDARY claro con borde sutil, TERTIARY (ghost) sin borde,
+   DANGER solo cuando hace falta. Forma de píldora, altura compacta, padding horizontal generoso. */
 .button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
-  height: 36px;
-  padding: 0 var(--space-4);
-  border: 1px solid transparent;
-  border-radius: var(--radius-md);
+  height: var(--control-height);
+  padding: 0 var(--space-5);
+  border: var(--border-width) solid transparent;
+  border-radius: var(--radius-pill);
   font-size: var(--text-md);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
   line-height: 1;
   white-space: nowrap;
   cursor: pointer;
   transition:
-    background-color 120ms ease,
-    border-color 120ms ease,
-    color 120ms ease;
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease,
+    box-shadow 140ms ease;
   text-decoration: none;
 }
 .button:hover {
@@ -24,47 +27,57 @@
 .button:disabled,
 .button[aria-disabled='true'] {
   cursor: not-allowed;
-  opacity: 0.55;
+  opacity: 0.5;
 }
 .primary {
-  background: var(--accent);
-  color: #fff;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
 }
 .primary:hover:not(:disabled) {
-  background: var(--accent-hover);
+  background: var(--color-primary-hover);
 }
 .secondary {
-  background: var(--bg-surface);
-  border-color: var(--border-strong);
-  color: var(--text-primary);
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-text);
+  box-shadow: var(--shadow-sm);
 }
 .secondary:hover:not(:disabled) {
-  background: var(--gray-50);
+  background: var(--color-surface-muted);
+  border-color: var(--color-border-strong);
 }
 .ghost {
   background: transparent;
-  color: var(--text-secondary);
+  color: var(--color-primary);
 }
 .ghost:hover:not(:disabled) {
-  background: var(--gray-100);
-  color: var(--text-primary);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-hover);
 }
 .danger {
-  background: var(--bg-surface);
-  border-color: #f1c4bf;
-  color: var(--critical-fg);
+  background: var(--color-surface);
+  border-color: var(--color-danger-border);
+  color: var(--color-danger-text);
 }
 .danger:hover:not(:disabled) {
-  background: var(--critical-bg);
+  background: var(--color-danger-soft);
 }
 .sm {
-  height: 30px;
-  padding: 0 var(--space-3);
+  height: var(--control-height-sm);
+  padding: 0 var(--space-4);
   font-size: var(--text-sm);
 }
+/* Botón solo-ícono: círculo. */
+.iconOnly {
+  width: var(--control-height);
+  padding: 0;
+}
+.iconOnly.sm {
+  width: var(--control-height-sm);
+}
 .lg {
-  height: 44px;
-  padding: 0 var(--space-6);
+  height: var(--control-height-lg);
+  padding: 0 var(--space-7);
   font-size: var(--text-lg);
 }
 .block {
@@ -75,7 +88,7 @@
   height: 14px;
   border: 2px solid currentColor;
   border-right-color: transparent;
-  border-radius: 50%;
+  border-radius: var(--radius-pill);
   animation: spin 700ms linear infinite;
 }
 @keyframes spin {

@@ -1,5 +1,6 @@
 'use client';
 
+import { COLORS } from '@/lib/design/tokens';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
@@ -183,7 +184,7 @@ function Summary({ asset }: { asset: AssetDetail }) {
     {
       id: 'asset',
       coordinates: asset.location.coordinates,
-      color: '#0f2a3d',
+      color: COLORS.inverse,
       selected: true,
       label: asset.name,
     },
@@ -192,15 +193,15 @@ function Summary({ asset }: { asset: AssetDetail }) {
       .map((i) => ({
         id: i.id,
         coordinates: i.location!.coordinates,
-        color: i.device?.status === 'ONLINE' ? '#1b8f3a' : '#9aa4ac',
+        color: i.device?.status === 'ONLINE' ? COLORS.success : COLORS.muted,
         label: i.label,
       })),
   ];
   const polygons: MapPolygon[] = [
     ...(est.boundary
-      ? [{ id: 'est', geometry: est.boundary, color: '#0f2a3d', dashed: true }]
+      ? [{ id: 'est', geometry: est.boundary, color: COLORS.inverse, dashed: true }]
       : []),
-    ...(asset.area ? [{ id: 'area', geometry: asset.area, color: '#2e7d4f' }] : []),
+    ...(asset.area ? [{ id: 'area', geometry: asset.area, color: COLORS.secondary }] : []),
   ];
   const schema = asset.assetType.metadataSchema;
   const metadata = asset.metadata?.data ?? {};
@@ -230,10 +231,10 @@ function Summary({ asset }: { asset: AssetDetail }) {
           <MapView label={`Mapa de ${asset.name}`} points={points} polygons={polygons} height={340}>
             <MapLegend
               items={[
-                { color: '#0f2a3d', label: 'Activo / establecimiento' },
-                ...(asset.area ? [{ color: '#2e7d4f', label: 'Superficie declarada' }] : []),
+                { color: COLORS.inverse, label: 'Activo / establecimiento' },
+                ...(asset.area ? [{ color: COLORS.secondary, label: 'Superficie declarada' }] : []),
                 ...((devices.data?.length ?? 0) > 0
-                  ? [{ color: '#1b8f3a', label: 'Cámara en línea' }]
+                  ? [{ color: COLORS.success, label: 'Cámara en línea' }]
                   : []),
               ]}
             />

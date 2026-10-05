@@ -1,5 +1,6 @@
 'use client';
 
+import { COLORS } from '@/lib/design/tokens';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { DevicesPanel } from '@/components/domain/DevicesPanel';
@@ -102,7 +103,7 @@ function Stepper({ current }: { current: StepId }) {
           aria-current={i === index ? 'step' : undefined}
         >
           <span className={styles.stepIndex}>
-            {i < index ? <Icon name="check" size={12} /> : i + 1}
+            {i < index ? <Icon name="check" size="xs" /> : i + 1}
           </span>
           {step.label}
         </li>
@@ -303,7 +304,7 @@ export function NewAssetWizard() {
   };
 
   const context = establishment?.boundary
-    ? [{ id: 'est', geometry: establishment.boundary, color: '#0f2a3d', dashed: true }]
+    ? [{ id: 'est', geometry: establishment.boundary, color: COLORS.inverse, dashed: true }]
     : [];
 
   return (
@@ -333,7 +334,7 @@ export function NewAssetWizard() {
                 >
                   {active ? (
                     <span className={styles.optionCheck}>
-                      <Icon name="check" size={18} />
+                      <Icon name="check" size="md" />
                     </span>
                   ) : null}
                   <span className={styles.optionTitle}>{type.name}</span>
@@ -421,7 +422,7 @@ export function NewAssetWizard() {
                             {
                               id: establishment.id,
                               coordinates: establishment.point.coordinates,
-                              color: '#0f2a3d',
+                              color: COLORS.inverse,
                               selected: true,
                             },
                           ]
@@ -681,7 +682,7 @@ export function NewAssetWizard() {
                     {draft.errors.location || draft.errors.polygon ? (
                       <p
                         role="alert"
-                        style={{ color: 'var(--critical-fg)', fontSize: 13, marginTop: 6 }}
+                        style={{ color: 'var(--color-danger-text)', fontSize: 13, marginTop: 6 }}
                       >
                         {draft.errors.location ?? draft.errors.polygon}
                       </p>
@@ -786,7 +787,7 @@ export function NewAssetWizard() {
             {created.map((asset) => (
               <li key={asset.id} className={styles.requirement}>
                 <span className={styles.requirementName}>
-                  <Icon name="check" size={16} />
+                  <Icon name="check" size="sm" />
                   <Link href={`/assets/${asset.id}`}>{asset.name}</Link>
                   <span className={styles.muted}>{asset.type.name}</span>
                 </span>

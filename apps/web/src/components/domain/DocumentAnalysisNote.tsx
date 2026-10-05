@@ -28,7 +28,7 @@ export function DocumentAnalysisNote({ analysis }: { analysis?: DocumentAnalysis
   ].join('\n');
 
   let text: string;
-  let color = 'var(--text-secondary)';
+  let color = 'var(--color-text-secondary)';
   switch (analysis.status) {
     case 'PENDING':
       text = 'Lectura automática en curso…';
@@ -38,7 +38,7 @@ export function DocumentAnalysisNote({ analysis }: { analysis?: DocumentAnalysis
       break;
     case 'CONSISTENT':
       text = `✓ Lectura automática: ${matched.length ? `${matched.join(', ')} coinciden` : 'sin diferencias'}`;
-      color = 'var(--success-fg)';
+      color = 'var(--color-success-text)';
       break;
     default:
       text = `Revisión requerida: ${
@@ -46,7 +46,7 @@ export function DocumentAnalysisNote({ analysis }: { analysis?: DocumentAnalysis
           ? `lectura de baja confianza (${Math.round((analysis.extractionConfidence ?? 0) * 100)} %)`
           : issues.map((r) => r.message.toLowerCase()).join('; ') || 'verificar manualmente'
       }`;
-      color = 'var(--warning-fg)';
+      color = 'var(--color-warning-text)';
   }
   return (
     <span

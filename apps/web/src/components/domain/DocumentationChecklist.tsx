@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Fragment, useState } from 'react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { Icon } from '@/components/ui/Icon';
 import { Callout } from '@/components/ui/Feedback';
 import { Panel } from '@/components/ui/Panel';
 import { Progress } from '@/components/ui/Progress';
@@ -326,9 +327,11 @@ export function OcrDetail({ document }: { document: DocumentItem | undefined }) 
           {checks.map((c) => (
             <Fragment key={c.check}>
               <li data-status={c.status}>
-                <span aria-hidden>
-                  {c.status === 'MATCH' ? '✓' : c.status === 'MISMATCH' ? '✕' : '–'}
-                </span>{' '}
+                <Icon
+                  name={c.status === 'MATCH' ? 'check' : c.status === 'MISMATCH' ? 'x' : 'info'}
+                  size="xs"
+                  className={styles.checkIcon}
+                />{' '}
                 {c.message}
               </li>
             </Fragment>

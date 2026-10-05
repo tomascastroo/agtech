@@ -168,7 +168,11 @@ export function RequestDetailView() {
                 label="Coincidencia"
                 value={v.matchPercentage != null ? `${formatNumber(v.matchPercentage, 1)} %` : '—'}
               />
-              <Stat label="Score" value={v.finalScore != null ? `${v.finalScore}/100` : '—'} />
+              <Stat
+                label="Score"
+                value={v.finalScore ?? '—'}
+                unit={v.finalScore != null ? '/100' : undefined}
+              />
             </StatRow>
           )}
           {v?.outcome ? (

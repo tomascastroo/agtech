@@ -4,8 +4,8 @@
   min-height: 280px;
   border-radius: var(--radius-md);
   overflow: hidden;
-  background: #e8ebe4;
-  border: 1px solid var(--border);
+  background: var(--color-surface-sunken);
+  border: var(--border-width) solid var(--color-border-subtle);
 }
 .map :global(.maplibregl-ctrl-attrib) {
   font-size: 10px;
@@ -26,24 +26,24 @@
   left: var(--space-3);
   padding: 6px 10px;
   border-radius: var(--radius-sm);
-  background: rgba(15, 42, 61, 0.88);
-  color: #fff;
+  background: var(--color-image-overlay);
+  color: var(--color-on-primary);
   font-size: var(--text-xs);
 }
 .legend {
   position: absolute;
   z-index: 2;
   right: var(--space-3);
-  bottom: var(--space-6);
+  bottom: var(--space-8);
   display: flex;
   flex-direction: column;
   gap: 4px;
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.94);
-  border: 1px solid var(--border);
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border-subtle);
   font-size: var(--text-xs);
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
 }
 .legendItem {
   display: flex;
@@ -53,7 +53,7 @@
 .legendDot {
   width: 10px;
   height: 10px;
-  border-radius: 50%;
-  border: 2px solid #fff;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15);
+  border-radius: var(--radius-pill);
+  border: 2px solid var(--color-surface);
+  box-shadow: 0 0 0 1px var(--color-border-strong);
 }

@@ -10,10 +10,10 @@ export function ScoreMeter({
 }) {
   const color =
     tone === 'success'
-      ? 'var(--green-600)'
+      ? 'var(--color-secondary)'
       : tone === 'warning'
-        ? 'var(--warning-mark)'
-        : 'var(--critical-mark)';
+        ? 'var(--color-warning)'
+        : 'var(--color-danger)';
   return (
     <div className={styles.meter}>
       <div className={styles.meterHero}>

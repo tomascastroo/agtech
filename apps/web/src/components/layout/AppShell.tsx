@@ -62,9 +62,9 @@ export function AppShell({ children }: { children: ReactNode }) {
       >
         <Link href="/dashboard" className={styles.brand}>
           <span className={styles.brandMark}>
-            <Icon name="leaf" size={16} />
+            <Icon name="leaf" size="sm" />
           </span>
-          AGROGARANTÍAS
+          AgroGarantías
         </Link>
         <nav className={styles.nav}>
           {NAV.map((item) => {
@@ -78,7 +78,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                   aria-current={active ? 'page' : undefined}
                   onClick={() => setOpen(false)}
                 >
-                  <Icon name={item.icon} size={18} />
+                  <Icon name={item.icon} size="md" />
                   {item.label}
                   {item.href === '/alerts' && openAlerts > 0 ? (
                     <span className={styles.navCount} aria-label={`${openAlerts} alertas activas`}>
@@ -104,7 +104,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             />
           </span>
           <div className={styles.org}>
-            <Icon name="building" size={18} />
+            <Icon name="building" size="md" />
             {user?.organizationName ?? ' '}
             <span className={styles.orgKind}>· Entidad financiera</span>
           </div>

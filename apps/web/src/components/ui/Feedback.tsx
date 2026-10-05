@@ -26,8 +26,10 @@ export function Callout({
       className={`${styles.callout} ${styles[tone]}`}
       role={tone === 'critical' ? 'alert' : 'status'}
     >
-      <Icon name={CALLOUT_ICON[tone]} size={18} />
-      <div>
+      <span className={styles.calloutIcon} aria-hidden>
+        <Icon name={CALLOUT_ICON[tone]} size="sm" />
+      </span>
+      <div className={styles.calloutBody}>
         {title ? <div className={styles.calloutTitle}>{title}</div> : null}
         {children}
       </div>
@@ -49,7 +51,7 @@ export function EmptyState({
   return (
     <div className={styles.empty}>
       <div className={styles.emptyIcon}>
-        <Icon name={icon} size={20} />
+        <Icon name={icon} size="lg" />
       </div>
       <div className={styles.emptyTitle}>{title}</div>
       {children ? <div>{children}</div> : null}
@@ -58,11 +60,15 @@ export function EmptyState({
   );
 }
 
-export function Loading({ label = 'Cargando…' }: { label?: string }) {
+/** Estado de carga: esqueletos (no spinners genéricos). El texto queda para lectores de pantalla. */
+export function Loading({ label = 'Cargando…', rows = 3 }: { label?: string; rows?: number }) {
   return (
-    <div className={styles.loading} role="status">
-      <span className={styles.spinner} aria-hidden />
-      {label}
+    <div className={styles.loading} role="status" aria-live="polite">
+      <span className="visually-hidden">{label}</span>
+      <Skeleton height={14} width="38%" />
+      {Array.from({ length: rows }, (_, i) => (
+        <Skeleton key={i} height={12} width={i === rows - 1 ? '62%' : '100%'} />
+      ))}
     </div>
   );
 }

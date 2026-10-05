@@ -101,7 +101,7 @@ export function DemoBanner({
   return (
     <div className={styles.demoBanner} role="note" data-testid="demo-banner">
       <div>
-        <strong>DATOS DE DEMOSTRACIÓN</strong>
+        <strong>Datos de demostración</strong>
         {scenario ? ` · ${scenario}` : ''}. {message}
       </div>
     </div>

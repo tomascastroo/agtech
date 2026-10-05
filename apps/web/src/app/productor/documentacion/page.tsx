@@ -31,7 +31,7 @@ export default function ProducerDocumentation() {
                 <span
                   className={`${styles.docMark} ${d.satisfied ? styles.docOk : styles.docMissing}`}
                 >
-                  <Icon name={d.satisfied ? 'check' : 'warning'} size={14} />
+                  <Icon name={d.satisfied ? 'check' : 'warning'} size="xs" />
                 </span>
                 <span style={{ flex: 1 }}>
                   {d.alternatives.map((a) => DOCUMENT_TYPE_LABELS[a] ?? a).join(' o ')}
@@ -42,7 +42,7 @@ export default function ProducerDocumentation() {
               href={`/productor/solicitudes/${r.id}#documentacion`}
               className={`${styles.bigButton} ${styles.bigButtonSecondary}`}
             >
-              <Icon name="plus" size={20} /> Agregar documento
+              <Icon name="plus" size="lg" /> Agregar documento
             </Link>
           </section>
         ))

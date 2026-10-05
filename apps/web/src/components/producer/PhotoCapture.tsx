@@ -185,7 +185,7 @@ export function PhotoCapture({
     <div className={styles.list}>
       {guidance ? (
         <p className={styles.muted}>
-          <Icon name="info" size={14} /> {guidance}
+          <Icon name="info" size="xs" /> {guidance}
         </p>
       ) : null}
       <input
@@ -216,14 +216,14 @@ export function PhotoCapture({
           className={styles.bigButton}
           onClick={() => cameraRef.current?.click()}
         >
-          <Icon name="camera" size={20} /> Tomar foto
+          <Icon name="camera" size="lg" /> Tomar foto
         </button>
         <button
           type="button"
           className={`${styles.bigButton} ${styles.bigButtonSecondary}`}
           onClick={() => galleryRef.current?.click()}
         >
-          <Icon name="upload" size={20} /> Elegir de galería (vale menos)
+          <Icon name="upload" size="lg" /> Elegir de galería (vale menos)
         </button>
       </div>
 
@@ -242,7 +242,7 @@ export function PhotoCapture({
                     aria-label={`Quitar ${p.file.name}`}
                     disabled={uploading}
                   >
-                    <Icon name="x" size={14} />
+                    <Icon name="x" size="xs" />
                   </button>
                 ) : null}
                 {p.state !== 'pending' ? (
@@ -258,7 +258,7 @@ export function PhotoCapture({
             ))}
           </div>
           <span className={styles.chip}>
-            <Icon name="pin" size={12} />
+            <Icon name="pin" size="xs" />
             {locationState === 'ok' && position
               ? `Ubicación del teléfono · ±${Math.round(position.accuracyM)} m`
               : locationState === 'asking'
@@ -271,7 +271,7 @@ export function PhotoCapture({
               className={`${styles.bigButton} ${styles.bigButtonSecondary}`}
               onClick={() => void requestPosition()}
             >
-              <Icon name="pin" size={20} /> Permitir ubicación
+              <Icon name="pin" size="lg" /> Permitir ubicación
             </button>
           ) : null}
           {locationState === 'denied' || locationState === 'unavailable' ? (
@@ -301,7 +301,7 @@ export function PhotoCapture({
             onClick={upload}
             disabled={uploading || pending === 0}
           >
-            <Icon name="check" size={20} />
+            <Icon name="check" size="lg" />
             {uploading ? 'Enviando…' : `Enviar ${pending} foto${pending === 1 ? '' : 's'}`}
           </button>
         </>

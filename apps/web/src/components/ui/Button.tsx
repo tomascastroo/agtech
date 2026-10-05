@@ -14,9 +14,13 @@ interface Common {
   children?: ReactNode;
 }
 
-const classes = ({ variant = 'secondary', size = 'md', block }: Common, extra?: string) =>
+const classes = (
+  { variant = 'secondary', size = 'md', block, icon, children }: Common,
+  extra?: string,
+) =>
   [
     styles.button,
+    icon && (children === undefined || children === null) ? styles.iconOnly : '',
     styles[variant],
     size !== 'md' ? styles[size] : '',
     block ? styles.block : '',
@@ -40,7 +44,7 @@ export function Button({
   return (
     <button
       type={type}
-      className={classes({ variant, size, block }, className)}
+      className={classes({ variant, size, block, icon, children }, className)}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
       {...rest}
@@ -48,7 +52,7 @@ export function Button({
       {loading ? (
         <span className={styles.spinner} aria-hidden />
       ) : icon ? (
-        <Icon name={icon} size={16} />
+        <Icon name={icon} size="sm" />
       ) : null}
       {children}
     </button>
@@ -70,16 +74,16 @@ export function LinkButton({
         href={href}
         target="_blank"
         rel="noopener noreferrer"
-        className={classes({ variant, size, block })}
+        className={classes({ variant, size, block, icon, children })}
       >
-        {icon ? <Icon name={icon} size={16} /> : null}
+        {icon ? <Icon name={icon} size="sm" /> : null}
         {children}
       </a>
     );
   }
   return (
-    <Link href={href} className={classes({ variant, size, block })}>
-      {icon ? <Icon name={icon} size={16} /> : null}
+    <Link href={href} className={classes({ variant, size, block, icon, children })}>
+      {icon ? <Icon name={icon} size="sm" /> : null}
       {children}
     </Link>
   );

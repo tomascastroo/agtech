@@ -76,13 +76,13 @@ export function GuaranteesView() {
             <Stat
               label="Verificadas"
               value={formatNumber(query.data.kpis.verified)}
-              accent="var(--success-mark)"
+              accent="var(--color-success)"
             />
             <Stat
               testId="kpi-at-risk"
               label="En riesgo"
               value={formatNumber(query.data.kpis.atRisk)}
-              accent="var(--critical-mark)"
+              accent="var(--color-danger)"
               caption="Inspección, revisión, no determinable o riesgo alto"
             />
             <Stat
@@ -92,7 +92,7 @@ export function GuaranteesView() {
             <Stat
               label="Evidencia vencida"
               value={formatNumber(query.data.kpis.expiredEvidence)}
-              accent="var(--warning-mark)"
+              accent="var(--color-warning)"
             />
             <Stat label="Alertas abiertas" value={formatNumber(query.data.kpis.openAlerts)} />
             <Stat

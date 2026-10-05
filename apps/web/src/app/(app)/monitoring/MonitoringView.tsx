@@ -1,5 +1,6 @@
 'use client';
 
+import { COLORS } from '@/lib/design/tokens';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
@@ -224,7 +225,7 @@ export function MonitoringView() {
                 points={rows.map((r) => ({
                   id: r.assetId,
                   coordinates: r.location.coordinates,
-                  color: STATE_COLORS[r.state] ?? '#5b6670',
+                  color: STATE_COLORS[r.state] ?? COLORS.textSecondary,
                   label: `${r.assetName}${r.dataSource === 'DEMO' ? ' (DEMO)' : ''} · ${PORTFOLIO_STATE_LABELS[r.state]}`,
                   selected: r.assetId === selectedId,
                 }))}

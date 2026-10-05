@@ -107,8 +107,8 @@ export function DocumentsPanel({
               <span
                 className={`${styles.requirementName} ${r.satisfied ? styles.requirementOk : styles.requirementMissing}`}
               >
-                <Icon name={r.satisfied ? 'check' : 'x'} size={16} />
-                <span style={{ color: 'var(--text-primary)' }}>
+                <Icon name={r.satisfied ? 'check' : 'x'} size="sm" />
+                <span style={{ color: 'var(--color-text)' }}>
                   {requirementLabel(r.requirement)}
                 </span>
               </span>

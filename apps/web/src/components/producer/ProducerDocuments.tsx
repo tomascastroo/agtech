@@ -124,7 +124,7 @@ export function ProducerDocuments({
               <span
                 className={`${styles.docMark} ${r.satisfied ? styles.docOk : styles.docMissing}`}
               >
-                <Icon name={r.satisfied ? 'check' : 'warning'} size={14} />
+                <Icon name={r.satisfied ? 'check' : 'warning'} size="xs" />
               </span>
               <span style={{ flex: 1 }}>{requirementLabel(r.alternatives)}</span>
               {!r.satisfied ? (
@@ -144,7 +144,7 @@ export function ProducerDocuments({
             <div key={d.id}>
               <div className={styles.docRow}>
                 <span className={`${styles.docMark} ${styles.docOk}`}>
-                  <Icon name="document" size={14} />
+                  <Icon name="document" size="xs" />
                 </span>
                 <span className={styles.docInfo}>
                   <strong style={{ display: 'block' }}>{d.title}</strong>
@@ -232,7 +232,7 @@ export function ProducerDocuments({
           {error ? <Callout tone="critical">{error}</Callout> : null}
           <div className={styles.buttonRow}>
             <button type="submit" className={styles.bigButton} disabled={busy}>
-              <Icon name="upload" size={20} /> {busy ? 'Subiendo…' : 'Subir documento'}
+              <Icon name="upload" size="lg" /> {busy ? 'Subiendo…' : 'Subir documento'}
             </button>
             <button
               type="button"
@@ -249,7 +249,7 @@ export function ProducerDocuments({
           className={`${styles.bigButton} ${styles.bigButtonSecondary}`}
           onClick={() => start()}
         >
-          <Icon name="plus" size={20} /> Agregar documento
+          <Icon name="plus" size="lg" /> Agregar documento
         </button>
       )}
       {notice ? <Callout tone="success">{notice}</Callout> : null}
@@ -317,11 +317,11 @@ function RequirementCard({
       </div>
       {item.document ? (
         <span className={`${styles.reqLine} ${styles.reqOk}`}>
-          <Icon name="check" size={16} /> Documento cargado
+          <Icon name="check" size="sm" /> Documento cargado
         </span>
       ) : null}
       <span className={`${styles.reqLine} ${toneClass}`} data-status={item.status}>
-        <Icon name={state.icon} size={16} /> {state.text}
+        <Icon name={state.icon} size="sm" /> {state.text}
         {item.status === 'INCONSISTENT' ? ` · ${item.reason}` : ''}
       </span>
       <p className={styles.muted}>
@@ -345,7 +345,7 @@ function RequirementCard({
             className={`${styles.bigButton} ${styles.bigButtonSecondary}`}
             onClick={onUpload}
           >
-            <Icon name="upload" size={20} /> Subí una foto o PDF
+            <Icon name="upload" size="lg" /> Subí una foto o PDF
           </button>
         </>
       ) : null}

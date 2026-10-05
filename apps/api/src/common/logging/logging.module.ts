@@ -7,6 +7,15 @@ import { AppConfig } from '../../config/app-config.js';
 const REQUEST_ID = /^[A-Za-z0-9._-]{1,64}$/;
 
 /**
+ * Los links del productor y del inspector llevan su credencial en la ruta: nunca se escriben en
+ * los logs. También se ocultan parámetros de query con nombre de secreto.
+ */
+const TOKEN_PATHS = /\/(producer\/requests|inspections)\/[^/?#]+/g;
+const SECRET_QUERY = /([?&](?:token|code|password|secret)=)[^&#]*/gi;
+export const redactUrl = (url: string | undefined): string | undefined =>
+  url?.replace(TOKEN_PATHS, '/$1/[REDACTED]').replace(SECRET_QUERY, '$1[REDACTED]');
+
+/**
  * Logging estructurado (JSON) con pino. Cada request recibe un request-id (propagado desde
  * x-request-id si es válido) que se incluye en todos los logs y en la respuesta. Se redactan
  * credenciales y cookies. Preparado para enviarse a Datadog/Elastic/OpenTelemetry collector.
@@ -52,7 +61,7 @@ export class LoggingModule {
                 req: (req: { id: string; method: string; url: string }) => ({
                   id: req.id,
                   method: req.method,
-                  url: req.url,
+                  url: redactUrl(req.url),
                 }),
                 res: (res: { statusCode: number }) => ({ statusCode: res.statusCode }),
               },

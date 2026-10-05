@@ -12,10 +12,13 @@
   gap: 4px;
   margin-bottom: var(--space-2);
   font-size: var(--text-sm);
-  color: var(--text-secondary);
+  color: var(--color-text-muted);
 }
 .breadcrumb a {
-  color: var(--text-secondary);
+  color: var(--color-text-muted);
+}
+.breadcrumb a:hover {
+  color: var(--color-primary);
 }
 .title {
   display: flex;
@@ -26,7 +29,7 @@
 .description {
   margin-top: 6px;
   max-width: 760px;
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
 }
 .actions {
   display: flex;

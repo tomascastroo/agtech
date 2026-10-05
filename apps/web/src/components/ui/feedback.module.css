@@ -1,42 +1,67 @@
+/* Callouts limpios (no cajas gigantes de color): fondo suave, borde fino, ícono lineal. */
+/* Avisos: tarjeta limpia (no cajas de color gigantes). El tono lo llevan el ícono en un
+   círculo suave y el título; el fondo queda casi neutro con un tinte muy leve. */
 .callout {
   display: flex;
+  align-items: flex-start;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-md);
-  border: 1px solid transparent;
+  border: var(--border-width) solid var(--color-border-subtle);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
   font-size: var(--text-sm);
 }
-.callout svg {
+.calloutIcon {
   flex: none;
-  margin-top: 1px;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-pill);
+}
+.calloutBody {
+  min-width: 0;
+  padding-top: 4px;
 }
 .calloutTitle {
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
 }
-.info {
-  background: var(--info-bg);
-  color: var(--info-fg);
-  border-color: #cfe0f2;
+.info .calloutIcon {
+  background: var(--color-info-soft);
+  color: var(--color-info-text);
 }
-.success {
-  background: var(--success-bg);
-  color: var(--success-fg);
-  border-color: #c9e6d3;
+.success .calloutIcon {
+  background: var(--color-success-soft);
+  color: var(--color-success-text);
 }
 .warning {
-  background: var(--warning-bg);
-  color: var(--warning-fg);
-  border-color: #f4e0b3;
+  background: var(--color-surface-muted);
+}
+.warning .calloutIcon {
+  background: var(--color-warning-soft);
+  color: var(--color-warning-text);
+}
+.warning .calloutTitle {
+  color: var(--color-warning-text);
 }
 .critical {
-  background: var(--critical-bg);
-  color: var(--critical-fg);
-  border-color: #f6cfca;
+  border-color: var(--color-danger-border);
+}
+.critical .calloutIcon {
+  background: var(--color-danger-soft);
+  color: var(--color-danger-text);
+}
+.critical .calloutTitle {
+  color: var(--color-danger-text);
 }
 .neutral {
-  background: var(--gray-50);
-  color: var(--text-secondary);
-  border-color: var(--border);
+  background: var(--color-surface-muted);
+}
+.neutral .calloutIcon {
+  background: var(--color-neutral-soft);
+  color: var(--color-neutral-text);
 }
 .empty {
   display: flex;
@@ -45,49 +70,39 @@
   gap: var(--space-2);
   padding: var(--space-10) var(--space-6);
   text-align: center;
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
 }
 .emptyIcon {
   display: grid;
   place-items: center;
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   margin-bottom: var(--space-2);
-  border-radius: 50%;
-  background: var(--gray-100);
-  color: var(--gray-600);
+  border-radius: var(--radius-pill);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
 }
 .emptyTitle {
-  font-weight: 600;
-  color: var(--text-primary);
+  font: var(--type-h3);
+  color: var(--color-text);
 }
 .loading {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  padding: var(--space-8);
-  color: var(--text-secondary);
-  font-size: var(--text-sm);
-}
-.spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid var(--gray-300);
-  border-top-color: var(--green-700);
-  border-radius: 50%;
-  animation: spin 800ms linear infinite;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-6);
 }
 .skeleton {
   border-radius: var(--radius-sm);
-  background: linear-gradient(90deg, var(--gray-100) 0%, var(--gray-50) 50%, var(--gray-100) 100%);
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-sunken) 0%,
+    var(--color-surface-muted) 50%,
+    var(--color-surface-sunken) 100%
+  );
   background-size: 200% 100%;
   animation: shimmer 1.4s ease infinite;
-}
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 @keyframes shimmer {
   0% {
