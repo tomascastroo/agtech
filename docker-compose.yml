@@ -105,6 +105,8 @@ services:
       AI_SERVICE_DETECTOR: ${AI_SERVICE_DETECTOR:-yolox}
       AI_SERVICE_SENTINEL_CATALOG: ${AI_SERVICE_SENTINEL_CATALOG:-auto}
       AI_SERVICE_MAX_CLOUD_COVER: ${AI_SERVICE_MAX_CLOUD_COVER:-20}
+    # Si el proceso muere (p. ej. sin memoria al procesar un escaneo), vuelve a levantarse solo.
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health/live', timeout=3).status == 200 else 1)"]
       interval: 10s
@@ -130,6 +132,7 @@ services:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
     command: ["node", "dist/main.js"]
     environment:
       <<: *api-env
@@ -153,6 +156,7 @@ services:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
     command: ["node", "dist/worker.js"]
     environment:
       <<: *api-env
@@ -168,6 +172,7 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
+    restart: unless-stopped
     environment:
       API_INTERNAL_URL: http://api:4000
       MAP_STYLE_URL: ${MAP_STYLE_URL:-}
