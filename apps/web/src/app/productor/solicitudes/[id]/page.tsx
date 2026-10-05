@@ -2,6 +2,7 @@
 
 import { DemoBanner } from '@/components/domain/DataLayersPanel';
 import { useParams } from 'next/navigation';
+import { DeclarationVersions } from '@/components/producer/DeclarationVersions';
 import { useEffect, useState } from 'react';
 import { ProgressBar, ProducerStatusBadge } from '@/components/producer/Cards';
 import { AssetStep, EstablishmentStep } from '@/components/producer/DeclarationForms';
@@ -145,7 +146,12 @@ export default function ProducerRequestPage() {
             done={submitted}
           >
             {submitted ? (
-              <SubmittedCard request={r} />
+              <>
+                <SubmittedCard request={r} />
+                {r.guaranteeType.code === 'BOVINOS' ? (
+                  <DeclarationVersions requestId={r.id} />
+                ) : null}
+              </>
             ) : (
               <SubmitCard request={r} base={base} onDone={refresh} />
             )}

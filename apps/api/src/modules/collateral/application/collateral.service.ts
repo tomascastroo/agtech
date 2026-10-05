@@ -504,7 +504,7 @@ export class CollateralService {
       verificationState: 'PENDIENTE' | 'VERIFICADO' | 'RECHAZADO';
     }>(
       `SELECT direction, heads, source_level AS "sourceLevel", verification_state AS "verificationState"
-         FROM collateral_movements WHERE guarantee_id = $1 AND occurred_at >= $2`,
+         FROM collateral_movements WHERE guarantee_id = $1 AND occurred_at >= date_trunc('day', $2::timestamptz)`,
       [g.id, declaration?.declaredAt ?? new Date(0)],
     );
     const undocumentedExits = movements
@@ -587,7 +587,7 @@ export class CollateralService {
               ) END AS "locationVerified"
          FROM collateral_inspections i JOIN bovine_guarantees g ON g.id = i.guarantee_id
         WHERE i.guarantee_id = $1 AND i.status = 'REALIZADA'
-        ORDER BY i.performed_at DESC`,
+        ORDER BY i.performed_at DESC, i.created_at DESC`,
       [g.id],
     );
     for (const ins of inspections) candidates.push(observationFromInspection(ins));

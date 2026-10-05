@@ -13,6 +13,8 @@ interface QueuedPhoto {
   id: string;
   file: File;
   preview: string;
+  /** CAMERA: tomada con la cámara desde la app. FILE: elegida de la galería (vale menos). */
+  origin: 'CAMERA' | 'FILE';
   state: 'pending' | 'uploading' | 'done' | 'error';
   error?: string;
 }
@@ -96,7 +98,7 @@ export function PhotoCapture({
     if (locationState === 'idle') void requestPosition();
   };
 
-  const add = (files: FileList | null) => {
+  const add = (files: FileList | null, origin: 'CAMERA' | 'FILE') => {
     setError(null);
     setNotice(null);
     const list = Array.from(files ?? []);
@@ -111,6 +113,7 @@ export function PhotoCapture({
         id: `${file.name}-${file.size}-${file.lastModified}-${Math.random()}`,
         file,
         preview: URL.createObjectURL(file),
+        origin,
         state: 'pending' as const,
       })),
     ]);
@@ -151,6 +154,7 @@ export function PhotoCapture({
           form.set('accuracyM', String(Math.round(location.accuracyM * 10) / 10));
           form.set('locationSource', 'DEVICE_GPS');
         }
+        form.set('captureOrigin', item.origin);
         if (description.trim()) form.set('description', description.trim());
         await api(endpoint, { method: 'POST', form });
         ok++;
@@ -191,7 +195,7 @@ export function PhotoCapture({
         accept="image/*"
         capture="environment"
         onChange={(e) => {
-          add(e.target.files);
+          add(e.target.files, 'CAMERA');
           e.target.value = '';
         }}
       />
@@ -202,7 +206,7 @@ export function PhotoCapture({
         accept="image/jpeg,image/png,image/webp"
         multiple
         onChange={(e) => {
-          add(e.target.files);
+          add(e.target.files, 'FILE');
           e.target.value = '';
         }}
       />
@@ -219,7 +223,7 @@ export function PhotoCapture({
           className={`${styles.bigButton} ${styles.bigButtonSecondary}`}
           onClick={() => galleryRef.current?.click()}
         >
-          <Icon name="upload" size={20} /> Elegir de galería
+          <Icon name="upload" size={20} /> Elegir de galería (vale menos)
         </button>
       </div>
 
