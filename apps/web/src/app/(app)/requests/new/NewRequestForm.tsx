@@ -503,6 +503,11 @@ function SimulateRequest() {
               >
                 Abrir solicitud
               </Button>
+              {created.guaranteeId ? (
+                <Button onClick={() => router.push(`/guarantees/${created.guaranteeId}`)}>
+                  Abrir garantía (Asset Passport)
+                </Button>
+              ) : null}
               <Button variant="secondary" onClick={() => setCreated(null)}>
                 Crear otra
               </Button>

@@ -796,6 +796,8 @@ export interface DemoScenarioOption {
 }
 
 export interface DemoCreated {
+  /** Garantía bovina de la demo (si el escenario la crea). */
+  guaranteeId?: string | null;
   requestId: string;
   scenario: { code: string; name: string };
   producerAccess: { email: string; password: string };

@@ -1,3 +1,4 @@
+import { CollateralCommandsService } from '../../collateral/application/collateral-commands.service.js';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { readFile } from 'node:fs/promises';
@@ -49,6 +50,7 @@ export class DemoService {
     private readonly entities: Repository<GuaranteeRequestEntity>,
     private readonly config: AppConfig,
     private readonly audit: AuditService,
+    private readonly collateral: CollateralCommandsService,
   ) {}
 
   get enabled(): boolean {
@@ -128,7 +130,7 @@ export class DemoService {
           scenario.system === 'FEEDLOT'
             ? 'Feedlot La Esperanza (demo)'
             : 'Rodeo de cría La Esperanza (demo)',
-        declaredQuantity: 1500,
+        declaredQuantity: scenario.heads ?? 1500,
         metadata: {
           sistema_productivo: scenario.system === 'FEEDLOT' ? 'Feedlot' : 'Cría',
           raza_predominante: 'Aberdeen Angus',
@@ -177,6 +179,8 @@ export class DemoService {
       );
     }
     if (scenario.submit) await this.requests.submitFor(await this.entity(created.id), context);
+    if (scenario.collateral)
+      await this.collateralLifecycle(user, created.id, scenario.collateral, context);
 
     await this.audit.record({
       actor: { kind: 'user', user },
@@ -186,13 +190,102 @@ export class DemoService {
       metadata: { scenario: scenario.code },
       context,
     });
+    const [guarantee] = (await this.entities.manager.query(
+      `SELECT id FROM bovine_guarantees WHERE guarantee_request_id = $1`,
+      [created.id],
+    )) as { id: string }[];
     return {
       requestId: created.id,
+      guaranteeId: guarantee?.id ?? null,
       scenario: { code: scenario.code, name: scenario.name },
       // Acceso del productor ficticio (para mostrar su portal en la presentación).
       producerAccess: { email, password },
       demo: true,
     };
+  }
+
+  /**
+   * Ciclo de la garantía bovina con los MISMOS comandos que usa la entidad. Todo queda en una
+   * garantía DEMO; el inspector, los montos, el peso y el precio son ficticios y lo dicen.
+   */
+  private async collateralLifecycle(
+    user: AuthenticatedUser,
+    requestId: string,
+    mode: 'VERIFIED' | 'INSPECTION',
+    context: RequestContext,
+  ) {
+    const [g] = (await this.entities.manager.query(
+      `SELECT id FROM bovine_guarantees WHERE guarantee_request_id = $1`,
+      [requestId],
+    )) as { id: string }[];
+    if (!g) return;
+    const today = new Date().toISOString().slice(0, 10);
+    const DEMO = 'Valor ficticio de demostración';
+    await this.collateral.update(
+      user,
+      g.id,
+      {
+        legalInstrument: 'PRENDA_FIJA',
+        legalIdentifier: 'DEMO-0001',
+        legalStatus: 'INSCRIPTA',
+        lienPriority: 1,
+        immobilizationStatus: 'SOLICITADA',
+        amount: 450_000,
+        debtAmount: 380_000,
+        currency: 'USD',
+        grantedAt: today,
+        averageWeightKg: 380,
+        weightSource: DEMO,
+        pricePerKg: 1.9,
+        priceCurrency: 'USD',
+        priceSource: DEMO,
+        priceDate: today,
+        qualityFactor: 0.9,
+      },
+      context,
+    );
+    await this.collateral.recordMovement(
+      user,
+      g.id,
+      {
+        direction: 'EGRESO',
+        kind: 'VENTA',
+        heads: 25,
+        destination: 'Frigorífico (demo)',
+        occurredAt: new Date().toISOString(),
+        notes: 'Movimiento de demostración',
+      },
+      context,
+    );
+    const inspection = (
+      observedHeads: number,
+      minutesAgo: number,
+      result: 'CONFORME' | 'NO_CONFORME',
+    ) =>
+      this.collateral.recordInspection(
+        user,
+        g.id,
+        null,
+        {
+          inspectorName: 'Inspector de demostración',
+          performedAt: new Date(Date.now() - minutesAgo * 60_000).toISOString(),
+          latitude: DEMO_PRODUCER.location.latitude,
+          longitude: DEMO_PRODUCER.location.longitude,
+          observedHeads,
+          fullCount: true,
+          observations: 'Inspección de demostración: conteo en manga.',
+          discrepancies:
+            result === 'NO_CONFORME'
+              ? [{ topic: 'Cantidad', description: 'Corrales 4 y 5 vacíos (demo)' }]
+              : [],
+          result,
+          signatureName: 'Inspector de demostración',
+          signatureAccepted: true,
+        },
+        context,
+      );
+    await inspection(975, mode === 'INSPECTION' ? 60 : 1, 'CONFORME');
+    if (mode === 'INSPECTION') await inspection(720, 1, 'NO_CONFORME');
   }
 
   private entity(id: string) {

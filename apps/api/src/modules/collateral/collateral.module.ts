@@ -22,5 +22,6 @@ import {
   ],
   controllers: [CollateralController, ProducerDeclarationController],
   providers: [CollateralCommandsService, CollateralQueryService],
+  exports: [CollateralCommandsService],
 })
 export class CollateralModule {}

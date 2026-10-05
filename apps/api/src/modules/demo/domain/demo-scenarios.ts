@@ -45,6 +45,14 @@ export interface DemoScenario {
   requestRequirements: string[];
   /** El productor envía la declaración (se ejecuta la verificación). */
   submit: boolean;
+  /**
+   * Ciclo de la garantía bovina después del envío (movimiento, datos legales, valuación e
+   * inspecciones de DEMOSTRACIÓN): VERIFIED termina VERIFICADA; INSPECTION, con una diferencia que
+   * exige inspección.
+   */
+  collateral?: 'VERIFIED' | 'INSPECTION';
+  /** Cabezas declaradas (por defecto 1.500). */
+  heads?: number;
 }
 
 export const DEMO_SCENARIOS: DemoScenario[] = [
@@ -94,6 +102,36 @@ export const DEMO_SCENARIOS: DemoScenario[] = [
     photos: 3,
     requestRequirements: [],
     submit: false,
+  },
+  {
+    code: 'GUARANTEE_VERIFIED',
+    name: 'Garantía bovina verificada',
+    description:
+      'Feedlot de 1.000 bovinos: egreso de 25, inspección con conteo completo de 975, datos legales y valuación cargados.',
+    shows:
+      'Asset Passport en VERIFICADA: declarado 1.000 → esperado 975 → observado 975, score, cobertura calculada, agenda y PDF.',
+    system: 'FEEDLOT',
+    documents: ['constancia-cuit', 'renspa', 'certificado-vacunacion', 'contrato-arrendamiento'],
+    photos: 3,
+    requestRequirements: [],
+    submit: true,
+    collateral: 'VERIFIED',
+    heads: 1000,
+  },
+  {
+    code: 'GUARANTEE_INSPECTION',
+    name: 'Garantía bovina con diferencia',
+    description:
+      'Mismo feedlot, pero una segunda inspección cuenta 720 animales contra 975 esperados.',
+    shows:
+      'REQUIERE INSPECCIÓN: diferencia no explicada de 255, alerta crítica con qué pasó, por qué, evidencia y acción, e historial del cambio de estado.',
+    system: 'FEEDLOT',
+    documents: ['constancia-cuit', 'renspa', 'certificado-vacunacion', 'contrato-arrendamiento'],
+    photos: 3,
+    requestRequirements: [],
+    submit: true,
+    collateral: 'INSPECTION',
+    heads: 1000,
   },
 ];
 

@@ -397,4 +397,24 @@ describe('Garantía bovina: verificación continua (Asset Passport)', () => {
     expect(await ctx.app.get(CollateralService).sweep(new Date())).toBe(0);
     expect(await events()).toBe(before);
   });
+
+  it('demos de garantía bovina: VERIFICADA y REQUIERE_INSPECCION, siempre marcadas DEMO', async () => {
+    const make = async (scenario: string) => {
+      const r = await as(ctx, maria)
+        .post('/api/demo/guarantee-requests')
+        .send({ scenario })
+        .expect(201);
+      expect(r.body.guaranteeId).toBeTruthy();
+      return passport(r.body.guaranteeId as string);
+    };
+    const ok = await make('GUARANTEE_VERIFIED');
+    expect(ok.header).toMatchObject({ state: 'VERIFICADA', dataSource: 'DEMO' });
+    expect(ok.bovines).toMatchObject({ declared: 1000, exits: 25, expected: 975, observed: 975 });
+    expect(ok.coverage).toMatchObject({ status: 'DETERMINADA', verifiableHeads: 975 });
+    expect(ok.limitations[0]).toContain('DATOS DE DEMOSTRACIÓN');
+    const diff = await make('GUARANTEE_INSPECTION');
+    expect(diff.header.state).toBe('REQUIERE_INSPECCION');
+    expect(diff.bovines.unexplainedDifference).toBe(-255);
+    expect(diff.alerts.map((a: { type: string }) => a.type)).toContain('BG_QUANTITY_DIFFERENCE');
+  });
 });

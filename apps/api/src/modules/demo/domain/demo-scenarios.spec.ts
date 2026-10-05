@@ -19,6 +19,8 @@ describe('escenarios de demostración', () => {
       'MISSING_DOCUMENTS',
       'INCONSISTENT',
       'READY',
+      'GUARANTEE_VERIFIED',
+      'GUARANTEE_INSPECTION',
     ]);
     for (const s of DEMO_SCENARIOS)
       for (const d of s.documents) expect(existsSync(join(DOCS, `${d}.png`))).toBe(true);

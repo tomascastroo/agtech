@@ -185,7 +185,7 @@ describe('Documentación de crédito, OCR y simulación de solicitudes', () => {
     expect(bice.sources[0].url).toMatch(/^https:\/\/www\.bice\.com\.ar/);
     const demo = await as(ctx, maria).get('/api/demo/scenarios').expect(200);
     expect(demo.body.enabled).toBe(true);
-    expect(demo.body.scenarios).toHaveLength(4);
+    expect(demo.body.scenarios).toHaveLength(6);
   });
 
   it('demo completa: mismos modelos, datos DEMO, OCR consistente y verificación', async () => {
