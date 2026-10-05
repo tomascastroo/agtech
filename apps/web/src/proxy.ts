@@ -21,6 +21,8 @@ function contentSecurityPolicy(nonce: string): string {
     `connect-src 'self' ${mapOrigins.join(' ')}${dev ? ' ws:' : ''}`,
     "worker-src 'self' blob:",
     "font-src 'self'",
+    // Visor de documentos PDF (URL firmada del almacenamiento).
+    `frame-src 'self' ${assetOrigins.join(' ')}`,
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",

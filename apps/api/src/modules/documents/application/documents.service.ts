@@ -126,12 +126,48 @@ export class DocumentsService {
     );
   }
 
-  async downloadUrl(user: AuthenticatedUser, id: string, context: RequestContext) {
+  /** URL firmada de corta vida. `inline` la sirve para mostrar en el visor (no como descarga). */
+  async downloadUrl(
+    user: AuthenticatedUser,
+    id: string,
+    context: RequestContext,
+    options: { inline?: boolean } = {},
+  ) {
     const document = await this.documents.findById(user.organizationId, id);
     if (!document) throw new NotFoundError('Documento', id);
+    return this.signedUrl(user, document, context, options.inline ?? false);
+  }
+
+  /**
+   * Visor para el productor: solo documentos de SU solicitud (del activo declarado o del
+   * establecimiento). Cualquier otro documento responde como inexistente.
+   */
+  async viewUrlForRequest(
+    user: AuthenticatedUser,
+    scope: { organizationId: string; assetId: string | null; establishmentId: string | null },
+    id: string,
+    context: RequestContext,
+  ) {
+    const document = await this.documents.findById(scope.organizationId, id);
+    const belongs =
+      document !== null &&
+      ((scope.assetId !== null && document.assetId === scope.assetId) ||
+        (scope.establishmentId !== null &&
+          document.assetId === null &&
+          document.establishmentId === scope.establishmentId));
+    if (!document || !belongs) throw new NotFoundError('Documento', id);
+    return this.signedUrl(user, document, context, true);
+  }
+
+  private async signedUrl(
+    user: AuthenticatedUser,
+    document: DocumentEntity,
+    context: RequestContext,
+    inline: boolean,
+  ) {
     const url = await this.storage.signedDownloadUrl(document.storageKey, {
       downloadFileName: document.originalFileName,
-      inline: document.mimeType === 'application/pdf',
+      inline: inline || document.mimeType === 'application/pdf',
     });
     await this.audit.record({
       actor: { kind: 'user', user },
@@ -140,7 +176,7 @@ export class DocumentsService {
       resourceId: document.id,
       context,
     });
-    return { url };
+    return { url, mimeType: document.mimeType, fileName: document.originalFileName };
   }
 
   /** Vuelve a leer el documento (OCR + reglas) y lo compara con los datos declarados actuales. */

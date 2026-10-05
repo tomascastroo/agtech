@@ -482,6 +482,26 @@ export class GuaranteeRequestsService {
     };
   }
 
+  /** El productor ve un documento de su propia solicitud (URL firmada, para el visor). */
+  async producerDocumentUrl(
+    user: AuthenticatedUser,
+    id: string,
+    documentId: string,
+    context: RequestContext,
+  ) {
+    const request = await this.mine(user, id);
+    return this.documentsService.viewUrlForRequest(
+      user,
+      {
+        organizationId: request.organizationId,
+        assetId: request.assetId,
+        establishmentId: request.establishmentId,
+      },
+      documentId,
+      context,
+    );
+  }
+
   async producerDetail(user: AuthenticatedUser, id: string) {
     const request = await this.mine(user, id);
     const view = await this.present(request, { forProducer: true });

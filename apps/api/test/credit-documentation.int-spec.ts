@@ -284,11 +284,32 @@ describe('Documentación de crédito, OCR y simulación de solicitudes', () => {
 
     // Carga el RENSPA → OCR → consistente; responde el pedido.
     const bytes = await readFile(join(DOCS, 'renspa.png'));
-    await as(ctx, producer)
+    const uploaded = await as(ctx, producer)
       .post(`/api/producer/me/requests/${id}/documents`)
       .field('type', 'RENSPA')
       .attach('file', bytes, { filename: 'renspa-cargado.png', contentType: 'image/png' })
       .expect(201);
+    // Visor: el productor ve su documento; la entidad, con inline=1.
+    const view = await as(ctx, producer)
+      .get(`/api/producer/me/requests/${id}/documents/${uploaded.body.id}/view`)
+      .expect(200);
+    expect(view.body).toMatchObject({ mimeType: 'image/png', fileName: 'renspa-cargado.png' });
+    expect(view.body.url).toContain('response-content-disposition=inline');
+    const bankView = await as(ctx, maria)
+      .get(`/api/documents/${uploaded.body.id}/download?inline=1`)
+      .expect(200);
+    expect(bankView.body.url).toContain('response-content-disposition=inline');
+    // Un documento ajeno a su solicitud no existe para el productor.
+    const [foreign] = (await ctx.dataSource.query(
+      `SELECT d.id FROM documents d
+        WHERE d.organization_id = (SELECT organization_id FROM guarantee_requests WHERE id = $1)
+          AND d.establishment_id <> (SELECT establishment_id FROM guarantee_requests WHERE id = $1)
+        LIMIT 1`,
+      [id],
+    )) as { id: string }[];
+    await as(ctx, producer)
+      .get(`/api/producer/me/requests/${id}/documents/${foreign!.id}/view`)
+      .expect(404);
     c = await settled(id);
     expect(item(c.documentation.items, 'RENSPA').status).toBe('CONSISTENT');
     const info = c.informationRequests.find((i) => i.requirementCode === 'RENSPA') as unknown as {

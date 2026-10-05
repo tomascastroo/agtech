@@ -380,6 +380,16 @@ export class ProducerPortalController {
     return presentDocument(await this.requests.documentFor(request, file, dto, context));
   }
 
+  @Get('requests/:id/documents/:documentId/view')
+  viewDocument(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('documentId', ParseUUIDPipe) documentId: string,
+    @ReqContext() context: RequestContext,
+  ) {
+    return this.requests.producerDocumentUrl(user, id, documentId, context);
+  }
+
   @Post('requests/:id/evidence')
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('file', uploadOptions(20 * 1_048_576)))

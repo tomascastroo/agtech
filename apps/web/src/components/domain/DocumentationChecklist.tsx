@@ -10,8 +10,8 @@ import { Progress } from '@/components/ui/Progress';
 import { api, ApiError } from '@/lib/api/client';
 import { useApiMutation } from '@/lib/api/queries';
 import type { DocumentItem, Documentation, OcrFieldEntry, RequirementItem } from '@/lib/api/types';
-import { openSignedUrl } from '@/lib/download';
 import { formatDateTime } from '@/lib/format';
+import { DocumentViewer, type ViewableDocument } from './DocumentViewer';
 import { DemoBadge, RequirementStatusBadge } from './StatusBadges';
 import styles from './documentation.module.css';
 
@@ -176,24 +176,11 @@ export function DocumentationChecklist({
                             <Button
                               size="sm"
                               variant="ghost"
-                              onClick={() =>
-                                void openSignedUrl(() =>
-                                  api<{ url: string }>(`/documents/${item.document!.id}/download`),
-                                )
-                              }
+                              aria-expanded={expanded}
+                              onClick={() => setOpen(expanded ? null : item.code)}
                             >
-                              Ver
+                              {expanded ? 'Ocultar documento' : 'Ver documento'}
                             </Button>
-                            {item.validation === 'OCR_CHECK' ? (
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                aria-expanded={expanded}
-                                onClick={() => setOpen(expanded ? null : item.code)}
-                              >
-                                {expanded ? 'Ocultar lectura' : 'Lectura OCR'}
-                              </Button>
-                            ) : null}
                             <Button
                               size="sm"
                               variant="ghost"
@@ -244,7 +231,20 @@ export function DocumentationChecklist({
                         </Button>
                       </div>
                     </div>
-                    {expanded ? <OcrDetail document={doc} /> : null}
+                    {expanded && item.document ? (
+                      <div className={styles.docPanel}>
+                        <DocumentViewer
+                          queryKey={[item.document.id]}
+                          title={item.document.title}
+                          resolve={() =>
+                            api<ViewableDocument>(
+                              `/documents/${item.document!.id}/download?inline=1`,
+                            )
+                          }
+                        />
+                        {item.validation === 'OCR_CHECK' ? <OcrDetail document={doc} /> : null}
+                      </div>
+                    ) : null}
                   </li>
                 );
               })}
@@ -262,10 +262,21 @@ export function OcrDetail({ document }: { document: DocumentItem | undefined }) 
   if (!a) return <p className={styles.ocrEmpty}>Lectura en curso o no disponible.</p>;
   const entries: OcrFieldEntry[] = a.fieldEntries ?? [];
   const checks = a.validationResults.filter((r) => r.check !== 'TEXT');
+  if (a.status === 'FAILED')
+    return (
+      <div className={styles.ocr} data-testid="ocr-detail">
+        <p className={styles.meta}>
+          <strong>No se pudo leer el documento.</strong> El servicio de lectura no respondió o no
+          pudo procesar el archivo. Probá “Procesar de nuevo” más tarde o revisalo a mano.
+        </p>
+        {a.error ? <p className={styles.ocrEmpty}>Detalle técnico: {a.error}</p> : null}
+        <p className={styles.disclaimer}>{a.disclaimer}</p>
+      </div>
+    );
   return (
     <div className={styles.ocr} data-testid="ocr-detail">
       <p className={styles.meta}>
-        {a.method === 'OCR' ? 'OCR' : 'Capa de texto del PDF'}
+        {a.method === 'OCR' ? 'OCR' : a.method === 'PDF_TEXT' ? 'Capa de texto del PDF' : 'Lectura'}
         {a.extractionConfidence != null
           ? ` · confianza ${Math.round(a.extractionConfidence * 100)} %`
           : ''}

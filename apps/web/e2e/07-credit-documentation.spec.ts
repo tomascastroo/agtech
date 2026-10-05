@@ -33,7 +33,8 @@ test('demo con documentación faltante: OCR, pedido al productor, carga y result
   const taxId = page.getByTestId('requirement-TAX_ID');
   await expect(taxId).toContainText('Consistente', { timeout: 90_000 });
   await expect(taxId).toContainText('Documento de demostración');
-  await taxId.getByRole('button', { name: 'Lectura OCR' }).click();
+  await taxId.getByRole('button', { name: 'Ver documento' }).click();
+  await expect(taxId.getByTestId('document-viewer').locator('img')).toBeVisible();
   await expect(page.getByTestId('ocr-detail')).toContainText('20000000019');
   await expect(page.getByTestId('requirement-RENSPA')).toContainText('Pendiente');
   await expect(page.getByTestId('requirement-RENSPA')).toContainText('Solicitado al productor');
@@ -76,6 +77,10 @@ test('demo con documentación faltante: OCR, pedido al productor, carga y result
   await expect(pp.getByTestId('producer-requirement-RENSPA')).toContainText('Datos consistentes', {
     timeout: 90_000,
   });
+  // El productor ve el documento que subió.
+  const uploaded = pp.getByRole('button', { name: 'Ver', exact: true }).first();
+  await uploaded.click();
+  await expect(pp.getByTestId('document-viewer').locator('img')).toBeVisible();
   await producer.close();
 
   // El panel de cartera no mezcla la demo con la cartera real.
@@ -88,7 +93,8 @@ test('demo con documentación faltante: OCR, pedido al productor, carga y result
   await expect(renspa).toContainText('Consistente', { timeout: 60_000 });
   await renspa.getByRole('button', { name: 'Procesar de nuevo' }).click();
   await expect(renspa).toContainText('Consistente', { timeout: 60_000 });
-  await renspa.getByRole('button', { name: 'Lectura OCR' }).click();
+  await renspa.getByRole('button', { name: 'Ver documento' }).click();
+  await expect(renspa.getByTestId('document-viewer').locator('img')).toBeVisible();
   await expect(page.getByTestId('ocr-detail')).toContainText('99.001.0.00001/00');
   await page.screenshot({ path: 'test-results/documentacion-banco.png', fullPage: true });
 });

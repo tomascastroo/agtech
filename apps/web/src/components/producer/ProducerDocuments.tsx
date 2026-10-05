@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { DocumentAnalysisNote } from '@/components/domain/DocumentAnalysisNote';
+import { DocumentViewer, type ViewableDocument } from '@/components/domain/DocumentViewer';
 import { DocumentStatusBadge } from '@/components/domain/StatusBadges';
 import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Feedback';
@@ -44,6 +45,7 @@ export function ProducerDocuments({
     request.documentation?.items.find((r) => r.status === 'PENDING')?.documentTypes[0]?.code ??
     request.requiredDocuments.find((r) => !r.satisfied)?.alternatives[0];
   const [open, setOpen] = useState(false);
+  const [viewing, setViewing] = useState<string | null>(null);
   const [type, setType] = useState(suggestedType ?? firstMissing ?? 'OTHER');
   const [expiresAt, setExpiresAt] = useState('');
   const [busy, setBusy] = useState(false);
@@ -129,27 +131,44 @@ export function ProducerDocuments({
         <div>
           <p className={styles.sectionTitle}>Documentos cargados</p>
           {documents.map((d) => (
-            <div key={d.id} className={styles.docRow}>
-              <span className={`${styles.docMark} ${styles.docOk}`}>
-                <Icon name="document" size={14} />
-              </span>
-              <span className={styles.docInfo}>
-                <strong style={{ display: 'block' }}>{d.title}</strong>
-                <span className={styles.muted}>
-                  {label(d.type)} · {fmtDate(d.uploadedAt)}
-                  {d.expiresAt ? ` · vence ${fmtDate(d.expiresAt)}` : ''}
+            <div key={d.id}>
+              <div className={styles.docRow}>
+                <span className={`${styles.docMark} ${styles.docOk}`}>
+                  <Icon name="document" size={14} />
                 </span>
-                <DocumentAnalysisNote analysis={d.analysis} />
-              </span>
-              <DocumentStatusBadge status={d.status} />
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => start(d.type)}
-                aria-label={`Subir nueva versión de ${d.title}`}
-              >
-                Nueva versión
-              </Button>
+                <span className={styles.docInfo}>
+                  <strong style={{ display: 'block' }}>{d.title}</strong>
+                  <span className={styles.muted}>
+                    {label(d.type)} · {fmtDate(d.uploadedAt)}
+                    {d.expiresAt ? ` · vence ${fmtDate(d.expiresAt)}` : ''}
+                  </span>
+                  <DocumentAnalysisNote analysis={d.analysis} />
+                </span>
+                <DocumentStatusBadge status={d.status} />
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => start(d.type)}
+                  aria-label={`Subir nueva versión de ${d.title}`}
+                >
+                  Nueva versión
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  aria-expanded={viewing === d.id}
+                  onClick={() => setViewing(viewing === d.id ? null : d.id)}
+                >
+                  {viewing === d.id ? 'Ocultar' : 'Ver'}
+                </Button>
+              </div>
+              {viewing === d.id ? (
+                <DocumentViewer
+                  queryKey={['producer', d.id]}
+                  title={d.title}
+                  resolve={() => api<ViewableDocument>(`${endpoint}/${d.id}/view`)}
+                />
+              ) : null}
             </div>
           ))}
         </div>

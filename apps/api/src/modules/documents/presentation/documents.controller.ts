@@ -6,6 +6,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
@@ -163,13 +164,18 @@ export class DocumentsController {
 
   @Get('documents/:id/download')
   @RequirePermissions(PERMISSIONS.DOCUMENTS_READ)
-  @ApiOperation({ summary: 'URL firmada de descarga (vence en minutos)' })
+  @ApiOperation({
+    summary: 'URL firmada (vence en minutos); inline=1 para mostrarlo en el visor',
+  })
   download(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id', ParseUUIDPipe) id: string,
     @ReqContext() context: RequestContext,
+    @Query('inline') inline?: string,
   ) {
-    return this.documents.downloadUrl(user, id, context);
+    return this.documents.downloadUrl(user, id, context, {
+      inline: inline === '1' || inline === 'true',
+    });
   }
 
   @Post('documents/:id/analyze')
