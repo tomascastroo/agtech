@@ -33,20 +33,19 @@ export function ProducerDocuments({
   documents,
   endpoint,
   onUploaded,
-  suggestedType,
+  uploadPreset,
 }: {
   request: GuaranteeRequest;
   documents: DocumentItem[];
   endpoint: string;
   onUploaded: () => unknown;
-  suggestedType?: string | null;
+  /** Pedido de la entidad desde el que se abrió la carga: fija el tipo de documento. */
+  uploadPreset?: { type: string; at: number } | null;
 }) {
-  const firstMissing =
-    request.documentation?.items.find((r) => r.status === 'PENDING')?.documentTypes[0]?.code ??
-    request.requiredDocuments.find((r) => !r.satisfied)?.alternatives[0];
   const [open, setOpen] = useState(false);
   const [viewing, setViewing] = useState<string | null>(null);
-  const [type, setType] = useState(suggestedType ?? firstMissing ?? 'OTHER');
+  // Sin un pedido o requisito concreto, el tipo se elige: nunca se asume (antes quedaba RENSPA).
+  const [type, setType] = useState('');
   const [expiresAt, setExpiresAt] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,8 +57,18 @@ export function ProducerDocuments({
     if (open) formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, [open, type]);
 
+  const [handledPreset, setHandledPreset] = useState<typeof uploadPreset>(null);
+  if (uploadPreset && uploadPreset !== handledPreset) {
+    setHandledPreset(uploadPreset);
+    setType(uploadPreset.type);
+    setExpiresAt('');
+    setError(null);
+    setNotice(null);
+    setOpen(true);
+  }
+
   const start = (preset?: string) => {
-    setType(preset ?? suggestedType ?? firstMissing ?? 'OTHER');
+    setType(preset ?? '');
     setExpiresAt('');
     setError(null);
     setNotice(null);
@@ -68,6 +77,7 @@ export function ProducerDocuments({
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
+    if (!type) return setError('Elegí qué documento estás subiendo.');
     const file = fileRef.current?.files?.[0];
     if (!file) return setError('Elegí el archivo (PDF, JPG o PNG) o sacale una foto al documento.');
     setBusy(true);
@@ -185,6 +195,9 @@ export function ProducerDocuments({
             <Field label="Tipo de documento">
               {(p) => (
                 <Select {...p} value={type} onChange={(e) => setType(e.target.value)}>
+                  <option value="" disabled>
+                    Elegí qué documento es…
+                  </option>
                   {Object.entries(DOCUMENT_TYPE_LABELS).map(([k, v]) => (
                     <option key={k} value={k}>
                       {v}

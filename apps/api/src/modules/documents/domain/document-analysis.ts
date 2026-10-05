@@ -1,4 +1,4 @@
-import type { DocumentType } from './document.types.js';
+import { DOCUMENT_TYPE_NAMES, type DocumentType } from './document.types.js';
 
 /**
  * Validación del contenido de un documento (OCR / capa de texto) contra los datos declarados.
@@ -143,7 +143,7 @@ export function validateDocument(
         ? 'No se reconoce el tipo de documento por su contenido'
         : analysis.detectedType === declared.documentType
           ? 'El contenido corresponde al tipo declarado'
-          : 'El contenido parece de otro tipo de documento',
+          : `Se cargó como «${DOCUMENT_TYPE_NAMES[declared.documentType] ?? declared.documentType}» pero el contenido parece «${DOCUMENT_TYPE_NAMES[analysis.detectedType as DocumentType] ?? analysis.detectedType}»`,
     });
   }
 

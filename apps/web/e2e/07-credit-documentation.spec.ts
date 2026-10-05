@@ -77,6 +77,20 @@ test('demo con documentación faltante: OCR, pedido al productor, carga y result
   await expect(pp.getByTestId('producer-requirement-RENSPA')).toContainText('Datos consistentes', {
     timeout: 90_000,
   });
+  // Segundo pedido: el botón del pedido abre la carga con SU tipo (no el del primer pedido).
+  await pp.goto(pp.url());
+  await pp.getByRole('button', { name: /Subir certificado sanitario/i }).click();
+  await expect(pp.getByLabel('Tipo de documento')).toHaveValue('SANITARY_CERTIFICATE');
+  await pp
+    .getByLabel('Archivo o foto del documento')
+    .setInputFiles(seedAsset('demo-documents/certificado-vacunacion.png'));
+  await pp.getByRole('button', { name: 'Subir documento' }).click();
+  await expect(pp.getByTestId('producer-requirement-SANITARY_CERTIFICATE')).toContainText(
+    'Datos consistentes',
+    { timeout: 90_000 },
+  );
+  await expect(pp.getByTestId('producer-requirement-RENSPA')).toContainText('Datos consistentes');
+
   // El productor ve el documento que subió.
   const uploaded = pp.getByRole('button', { name: 'Ver', exact: true }).first();
   await uploaded.click();

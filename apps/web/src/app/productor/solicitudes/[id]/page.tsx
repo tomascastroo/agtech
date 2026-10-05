@@ -26,6 +26,8 @@ export default function ProducerRequestPage() {
   const query = useProducerRequest(id);
   const refresh = useProducerRefresh();
   const loaded = Boolean(query.data);
+  // "Subir documento" de un pedido abre la carga ya con el tipo de ESE pedido.
+  const [uploadPreset, setUploadPreset] = useState<{ type: string; at: number } | null>(null);
 
   useEffect(() => {
     if (!loaded || !window.location.hash) return;
@@ -40,7 +42,6 @@ export default function ProducerRequestPage() {
   const base = `/producer/me/requests/${r.id}`;
   const submitted = r.status === 'READY_FOR_VERIFICATION';
   const openInfo = r.informationRequests.filter((i) => i.status === 'OPEN');
-  const docRequest = openInfo.find((i) => i.kind === 'DOCUMENT');
 
   return (
     <>
@@ -70,7 +71,13 @@ export default function ProducerRequestPage() {
       </section>
 
       {openInfo.map((info) => (
-        <InfoRequestCard key={info.id} request={r} infoId={info.id} onDone={refresh} />
+        <InfoRequestCard
+          key={info.id}
+          request={r}
+          infoId={info.id}
+          onDone={refresh}
+          onUpload={(type) => setUploadPreset({ type, at: Date.now() })}
+        />
       ))}
 
       <Section id="establecimiento" title="Establecimiento" done={Boolean(r.establishment)}>
@@ -128,7 +135,7 @@ export default function ProducerRequestPage() {
               documents={r.documents?.documents ?? []}
               endpoint={`${base}/documents`}
               onUploaded={refresh}
-              suggestedType={docRequest?.documentType}
+              uploadPreset={uploadPreset}
             />
           </Section>
 
@@ -214,16 +221,24 @@ function InfoRequestCard({
   request: r,
   infoId,
   onDone,
+  onUpload,
 }: {
   request: ProducerRequestDetail;
   infoId: string;
   onDone: () => unknown;
+  onUpload: (documentType: string) => void;
 }) {
   const info = r.informationRequests.find((i) => i.id === infoId)!;
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const evidence = info.kind === 'EVIDENCE';
   const requirement = r.documentation?.items.find((x) => x.code === info.requirementCode);
+  // Tipo exacto del pedido: el del requisito o el que indicó la entidad.
+  const uploadType = requirement?.documentTypes[0]?.code ?? info.documentType ?? null;
+  const uploadLabel = (
+    requirement?.name ??
+    (uploadType ? (DOCUMENT_TYPE_LABELS[uploadType] ?? uploadType) : 'documento')
+  ).toLowerCase();
   const respond = async () => {
     setBusy(true);
     setError(null);
@@ -258,10 +273,16 @@ function InfoRequestCard({
           {DOCUMENT_TYPE_LABELS[info.documentType] ?? info.documentType}
         </span>
       ) : null}
-      <a href={evidence ? '#evidencia' : '#documentacion'} className={styles.bigButton}>
-        <Icon name={evidence ? 'camera' : 'upload'} size={20} />{' '}
-        {evidence ? 'Agregar fotos' : 'Subir documento'}
-      </a>
+      {evidence || !uploadType ? (
+        <a href={evidence ? '#evidencia' : '#documentacion'} className={styles.bigButton}>
+          <Icon name={evidence ? 'camera' : 'upload'} size={20} />{' '}
+          {evidence ? 'Agregar fotos' : 'Subir documento'}
+        </a>
+      ) : (
+        <button type="button" className={styles.bigButton} onClick={() => onUpload(uploadType)}>
+          <Icon name="upload" size={20} /> Subir {uploadLabel}
+        </button>
+      )}
       <button
         type="button"
         className={`${styles.bigButton} ${styles.bigButtonSecondary}`}

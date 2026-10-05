@@ -469,4 +469,38 @@ describe('Documentación de crédito, OCR y simulación de solicitudes', () => {
       Object.assign(config.env, { DEMO_MODE: previous });
     }
   });
+
+  it('un documento cargado con el tipo equivocado queda en revisión y lo dice', async () => {
+    const created = await as(ctx, maria)
+      .post('/api/demo/guarantee-requests')
+      .send({ scenario: 'MISSING_DOCUMENTS' })
+      .expect(201);
+    const id = created.body.requestId as string;
+    const producer = await login(
+      ctx,
+      created.body.producerAccess.email,
+      created.body.producerAccess.password,
+    );
+    // Certificado sanitario cargado como RENSPA (el error de la pantalla que se corrigió).
+    const bytes = await readFile(join(DOCS, 'certificado-vacunacion.png'));
+    await as(ctx, producer)
+      .post(`/api/producer/me/requests/${id}/documents`)
+      .field('type', 'RENSPA')
+      .attach('file', bytes, { filename: 'certificado-vacunacion.png', contentType: 'image/png' })
+      .expect(201);
+    const c = await settled(id);
+    const renspa = item(c.documentation.items, 'RENSPA');
+    expect(renspa.status).not.toBe('CONSISTENT');
+    const [analysis] = (await ctx.dataSource.query(
+      `SELECT a.validation_results FROM document_analyses a JOIN documents d ON d.id = a.document_id
+        WHERE d.original_file_name = 'certificado-vacunacion.png'
+          AND d.establishment_id = (SELECT establishment_id FROM guarantee_requests WHERE id = $1)`,
+      [id],
+    )) as { validation_results: { check: string; status: string; message: string }[] }[];
+    const typeCheck = analysis!.validation_results.find((v) => v.check === 'DOCUMENT_TYPE')!;
+    expect(typeCheck.status).toBe('MISMATCH');
+    expect(typeCheck.message).toBe(
+      'Se cargó como «RENSPA» pero el contenido parece «Certificado sanitario»',
+    );
+  });
 });
