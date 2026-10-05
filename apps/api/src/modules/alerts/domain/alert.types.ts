@@ -1,5 +1,5 @@
 export type AlertSeverity = 'INFO' | 'WARNING' | 'CRITICAL';
-export type AlertStatus = 'OPEN' | 'ACKNOWLEDGED' | 'RESOLVED';
+export type AlertStatus = 'OPEN' | 'ACKNOWLEDGED' | 'IN_REVIEW' | 'RESOLVED' | 'DISMISSED';
 
 export const ALERT_CONDITION_TYPES = [
   'QUANTITY_RATIO_BELOW',

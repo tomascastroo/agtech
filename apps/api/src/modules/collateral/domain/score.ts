@@ -126,6 +126,11 @@ export interface ScoreInput {
   possibleDoubleGuarantee: boolean;
   /** Resultado de la última inspección presencial (si es la observación vigente). */
   lastInspection: { result: string; isCurrentObservation: boolean } | null;
+  /**
+   * Verificaciones seguidas (las más recientes) que no permitieron determinar el rodeo. Cuenta
+   * verificaciones con evidencia, no recálculos: un recálculo sin evidencia nueva no escala.
+   */
+  consecutiveNotDeterminable: number;
 }
 
 export interface ScoreResult {
@@ -470,10 +475,7 @@ function computeGates(
       'REQUIERE_INSPECCION',
       `Diferencia no explicada de ${Math.abs(r.unexplainedDifference ?? 0)} cabezas (tolerancia ${r.toleranceHeads}).`,
     );
-  if (
-    input.previousStates[0] === 'NO_DETERMINABLE' &&
-    gates.some((g) => g.state === 'NO_DETERMINABLE')
-  )
+  if (input.consecutiveNotDeterminable >= 2 && gates.some((g) => g.state === 'NO_DETERMINABLE'))
     add(
       'NO_DETERMINABLE_REITERADO',
       'REQUIERE_INSPECCION',

@@ -72,6 +72,20 @@ export class UploadEvidenceDto {
   @IsString()
   @MaxLength(255)
   description?: string;
+
+  @ApiPropertyOptional({
+    enum: ['CAMERA', 'FILE'],
+    description: 'Cámara de la app o archivo elegido',
+  })
+  @IsOptional()
+  @IsIn(['CAMERA', 'FILE'])
+  captureOrigin?: 'CAMERA' | 'FILE';
+
+  @ApiPropertyOptional({ description: 'Código de desafío visible en la foto' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(12)
+  challengeCode?: string;
 }
 
 @ApiTags('Evidencias')

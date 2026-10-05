@@ -57,9 +57,9 @@ export class EstablishmentsRepository {
               ST_AsGeoJSON(l.boundary)::json AS boundary,
               (SELECT count(*) FROM assets a WHERE a.establishment_id = e.id AND a.deleted_at IS NULL)::int AS asset_count,
               (SELECT count(*) FROM alerts al JOIN assets a ON a.id = al.asset_id
-                 WHERE a.establishment_id = e.id AND al.status <> 'RESOLVED')::int AS open_alerts,
+                 WHERE a.establishment_id = e.id AND al.status NOT IN ('RESOLVED','DISMISSED'))::int AS open_alerts,
               (SELECT count(*) FROM alerts al JOIN assets a ON a.id = al.asset_id
-                 WHERE a.establishment_id = e.id AND al.status <> 'RESOLVED' AND al.severity = 'CRITICAL')::int AS critical_alerts,
+                 WHERE a.establishment_id = e.id AND al.status NOT IN ('RESOLVED','DISMISSED') AND al.severity = 'CRITICAL')::int AS critical_alerts,
               (SELECT max(a.last_verified_at) FROM assets a WHERE a.establishment_id = e.id AND a.deleted_at IS NULL) AS last_verified_at,
               (SELECT round(avg(a.last_score)) FROM assets a WHERE a.establishment_id = e.id AND a.deleted_at IS NULL)::int AS average_score
          FROM establishments e

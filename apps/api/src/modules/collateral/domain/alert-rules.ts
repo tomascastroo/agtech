@@ -21,6 +21,8 @@ export interface AlertDraft {
 
 export interface AlertRulesInput {
   state: CollateralState;
+  /** Nivel de riesgo cuya política exige inspección (null si no la exige). */
+  inspectionRequiredByRisk?: string | null;
   gates: Gate[];
   reconciliation: ReconciliationResult;
   previousReconciliation: { expected: number } | null;
@@ -65,12 +67,15 @@ export function deriveAlerts(input: AlertRulesInput): AlertDraft[] {
       action:
         'Revisar la diferencia con el productor (muertes, movimientos sin registrar) y documentarla.',
     });
-  if (input.state === 'REQUIERE_INSPECCION')
+  if (input.state === 'REQUIERE_INSPECCION' || input.inspectionRequiredByRisk)
     out.push({
       type: 'BG_INSPECTION_REQUIRED',
       severity: 'CRITICAL',
       title: 'Requiere inspección presencial',
-      what: 'La garantía pasó a REQUIERE INSPECCIÓN.',
+      what:
+        input.state === 'REQUIERE_INSPECCION'
+          ? 'La garantía pasó a REQUIERE INSPECCIÓN.'
+          : `Riesgo ${input.inspectionRequiredByRisk}: la política de monitoreo exige inspección presencial.`,
       why:
         input.gates
           .filter((g) => g.state === 'REQUIERE_INSPECCION')

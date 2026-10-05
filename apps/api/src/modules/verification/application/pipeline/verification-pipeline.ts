@@ -6,6 +6,7 @@ import { QUEUES, type ReportJobData } from '../../../../common/queues/queues.js'
 import { AlertEngineService } from '../../../alerts/application/alert-engine.service.js';
 import { statusAfterVerification } from '../../../assets/domain/asset-status.js';
 import { AssetEntity } from '../../../assets/infrastructure/asset.entity.js';
+import { CollateralService } from '../../../collateral/application/collateral.service.js';
 import { AuditService } from '../../../audit/application/audit.service.js';
 import { AUDIT_ACTIONS } from '../../../audit/application/audit.types.js';
 import { MonitoringConfigService } from '../../../monitoring/application/monitoring-config.service.js';
@@ -59,6 +60,7 @@ export class VerificationPipeline {
     private readonly audit: AuditService,
     private readonly dataSource: DataSource,
     @InjectQueue(QUEUES.REPORTS) private readonly reportsQueue: Queue<ReportJobData>,
+    private readonly collateral: CollateralService,
     livestock: LivestockCountingStrategy,
     vegetation: VegetationAreaStrategy,
     review: EvidenceReviewStrategy,
@@ -149,6 +151,14 @@ export class VerificationPipeline {
         status: d.status,
       })),
     });
+
+    // Garantías bovinas del activo: la verificación es evidencia nueva para el passport. Un error
+    // acá no invalida la verificación (el barrido programado vuelve a evaluar).
+    await this.collateral
+      .onVerificationCompleted(runId)
+      .catch((error: unknown) =>
+        this.logger.error({ err: error, runId }, 'No se pudo evaluar la garantía bovina'),
+      );
 
     await onStep('REPORT');
     await this.reportsQueue.add(

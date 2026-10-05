@@ -10,6 +10,7 @@ import { BovineScanner1795000000000 } from './migrations/1795000000000-bovine-sc
 import { LivestockScannerModes1796000000000 } from './migrations/1796000000000-livestock-scanner-modes.js';
 import { ChuteRfid1797000000000 } from './migrations/1797000000000-chute-rfid.js';
 import { CreditDocumentation1798000000000 } from './migrations/1798000000000-credit-documentation.js';
+import { BovineCollateral1799000000000 } from './migrations/1799000000000-bovine-collateral.js';
 import { SnakeNamingStrategy } from './snake-naming.strategy.js';
 
 export const MIGRATIONS = [
@@ -22,6 +23,7 @@ export const MIGRATIONS = [
   LivestockScannerModes1796000000000,
   ChuteRfid1797000000000,
   CreditDocumentation1798000000000,
+  BovineCollateral1799000000000,
 ];
 
 export function typeOrmOptions(env: Env): DataSourceOptions {

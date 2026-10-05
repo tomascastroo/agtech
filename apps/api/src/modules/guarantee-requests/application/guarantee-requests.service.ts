@@ -15,6 +15,7 @@ import { AppConfig } from '../../../config/app-config.js';
 import { AssetsService, type CreateAssetCommand } from '../../assets/application/assets.service.js';
 import { AssetsRepository } from '../../assets/infrastructure/assets.repository.js';
 import { AuditService } from '../../audit/application/audit.service.js';
+import { CollateralService } from '../../collateral/application/collateral.service.js';
 import { AUDIT_ACTIONS } from '../../audit/application/audit.types.js';
 import {
   DocumentsService,
@@ -121,6 +122,7 @@ export class GuaranteeRequestsService {
     private readonly verifications: VerificationRequestService,
     private readonly audit: AuditService,
     private readonly documentation: RequestDocumentationService,
+    private readonly collateral: CollateralService,
   ) {}
 
   // ------------------------------------------------------------------ banco
@@ -184,6 +186,8 @@ export class GuaranteeRequestsService {
           establishmentId: command.establishmentId ?? null,
         }),
       );
+      // Garantía bovina: nace con la solicitud (pendiente de la declaración del productor).
+      if (type.code === 'BOVINOS') await this.collateral.createForRequest(manager, created);
       if (productCode)
         await this.documentation.initialize(
           manager,
@@ -641,6 +645,9 @@ export class GuaranteeRequestsService {
       metadata: { assetId: request.assetId },
       context,
     });
+    // La declaración queda congelada (versión 1, inmutable) en la garantía bovina.
+    if (request.assetTypeCode === 'BOVINOS')
+      await this.collateral.freezeDeclaration(request.id, producer);
     await this.runVerification(request, 'Declaración del productor completada');
   }
 
@@ -871,7 +878,7 @@ export class GuaranteeRequestsService {
       request.assetId && !options.forProducer
         ? q(
             `SELECT id, type, severity, title, status, created_at AS "createdAt" FROM alerts
-               WHERE asset_id = $1 AND status <> 'RESOLVED' ORDER BY created_at DESC LIMIT 20`,
+               WHERE asset_id = $1 AND status NOT IN ('RESOLVED','DISMISSED') ORDER BY created_at DESC LIMIT 20`,
             [request.assetId],
           )
         : Promise.resolve([]),

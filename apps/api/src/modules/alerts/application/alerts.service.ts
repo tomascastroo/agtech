@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { DataSource } from 'typeorm';
 import type { AuthenticatedUser } from '../../../common/auth/authenticated-user.js';
 import type { RequestContext } from '../../../common/auth/decorators.js';
 import {
@@ -9,12 +10,26 @@ import {
 import { AuditService } from '../../audit/application/audit.service.js';
 import { AUDIT_ACTIONS } from '../../audit/application/audit.types.js';
 import type { AlertSeverity } from '../domain/alert.types.js';
+import type { AlertEntity } from '../infrastructure/alert.entity.js';
 import { AlertsRepository, type AlertFilters } from '../infrastructure/alerts.repository.js';
 
+export type AlertTransition = 'ACKNOWLEDGED' | 'IN_REVIEW' | 'RESOLVED' | 'DISMISSED';
+
 export interface UpdateAlertCommand {
-  status: 'ACKNOWLEDGED' | 'RESOLVED';
+  status?: AlertTransition;
   resolutionNote?: string;
+  /** Responsable asignado (usuario de la organización); null lo desasigna. */
+  ownerUserId?: string | null;
 }
+
+/** Transiciones permitidas. RESOLVED y DISMISSED son finales (la alerta nunca se borra). */
+const TRANSITIONS: Record<string, AlertTransition[]> = {
+  OPEN: ['ACKNOWLEDGED', 'IN_REVIEW', 'RESOLVED', 'DISMISSED'],
+  ACKNOWLEDGED: ['IN_REVIEW', 'RESOLVED', 'DISMISSED'],
+  IN_REVIEW: ['RESOLVED', 'DISMISSED'],
+  RESOLVED: [],
+  DISMISSED: [],
+};
 
 export interface UpdateRuleCommand {
   enabled?: boolean;
@@ -27,6 +42,7 @@ export class AlertsService {
   constructor(
     private readonly alerts: AlertsRepository,
     private readonly audit: AuditService,
+    private readonly dataSource: DataSource,
   ) {}
 
   list(organizationId: string, filters: AlertFilters) {
@@ -46,35 +62,74 @@ export class AlertsService {
     context: RequestContext,
   ) {
     const alert = await this.get(user.organizationId, id);
-    if (alert.status === 'RESOLVED') throw new InvalidStateError('La alerta ya está resuelta');
-    if (command.status === 'ACKNOWLEDGED' && alert.status !== 'OPEN') {
-      throw new InvalidStateError('Solo se puede tomar conocimiento de alertas abiertas');
-    }
-    if (command.status === 'RESOLVED' && !command.resolutionNote?.trim()) {
-      throw new ValidationFailedError('La resolución requiere una nota explicativa');
-    }
+    if (alert.status === 'RESOLVED' || alert.status === 'DISMISSED')
+      throw new InvalidStateError('La alerta ya está cerrada');
     const now = new Date();
-    await this.alerts.update(
-      id,
-      command.status === 'ACKNOWLEDGED'
-        ? { status: 'ACKNOWLEDGED', acknowledgedAt: now, acknowledgedBy: user.userId }
-        : {
-            status: 'RESOLVED',
-            resolvedAt: now,
-            resolvedBy: user.userId,
-            resolutionNote: command.resolutionNote!.trim(),
-            ...(alert.acknowledgedAt ? {} : { acknowledgedAt: now, acknowledgedBy: user.userId }),
-          },
-    );
+    const patch: Partial<AlertEntity> = {};
+    if (command.ownerUserId !== undefined) {
+      if (command.ownerUserId !== null) {
+        const [owner] = (await this.dataSource.query(
+          `SELECT id FROM users WHERE id = $1 AND organization_id = $2`,
+          [command.ownerUserId, user.organizationId],
+        )) as { id: string }[];
+        if (!owner)
+          throw new ValidationFailedError('El responsable no pertenece a la organización');
+      }
+      patch.ownerUserId = command.ownerUserId;
+    }
+    const to = command.status;
+    if (to) {
+      if (!TRANSITIONS[alert.status]!.includes(to)) {
+        throw new InvalidStateError(
+          to === 'ACKNOWLEDGED'
+            ? 'Solo se puede tomar conocimiento de alertas abiertas'
+            : `No se puede pasar de ${alert.status} a ${to}`,
+        );
+      }
+      if ((to === 'RESOLVED' || to === 'DISMISSED') && !command.resolutionNote?.trim()) {
+        throw new ValidationFailedError(
+          to === 'RESOLVED'
+            ? 'La resolución requiere una nota explicativa'
+            : 'Descartar una alerta requiere una nota explicativa',
+        );
+      }
+      patch.status = to;
+      if (!alert.acknowledgedAt)
+        Object.assign(patch, { acknowledgedAt: now, acknowledgedBy: user.userId });
+      if (to === 'RESOLVED')
+        Object.assign(patch, {
+          resolvedAt: now,
+          resolvedBy: user.userId,
+          resolutionNote: command.resolutionNote!.trim(),
+        });
+      if (to === 'DISMISSED')
+        Object.assign(patch, {
+          dismissedAt: now,
+          dismissedBy: user.userId,
+          resolutionNote: command.resolutionNote!.trim(),
+        });
+    }
+    if (!Object.keys(patch).length) throw new ValidationFailedError('Nada para actualizar');
+    await this.alerts.update(id, patch);
     await this.audit.record({
       actor: { kind: 'user', user },
       action:
-        command.status === 'RESOLVED'
+        to === 'RESOLVED'
           ? AUDIT_ACTIONS.ALERT_RESOLVED
-          : AUDIT_ACTIONS.ALERT_ACKNOWLEDGED,
+          : to === 'DISMISSED'
+            ? AUDIT_ACTIONS.ALERT_DISMISSED
+            : to
+              ? AUDIT_ACTIONS.ALERT_ACKNOWLEDGED
+              : AUDIT_ACTIONS.ALERT_ASSIGNED,
       resourceType: 'alert',
       resourceId: id,
-      metadata: { from: alert.status, to: command.status, note: command.resolutionNote ?? null },
+      metadata: {
+        from: alert.status,
+        to: to ?? alert.status,
+        note: command.resolutionNote ?? null,
+        ownerUserId: patch.ownerUserId ?? alert.ownerUserId,
+        bovineGuaranteeId: alert.bovineGuaranteeId,
+      },
       context,
     });
     return this.get(user.organizationId, id);

@@ -25,6 +25,13 @@ export interface UploadEvidenceCommand {
   accuracyM?: number;
   locationSource?: LocationSource;
   description?: string;
+  /**
+   * Cómo se obtuvo la imagen según el cliente: tomada con la cámara desde la app (CAMERA) o
+   * elegida de la galería/PC (FILE). Es lo que informa el dispositivo, no una prueba.
+   */
+  captureOrigin?: 'CAMERA' | 'FILE';
+  /** Código de desafío anti-fraude mostrado en la foto (p. ej. tarjeta con "4821"). */
+  challengeCode?: string;
 }
 
 const MAX_FUTURE_SKEW_MS = 5 * 60_000;
@@ -96,6 +103,13 @@ export class EvidenceService {
             locationAccuracyM: location.accuracyM,
             contextLocation: location.context,
             capturedAtSource,
+            captureOrigin:
+              command.captureOrigin === 'CAMERA'
+                ? 'CAPTURA_EN_CAMPO'
+                : command.captureOrigin === 'FILE'
+                  ? 'ARCHIVO_CARGADO'
+                  : 'DESCONOCIDO',
+            challengeCode: command.challengeCode ?? null,
             exifTimezoneAssumed: capturedAtSource === 'EXIF' && !exif.offset ? 'UTC' : null,
           },
         },

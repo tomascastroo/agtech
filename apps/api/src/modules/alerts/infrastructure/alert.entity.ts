@@ -53,4 +53,21 @@ export class AlertEntity extends TimestampedEntity {
 
   @Column({ type: 'text', nullable: true })
   resolutionNote: string | null;
+
+  /** Garantía bovina a la que pertenece la alerta (null: alerta del activo). */
+  @Column({ type: 'uuid', nullable: true })
+  bovineGuaranteeId: string | null;
+
+  /** Responsable asignado. */
+  @Column({ type: 'uuid', nullable: true })
+  ownerUserId: string | null;
+
+  @Column({ type: 'varchar', length: 400, nullable: true })
+  recommendedAction: string | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  dismissedBy: string | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  dismissedAt: Date | null;
 }

@@ -1,3 +1,4 @@
+import { COLLATERAL_ENTITIES } from '../modules/collateral/infrastructure/collateral.entities.js';
 import { AlertRuleEntity } from '../modules/alerts/infrastructure/alert-rule.entity.js';
 import { AlertEntity } from '../modules/alerts/infrastructure/alert.entity.js';
 import { AnimalIdentificationEntity } from '../modules/animals/infrastructure/animal-identification.entity.js';
@@ -88,4 +89,5 @@ export const ENTITIES = [
   BovineIndividualEntity,
   ExternalDataSnapshotEntity,
   AuditLogEntity,
+  ...COLLATERAL_ENTITIES,
 ];

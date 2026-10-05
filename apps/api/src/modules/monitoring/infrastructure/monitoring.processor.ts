@@ -3,6 +3,7 @@ import { Logger, type OnApplicationBootstrap } from '@nestjs/common';
 import { Queue, type Job } from 'bullmq';
 import { AppConfig } from '../../../config/app-config.js';
 import { MONITORING_TICK_JOB, QUEUES } from '../../../common/queues/queues.js';
+import { CollateralService } from '../../collateral/application/collateral.service.js';
 import { MonitoringSchedulerService } from '../application/monitoring-scheduler.service.js';
 
 /** Programa el ciclo de monitoreo como job repetitivo de BullMQ (un único scheduler global). */
@@ -13,6 +14,7 @@ export class MonitoringProcessor extends WorkerHost implements OnApplicationBoot
   constructor(
     private readonly scheduler: MonitoringSchedulerService,
     private readonly config: AppConfig,
+    private readonly collateral: CollateralService,
     @InjectQueue(QUEUES.MONITORING) private readonly queue: Queue,
   ) {
     super();
@@ -30,5 +32,8 @@ export class MonitoringProcessor extends WorkerHost implements OnApplicationBoot
 
   async process(_job: Job): Promise<void> {
     await this.scheduler.tick();
+    // Garantías bovinas: evidencia que envejece, próximas verificaciones vencidas.
+    const evaluated = await this.collateral.sweep();
+    if (evaluated) this.logger.log(`Garantías bovinas evaluadas: ${evaluated}`);
   }
 }

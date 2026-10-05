@@ -49,8 +49,8 @@ export class PortfolioService {
               a.declared_quantity, a.last_detected_quantity, a.unit, a.status, a.last_verified_at, a.last_score,
               a.declared_value, a.currency, ST_AsGeoJSON(a.location)::json AS location, a.data_source,
               r.risk_level,
-              (SELECT count(*) FROM alerts al WHERE al.asset_id = a.id AND al.status <> 'RESOLVED')::int AS open_alerts,
-              (SELECT al.severity FROM alerts al WHERE al.asset_id = a.id AND al.status <> 'RESOLVED'
+              (SELECT count(*) FROM alerts al WHERE al.asset_id = a.id AND al.status NOT IN ('RESOLVED','DISMISSED'))::int AS open_alerts,
+              (SELECT al.severity FROM alerts al WHERE al.asset_id = a.id AND al.status NOT IN ('RESOLVED','DISMISSED')
                 ORDER BY CASE al.severity WHEN 'CRITICAL' THEN 3 WHEN 'WARNING' THEN 2 ELSE 1 END DESC LIMIT 1) AS highest,
               EXISTS (SELECT 1 FROM guarantees g WHERE g.asset_id = a.id AND g.status = 'ACTIVE') AS guarantee_active
          FROM assets a
@@ -98,7 +98,7 @@ export class PortfolioService {
       this.dataSource.query(
         `SELECT al.severity, count(*)::int AS count FROM alerts al
            JOIN assets a ON a.id = al.asset_id
-          WHERE al.organization_id = $1 AND al.status <> 'RESOLVED' AND a.data_source = 'REAL'
+          WHERE al.organization_id = $1 AND al.status NOT IN ('RESOLVED','DISMISSED') AND a.data_source = 'REAL'
           GROUP BY al.severity`,
         [organizationId],
       ) as Promise<{ severity: string; count: number }[]>,
@@ -121,7 +121,7 @@ export class PortfolioService {
            FROM alerts al
            JOIN assets a ON a.id = al.asset_id
            JOIN establishments e ON e.id = a.establishment_id
-          WHERE al.organization_id = $1 AND al.status <> 'RESOLVED' AND a.data_source = 'REAL'
+          WHERE al.organization_id = $1 AND al.status NOT IN ('RESOLVED','DISMISSED') AND a.data_source = 'REAL'
           ORDER BY CASE al.severity WHEN 'CRITICAL' THEN 0 WHEN 'WARNING' THEN 1 ELSE 2 END, al.created_at DESC
           LIMIT 6`,
         [organizationId],

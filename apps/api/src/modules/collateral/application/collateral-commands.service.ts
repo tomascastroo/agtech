@@ -1,0 +1,804 @@
+import { Injectable } from '@nestjs/common';
+import { DataSource } from 'typeorm';
+import type { AuthenticatedUser } from '../../../common/auth/authenticated-user.js';
+import type { RequestContext } from '../../../common/auth/decorators.js';
+import { canonicalJson, sha256Hex } from '../../../common/crypto/hashing.js';
+import {
+  ForbiddenActionError,
+  InvalidStateError,
+  NotFoundError,
+  ValidationFailedError,
+} from '../../../common/domain/errors.js';
+import { point } from '../../../common/geo/geojson.js';
+import { AuditService } from '../../audit/application/audit.service.js';
+import { AUDIT_ACTIONS } from '../../audit/application/audit.types.js';
+import {
+  DocumentsService,
+  type UploadDocumentCommand,
+  type UploadedFile,
+} from '../../documents/application/documents.service.js';
+import {
+  EvidenceService,
+  type UploadEvidenceCommand,
+} from '../../evidence/application/evidence.service.js';
+import { VerificationRequestService } from '../../verification/application/verification-request.service.js';
+import type {
+  CollateralRiskLevel,
+  EvidenceMethod,
+  ImmobilizationStatus,
+  InspectionResult,
+  LegalInstrument,
+  LegalStatus,
+  MovementDirection,
+  MovementKind,
+  ProductionType,
+} from '../domain/collateral.types.js';
+import {
+  BovineGuaranteeEntity,
+  CollateralDeclarationEntity,
+  CollateralInspectionEntity,
+  CollateralMonitoringPolicyEntity,
+  CollateralMovementEntity,
+  type DeclaredCategory,
+  type Discrepancy,
+} from '../infrastructure/collateral.entities.js';
+import { CollateralService } from './collateral.service.js';
+
+export interface UpdateGuaranteeCommand {
+  legalInstrument?: LegalInstrument;
+  legalIdentifier?: string | null;
+  legalStatus?: LegalStatus;
+  lienPriority?: number | null;
+  immobilizationStatus?: ImmobilizationStatus;
+  immobilizationReference?: string | null;
+  amount?: number | null;
+  debtAmount?: number | null;
+  currency?: 'USD' | 'ARS';
+  grantedAt?: string | null;
+  expiresAt?: string | null;
+  productionType?: ProductionType;
+  averageWeightKg?: number | null;
+  weightSource?: string | null;
+  pricePerKg?: number | null;
+  priceCurrency?: 'USD' | 'ARS' | null;
+  priceSource?: string | null;
+  priceDate?: string | null;
+  qualityFactor?: number | null;
+}
+
+export interface MovementCommand {
+  direction: MovementDirection;
+  kind: MovementKind;
+  heads: number;
+  category?: string;
+  origin?: string;
+  destination?: string;
+  occurredAt: string;
+  documentId?: string;
+  dteNumber?: string;
+  animalRefs?: string[];
+  notes?: string;
+}
+
+export interface InspectionRecordCommand {
+  inspectorName: string;
+  performedAt: string;
+  latitude?: number;
+  longitude?: number;
+  observedHeads: number;
+  fullCount: boolean;
+  rfidRead?: number;
+  evidenceIds?: string[];
+  observations?: string;
+  discrepancies?: Discrepancy[];
+  result: InspectionResult;
+  signatureName: string;
+  signatureAccepted: boolean;
+}
+
+export interface PolicyCommand {
+  productionType: ProductionType;
+  riskLevel: CollateralRiskLevel;
+  frequencyDays: number;
+  maxEvidenceAgeDays: number;
+  recommendedMethod: EvidenceMethod;
+  requiresInspection: boolean;
+}
+
+const LEGAL_FIELDS = [
+  'legalInstrument',
+  'legalIdentifier',
+  'legalStatus',
+  'lienPriority',
+  'immobilizationStatus',
+  'immobilizationReference',
+  'amount',
+  'debtAmount',
+  'currency',
+  'grantedAt',
+  'expiresAt',
+  'productionType',
+  'averageWeightKg',
+  'weightSource',
+  'pricePerKg',
+  'priceCurrency',
+  'priceSource',
+  'priceDate',
+  'qualityFactor',
+] as const;
+
+/** Tipos de documento que respaldan un movimiento (DT-e) o una fuente oficial. */
+const MOVEMENT_DOCUMENT_TYPES = new Set(['DTE', 'TRAZA_REPORT', 'STOCK_CERTIFICATE', 'OTHER']);
+
+/** Comandos de la API sobre la garantía bovina. Toda modificación queda en historial y auditoría. */
+@Injectable()
+export class CollateralCommandsService {
+  constructor(
+    private readonly core: CollateralService,
+    private readonly dataSource: DataSource,
+    private readonly audit: AuditService,
+    private readonly evidence: EvidenceService,
+    private readonly documents: DocumentsService,
+    private readonly verifications: VerificationRequestService,
+  ) {}
+
+  async update(
+    user: AuthenticatedUser,
+    id: string,
+    command: UpdateGuaranteeCommand,
+    context: RequestContext,
+  ) {
+    const g = await this.core.findForOrganization(user.organizationId, id);
+    this.core.assertActive(g);
+    const before: Record<string, unknown> = {};
+    const after: Record<string, unknown> = {};
+    for (const field of LEGAL_FIELDS) {
+      if (command[field] === undefined) continue;
+      const value =
+        typeof command[field] === 'string'
+          ? (command[field] as string).trim() || null
+          : command[field];
+      if (value !== g[field]) {
+        before[field] = g[field];
+        after[field] = value;
+      }
+    }
+    const granted = (after.grantedAt ?? g.grantedAt) as string | null;
+    const expires = (after.expiresAt ?? g.expiresAt) as string | null;
+    if (granted && expires && expires < granted)
+      throw new ValidationFailedError('El vencimiento no puede ser anterior al otorgamiento');
+    if (!Object.keys(after).length) return g;
+    await this.dataSource.transaction(async (manager) => {
+      await manager.update(
+        BovineGuaranteeEntity,
+        { id: g.id },
+        after as Partial<BovineGuaranteeEntity>,
+      );
+      await this.core.event(manager, g, {
+        type: 'DATOS_GARANTIA_ACTUALIZADOS',
+        source: 'ENTIDAD',
+        actorId: user.userId,
+        actorLabel: user.fullName,
+        summary: `Datos de la garantía actualizados: ${Object.keys(after).join(', ')}.`,
+        payload: { before, after },
+      });
+      await this.audit.record(
+        {
+          actor: { kind: 'user', user },
+          action: AUDIT_ACTIONS.BOVINE_GUARANTEE_UPDATED,
+          resourceType: 'bovine_guarantee',
+          resourceId: g.id,
+          metadata: { before, after },
+          context,
+        },
+        manager,
+      );
+    });
+    await this.reassess(user, g.id, 'DATOS_GARANTIA');
+    return this.core.findForOrganization(user.organizationId, id);
+  }
+
+  /**
+   * Corrección de la declaración: nunca modifica la vigente; crea la versión siguiente con motivo,
+   * fecha y usuario. La puede pedir la entidad o el productor de la solicitud.
+   */
+  async correctDeclaration(
+    user: AuthenticatedUser,
+    id: string,
+    command: { heads: number; categories?: DeclaredCategory[]; reason: string },
+    context: RequestContext,
+    asProducer = false,
+  ) {
+    const g = asProducer
+      ? await this.producerGuarantee(user, id)
+      : await this.core.findForOrganization(user.organizationId, id);
+    this.core.assertActive(g);
+    if (!command.reason?.trim())
+      throw new ValidationFailedError('La corrección requiere un motivo');
+    if (!Number.isInteger(command.heads) || command.heads < 1)
+      throw new ValidationFailedError('La cantidad declarada debe ser un entero positivo');
+    const categories = command.categories ?? [];
+    const sum = categories.reduce((a, c) => a + c.heads, 0);
+    if (categories.length && sum !== command.heads)
+      throw new ValidationFailedError(
+        `Las categorías suman ${sum} y la cantidad declarada es ${command.heads}`,
+      );
+    const version = await this.dataSource.transaction(async (manager) => {
+      const current = await manager.findOne(CollateralDeclarationEntity, {
+        where: { guaranteeId: g.id },
+        order: { version: 'DESC' },
+      });
+      if (!current)
+        throw new InvalidStateError('Todavía no hay una declaración enviada para corregir');
+      const next = await manager.save(
+        manager.create(CollateralDeclarationEntity, {
+          organizationId: g.organizationId,
+          guaranteeId: g.id,
+          version: current.version + 1,
+          heads: command.heads,
+          categories,
+          productionType: g.productionType,
+          establishment: current.establishment,
+          source: asProducer ? 'PRODUCTOR' : 'ENTIDAD',
+          declaredBy: user.userId,
+          declaredByLabel: user.fullName,
+          declaredAt: new Date(),
+          reason: command.reason.trim().slice(0, 500),
+          supersedesId: current.id,
+        }),
+      );
+      await manager.update(
+        BovineGuaranteeEntity,
+        { id: g.id },
+        { currentDeclarationVersion: next.version },
+      );
+      await this.core.event(manager, g, {
+        type: 'DECLARACION_CORREGIDA',
+        source: asProducer ? 'PRODUCTOR' : 'ENTIDAD',
+        actorId: user.userId,
+        actorLabel: user.fullName,
+        method: 'DECLARACION',
+        result: `${current.heads} → ${command.heads} cabezas`,
+        summary: `Nueva versión ${next.version} de la declaración (${current.heads} → ${command.heads} cabezas). Motivo: ${command.reason.trim()}. La versión ${current.version} se conserva.`,
+        payload: { declarationId: next.id, version: next.version, supersedes: current.id },
+      });
+      await this.audit.record(
+        {
+          actor: { kind: 'user', user },
+          action: AUDIT_ACTIONS.BOVINE_DECLARATION_CORRECTED,
+          resourceType: 'bovine_guarantee',
+          resourceId: g.id,
+          metadata: {
+            from: current.version,
+            to: next.version,
+            heads: command.heads,
+            reason: command.reason,
+          },
+          context,
+        },
+        manager,
+      );
+      return next.version;
+    });
+    await this.reassess(user, g.id, 'DECLARACION', asProducer ? 'PRODUCTOR' : 'ENTIDAD');
+    return { version };
+  }
+
+  async recordMovement(
+    user: AuthenticatedUser,
+    id: string,
+    command: MovementCommand,
+    context: RequestContext,
+  ) {
+    const g = await this.core.findForOrganization(user.organizationId, id);
+    this.core.assertActive(g);
+    if (!Number.isInteger(command.heads) || command.heads < 1)
+      throw new ValidationFailedError('La cantidad de cabezas debe ser un entero positivo');
+    const occurredAt = new Date(command.occurredAt);
+    if (Number.isNaN(occurredAt.getTime()) || occurredAt.getTime() > Date.now() + 3_600_000)
+      throw new ValidationFailedError('Fecha del movimiento inválida');
+    let sourceLevel: 'DOCUMENTADO' | 'DECLARADO' = 'DECLARADO';
+    let sourceLabel = `Informado por ${user.fullName} (sin documento)`;
+    if (command.documentId) {
+      const [doc] = (await this.dataSource.query(
+        `SELECT id, type, title FROM documents WHERE id = $1 AND organization_id = $2 AND deleted_at IS NULL
+            AND (asset_id = $3 OR establishment_id = $4)`,
+        [command.documentId, g.organizationId, g.assetId, g.establishmentId],
+      )) as { id: string; type: string; title: string }[];
+      if (!doc) throw new ValidationFailedError('El documento no pertenece a esta garantía');
+      if (!MOVEMENT_DOCUMENT_TYPES.has(doc.type))
+        throw new ValidationFailedError(
+          'Un movimiento se respalda con un DT-e o una constancia oficial',
+        );
+      sourceLevel = 'DOCUMENTADO';
+      sourceLabel = `${doc.title}${command.dteNumber ? ` (DT-e ${command.dteNumber})` : ''} — documento cargado, no consultado en SENASA`;
+    }
+    const movement = await this.dataSource.transaction(async (manager) => {
+      const saved = await manager.save(
+        manager.create(CollateralMovementEntity, {
+          organizationId: g.organizationId,
+          guaranteeId: g.id,
+          direction: command.direction,
+          kind: command.kind,
+          heads: command.heads,
+          category: command.category?.trim() || null,
+          animalRefs: command.animalRefs ?? [],
+          origin: command.origin?.trim() || null,
+          destination: command.destination?.trim() || null,
+          occurredAt,
+          sourceLevel,
+          sourceLabel: sourceLabel.slice(0, 160),
+          documentId: command.documentId ?? null,
+          dteNumber: command.dteNumber?.trim() || null,
+          verificationState: 'PENDIENTE',
+          notes: command.notes?.trim() || null,
+          recordedBy: user.userId,
+        }),
+      );
+      await this.core.event(manager, g, {
+        type: 'MOVIMIENTO_REGISTRADO',
+        source: sourceLevel === 'DOCUMENTADO' ? 'DOCUMENTO' : 'ENTIDAD',
+        actorId: user.userId,
+        actorLabel: user.fullName,
+        method: sourceLevel,
+        evidence: command.documentId ? [{ kind: 'document', id: command.documentId }] : [],
+        result: `${command.direction === 'EGRESO' ? '−' : '+'}${command.heads}`,
+        summary: `${command.direction === 'EGRESO' ? 'Egreso' : 'Ingreso'} de ${command.heads} cabezas (${command.kind.toLowerCase()}), ${sourceLevel.toLowerCase()}.`,
+        payload: { movementId: saved.id },
+        occurredAt,
+      });
+      await this.audit.record(
+        {
+          actor: { kind: 'user', user },
+          action: AUDIT_ACTIONS.BOVINE_MOVEMENT_RECORDED,
+          resourceType: 'bovine_guarantee',
+          resourceId: g.id,
+          metadata: {
+            movementId: saved.id,
+            direction: saved.direction,
+            heads: saved.heads,
+            sourceLevel,
+          },
+          context,
+        },
+        manager,
+      );
+      return saved;
+    });
+    await this.reassess(user, g.id, 'MOVIMIENTO');
+    return movement;
+  }
+
+  async reviewMovement(
+    user: AuthenticatedUser,
+    id: string,
+    movementId: string,
+    command: { state: 'VERIFICADO' | 'RECHAZADO'; note: string },
+    context: RequestContext,
+  ) {
+    const g = await this.core.findForOrganization(user.organizationId, id);
+    this.core.assertActive(g);
+    if (!command.note?.trim()) throw new ValidationFailedError('La revisión requiere una nota');
+    await this.dataSource.transaction(async (manager) => {
+      const m = await manager.findOneBy(CollateralMovementEntity, {
+        id: movementId,
+        guaranteeId: g.id,
+      });
+      if (!m) throw new NotFoundError('Movimiento', movementId);
+      if (m.verificationState !== 'PENDIENTE')
+        throw new InvalidStateError('El movimiento ya fue revisado');
+      await manager.update(
+        CollateralMovementEntity,
+        { id: m.id },
+        { verificationState: command.state },
+      );
+      await this.core.event(manager, g, {
+        type: 'MOVIMIENTO_REVISADO',
+        source: 'ENTIDAD',
+        actorId: user.userId,
+        actorLabel: user.fullName,
+        result: command.state,
+        summary: `Movimiento de ${m.heads} cabezas ${command.state === 'VERIFICADO' ? 'verificado' : 'rechazado'}: ${command.note.trim()}`,
+        payload: { movementId: m.id, from: m.verificationState, to: command.state },
+      });
+      await this.audit.record(
+        {
+          actor: { kind: 'user', user },
+          action: AUDIT_ACTIONS.BOVINE_MOVEMENT_REVIEWED,
+          resourceType: 'bovine_guarantee',
+          resourceId: g.id,
+          metadata: {
+            movementId: m.id,
+            from: m.verificationState,
+            to: command.state,
+            note: command.note,
+          },
+          context,
+        },
+        manager,
+      );
+    });
+    await this.reassess(user, g.id, 'MOVIMIENTO');
+  }
+
+  async requestInspection(
+    user: AuthenticatedUser,
+    id: string,
+    command: { reason: string; dueAt?: string },
+    context: RequestContext,
+  ) {
+    const g = await this.core.findForOrganization(user.organizationId, id);
+    this.core.assertActive(g);
+    if (!command.reason?.trim())
+      throw new ValidationFailedError('Indicá el motivo de la inspección');
+    return this.dataSource.transaction(async (manager) => {
+      const inspection = await manager.save(
+        manager.create(CollateralInspectionEntity, {
+          organizationId: g.organizationId,
+          guaranteeId: g.id,
+          status: 'SOLICITADA',
+          reason: command.reason.trim().slice(0, 500),
+          requestedBy: user.userId,
+          requestedAt: new Date(),
+          dueAt: command.dueAt ? new Date(command.dueAt) : null,
+          evidenceIds: [],
+          discrepancies: [],
+        }),
+      );
+      await this.core.event(manager, g, {
+        type: 'INSPECCION_SOLICITADA',
+        source: 'ENTIDAD',
+        actorId: user.userId,
+        actorLabel: user.fullName,
+        method: 'INSPECCION',
+        summary: `Inspección presencial solicitada: ${command.reason.trim()}`,
+        payload: { inspectionId: inspection.id },
+      });
+      await this.audit.record(
+        {
+          actor: { kind: 'user', user },
+          action: AUDIT_ACTIONS.BOVINE_INSPECTION_REQUESTED,
+          resourceType: 'bovine_guarantee',
+          resourceId: g.id,
+          metadata: { inspectionId: inspection.id, reason: command.reason },
+          context,
+        },
+        manager,
+      );
+      return inspection;
+    });
+  }
+
+  /**
+   * Registra una inspección realizada (con firma). La firma es el nombre de quien firma + el
+   * SHA-256 del contenido canónico del acta: cualquier cambio posterior no coincidiría con el hash.
+   * Una vez REALIZADA, la base no permite modificarla.
+   */
+  async recordInspection(
+    user: AuthenticatedUser,
+    id: string,
+    inspectionId: string | null,
+    command: InspectionRecordCommand,
+    context: RequestContext,
+  ) {
+    const g = await this.core.findForOrganization(user.organizationId, id);
+    this.core.assertActive(g);
+    if (!command.signatureAccepted || !command.signatureName?.trim())
+      throw new ValidationFailedError('El acta requiere la firma del inspector');
+    if (!command.inspectorName?.trim()) throw new ValidationFailedError('Indicá el inspector');
+    if (!Number.isInteger(command.observedHeads) || command.observedHeads < 0)
+      throw new ValidationFailedError('La cantidad observada debe ser un entero');
+    const performedAt = new Date(command.performedAt);
+    if (Number.isNaN(performedAt.getTime()) || performedAt.getTime() > Date.now() + 3_600_000)
+      throw new ValidationFailedError('Fecha de inspección inválida');
+    const evidenceIds = [...new Set(command.evidenceIds ?? [])];
+    if (evidenceIds.length) {
+      const [{ n }] = (await this.dataSource.query(
+        `SELECT count(*)::int AS n FROM evidence WHERE id = ANY($1) AND asset_id = $2`,
+        [evidenceIds, g.assetId],
+      )) as { n: number }[];
+      if (n !== evidenceIds.length)
+        throw new ValidationFailedError('Hay evidencias que no son de esta garantía');
+    }
+    const hasLocation = command.latitude !== undefined && command.longitude !== undefined;
+    const signedAt = new Date();
+    const act = {
+      guarantee: g.code,
+      inspector: command.inspectorName.trim(),
+      performedAt: performedAt.toISOString(),
+      location: hasLocation ? [command.longitude, command.latitude] : null,
+      observedHeads: command.observedHeads,
+      fullCount: command.fullCount,
+      rfidRead: command.rfidRead ?? null,
+      evidenceIds,
+      observations: command.observations?.trim() ?? '',
+      discrepancies: command.discrepancies ?? [],
+      result: command.result,
+      signatureName: command.signatureName.trim(),
+      signedAt: signedAt.toISOString(),
+    };
+    const signatureHash = sha256Hex(canonicalJson(act));
+    const fields = {
+      status: 'REALIZADA' as const,
+      inspectorName: act.inspector,
+      inspectorUserId: user.userId,
+      performedAt,
+      location: hasLocation ? point(command.longitude!, command.latitude!) : null,
+      observedHeads: command.observedHeads,
+      fullCount: command.fullCount,
+      rfidRead: command.rfidRead ?? null,
+      evidenceIds,
+      observations: act.observations || null,
+      discrepancies: act.discrepancies,
+      result: command.result,
+      signatureName: act.signatureName,
+      signatureHash,
+      signedAt,
+      recordedBy: user.userId,
+    };
+    const saved = await this.dataSource.transaction(async (manager) => {
+      let inspection: CollateralInspectionEntity;
+      if (inspectionId) {
+        const existing = await manager.findOneBy(CollateralInspectionEntity, {
+          id: inspectionId,
+          guaranteeId: g.id,
+        });
+        if (!existing) throw new NotFoundError('Inspección', inspectionId);
+        if (existing.status !== 'SOLICITADA')
+          throw new InvalidStateError('La inspección ya fue registrada o cancelada');
+        await manager.update(CollateralInspectionEntity, { id: existing.id }, fields);
+        inspection = await manager.findOneByOrFail(CollateralInspectionEntity, { id: existing.id });
+      } else {
+        inspection = await manager.save(
+          manager.create(CollateralInspectionEntity, {
+            organizationId: g.organizationId,
+            guaranteeId: g.id,
+            reason: 'Inspección registrada sin solicitud previa',
+            requestedBy: user.userId,
+            requestedAt: performedAt,
+            ...fields,
+          }),
+        );
+      }
+      await this.core.event(manager, g, {
+        type: 'INSPECCION_REALIZADA',
+        source: 'INSPECTOR',
+        actorId: user.userId,
+        actorLabel: act.inspector,
+        method: 'INSPECCION',
+        evidence: evidenceIds.map((e) => ({ kind: 'evidence', id: e })),
+        result: command.result,
+        summary: `Inspección ${command.result.replace('_', ' ').toLowerCase()}: ${command.observedHeads} animales observados (${command.fullCount ? 'conteo completo' : 'conteo parcial'}). Firmada por ${act.signatureName}.`,
+        payload: { inspectionId: inspection.id, signatureHash },
+        occurredAt: performedAt,
+      });
+      await this.audit.record(
+        {
+          actor: { kind: 'user', user },
+          action: AUDIT_ACTIONS.BOVINE_INSPECTION_RECORDED,
+          resourceType: 'bovine_guarantee',
+          resourceId: g.id,
+          metadata: { inspectionId: inspection.id, result: command.result, signatureHash },
+          context,
+        },
+        manager,
+      );
+      return inspection;
+    });
+    await this.reassess(user, g.id, 'INSPECCION', 'INSPECTOR');
+    return saved;
+  }
+
+  /** Pide una verificación nueva con el pipeline existente (evidencia cargada del activo). */
+  async requestVerification(
+    user: AuthenticatedUser,
+    id: string,
+    context: RequestContext,
+    note?: string,
+  ) {
+    const g = await this.core.findForOrganization(user.organizationId, id);
+    this.core.assertActive(g);
+    if (!g.assetId || g.currentDeclarationVersion === null)
+      throw new InvalidStateError('La garantía todavía no tiene una declaración enviada');
+    const run = await this.verifications.request(
+      { kind: 'user', user },
+      {
+        assetId: g.assetId,
+        trigger: 'MANUAL',
+        note: note ?? `Verificación de la garantía ${g.code}`,
+      },
+      context,
+    );
+    await this.core.event(this.dataSource.manager, g, {
+      type: 'VERIFICACION_SOLICITADA',
+      source: 'ENTIDAD',
+      actorId: user.userId,
+      actorLabel: user.fullName,
+      summary: 'Se solicitó una verificación con la evidencia disponible.',
+      payload: { verificationRunId: run.id },
+    });
+    return { verificationRunId: run.id, status: run.status };
+  }
+
+  /** Evidencia nueva (foto) para la garantía + verificación con el pipeline. */
+  async uploadEvidence(
+    user: AuthenticatedUser,
+    id: string,
+    file: UploadedFile | undefined,
+    command: UploadEvidenceCommand,
+    context: RequestContext,
+  ) {
+    const g = await this.core.findForOrganization(user.organizationId, id);
+    this.core.assertActive(g);
+    if (!g.assetId) throw new InvalidStateError('La garantía todavía no tiene un rodeo declarado');
+    const evidence = await this.evidence.uploadManual(user, g.assetId, file, command, context);
+    const origin =
+      typeof evidence.metadata.captureOrigin === 'string'
+        ? evidence.metadata.captureOrigin
+        : 'DESCONOCIDO';
+    await this.core.event(this.dataSource.manager, g, {
+      type: 'EVIDENCIA_CARGADA',
+      source: 'ENTIDAD',
+      actorId: user.userId,
+      actorLabel: user.fullName,
+      method: 'FOTO',
+      evidence: [{ kind: 'evidence', id: evidence.id, sha256: evidence.sha256 }],
+      result: origin,
+      summary: `Foto cargada (${origin.replace('_', ' ').toLowerCase()}).`,
+      payload: { evidenceId: evidence.id },
+    });
+    const run = await this.requestVerification(
+      user,
+      id,
+      context,
+      'Evidencia nueva de la garantía',
+    ).catch(() => null);
+    return {
+      evidenceId: evidence.id,
+      sha256: evidence.sha256,
+      verificationRunId: run?.verificationRunId ?? null,
+    };
+  }
+
+  /** Documento oficial cargado (RENSPA, existencias SIGSA, DT-e, TRAZA, prenda...). */
+  async uploadDocument(
+    user: AuthenticatedUser,
+    id: string,
+    file: UploadedFile | undefined,
+    command: UploadDocumentCommand,
+    context: RequestContext,
+  ) {
+    const g = await this.core.findForOrganization(user.organizationId, id);
+    this.core.assertActive(g);
+    if (!g.assetId) throw new InvalidStateError('La garantía todavía no tiene un rodeo declarado');
+    const doc = await this.documents.uploadForAsset(user, g.assetId, file, command, context);
+    await this.core.event(this.dataSource.manager, g, {
+      type: 'DOCUMENTO_CARGADO',
+      source: 'DOCUMENTO',
+      actorId: user.userId,
+      actorLabel: user.fullName,
+      method: doc.type,
+      evidence: [{ kind: 'document', id: doc.id, sha256: doc.sha256 }],
+      summary: `Documento cargado: ${doc.title}. Es una copia aportada, no una consulta a la fuente oficial.`,
+      payload: { documentId: doc.id, type: doc.type },
+    });
+    await this.reassess(user, g.id, 'DOCUMENTO');
+    return doc;
+  }
+
+  async recalculate(user: AuthenticatedUser, id: string) {
+    const g = await this.core.findForOrganization(user.organizationId, id);
+    if (g.currentDeclarationVersion === null)
+      throw new InvalidStateError('La garantía todavía no tiene una declaración enviada');
+    const { assessment, snapshotId } = await this.core.reassess(g, 'RECALCULO', {
+      kind: 'user',
+      user,
+    });
+    return {
+      snapshotId,
+      state: assessment.state,
+      score: assessment.score.finalScore,
+      riskLevel: assessment.risk.level,
+    };
+  }
+
+  async finalize(
+    user: AuthenticatedUser,
+    id: string,
+    command: { reason: string },
+    context: RequestContext,
+  ) {
+    const g = await this.core.findForOrganization(user.organizationId, id);
+    this.core.assertActive(g);
+    if (!command.reason?.trim())
+      throw new ValidationFailedError('Indicá el motivo de la finalización');
+    await this.dataSource.transaction(async (manager) => {
+      await manager.update(
+        BovineGuaranteeEntity,
+        { id: g.id },
+        { finalizedAt: new Date(), finalizedBy: user.userId },
+      );
+      await this.core.event(manager, g, {
+        type: 'GARANTIA_FINALIZADA',
+        source: 'ENTIDAD',
+        actorId: user.userId,
+        actorLabel: user.fullName,
+        summary: `Garantía finalizada: ${command.reason.trim()}. El historial se conserva.`,
+      });
+      await this.audit.record(
+        {
+          actor: { kind: 'user', user },
+          action: AUDIT_ACTIONS.BOVINE_GUARANTEE_FINALIZED,
+          resourceType: 'bovine_guarantee',
+          resourceId: g.id,
+          metadata: { reason: command.reason },
+          context,
+        },
+        manager,
+      );
+    });
+    if (g.currentDeclarationVersion !== null) await this.reassess(user, g.id, 'RECALCULO');
+    else
+      await this.dataSource.manager.update(
+        BovineGuaranteeEntity,
+        { id: g.id },
+        { state: 'FINALIZADA', stateReason: 'La garantía fue finalizada.' },
+      );
+  }
+
+  async upsertPolicy(user: AuthenticatedUser, command: PolicyCommand, context: RequestContext) {
+    if (command.maxEvidenceAgeDays < command.frequencyDays)
+      throw new ValidationFailedError(
+        'La antigüedad máxima de la evidencia no puede ser menor que la frecuencia',
+      );
+    const repo = this.dataSource.getRepository(CollateralMonitoringPolicyEntity);
+    const existing = await repo.findOneBy({
+      organizationId: user.organizationId,
+      productionType: command.productionType,
+      riskLevel: command.riskLevel,
+    });
+    const before = existing
+      ? {
+          frequencyDays: existing.frequencyDays,
+          maxEvidenceAgeDays: existing.maxEvidenceAgeDays,
+          recommendedMethod: existing.recommendedMethod,
+          requiresInspection: existing.requiresInspection,
+        }
+      : null;
+    const saved = await repo.save(
+      Object.assign(existing ?? repo.create({ organizationId: user.organizationId }), command, {
+        updatedBy: user.userId,
+      }),
+    );
+    await this.audit.record({
+      actor: { kind: 'user', user },
+      action: AUDIT_ACTIONS.BOVINE_POLICY_UPDATED,
+      resourceType: 'collateral_monitoring_policy',
+      resourceId: saved.id,
+      metadata: { before, after: command },
+      context,
+    });
+    return saved;
+  }
+
+  private async reassess(
+    user: AuthenticatedUser,
+    id: string,
+    trigger: Parameters<CollateralService['reassess']>[1],
+    source?: 'ENTIDAD' | 'PRODUCTOR' | 'INSPECTOR',
+  ) {
+    const g = await this.dataSource.getRepository(BovineGuaranteeEntity).findOneByOrFail({ id });
+    if (g.currentDeclarationVersion === null) return;
+    await this.core.reassess(g, trigger, { kind: 'user', user, source });
+  }
+
+  private async producerGuarantee(user: AuthenticatedUser, requestId: string) {
+    const [row] = (await this.dataSource.query(
+      `SELECT g.id FROM bovine_guarantees g JOIN guarantee_requests r ON r.id = g.guarantee_request_id
+        WHERE r.id = $1 AND r.producer_user_id = $2`,
+      [requestId, user.userId],
+    )) as { id: string }[];
+    if (!row) throw new ForbiddenActionError('La solicitud no es tuya');
+    return this.dataSource.getRepository(BovineGuaranteeEntity).findOneByOrFail({ id: row.id });
+  }
+}

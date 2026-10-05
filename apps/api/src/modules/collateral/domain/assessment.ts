@@ -39,13 +39,15 @@ export interface AssessmentInput {
   movements: ReconciliationMovement[];
   undocumentedExits: number;
   observation:
-    (Observation & { quality: EvidenceQualityLevel; locationVerified: boolean | null }) | null;
+    | (Observation & { quality: EvidenceQualityLevel; locationVerified: boolean | null })
+    | null;
   rfid: RfidSummary | null;
   documents: DocumentSignal[];
   requiredDocuments: string[];
   hasVerification: boolean;
   lastVerificationAt: Date | null;
   lastInspection: { result: string; isCurrentObservation: boolean } | null;
+  consecutiveNotDeterminable: number;
   possibleDoubleGuarantee: boolean;
   previous: {
     state: CollateralState;
@@ -112,6 +114,7 @@ export function assess(input: AssessmentInput): Assessment {
       recentAlerts: input.recentAlerts,
       possibleDoubleGuarantee: input.possibleDoubleGuarantee,
       lastInspection: input.lastInspection,
+      consecutiveNotDeterminable: input.consecutiveNotDeterminable,
     },
     input.settings,
   );
@@ -170,13 +173,22 @@ export function assess(input: AssessmentInput): Assessment {
     'PENDIENTE_DECLARACION',
     'PENDIENTE_VERIFICACION',
   ].includes(state);
-  if (active && schedule.requiresInspection && state !== 'REQUIERE_INSPECCION') {
+  // NO_DETERMINABLE se mantiene (es una afirmación más fuerte: no se puede decir nada); la
+  // inspección queda como método recomendado y como alerta.
+  const escalable: CollateralState[] = [
+    'VERIFICADA',
+    'EN_MONITOREO',
+    'REQUIERE_REVISION',
+    'REQUIERE_EVIDENCIA',
+  ];
+  if (active && schedule.requiresInspection && escalable.includes(state)) {
     state = 'REQUIERE_INSPECCION';
     reason = `Riesgo ${risk.level}: la política de monitoreo exige inspección presencial.`;
   }
   const alerts = active
     ? deriveAlerts({
         state,
+        inspectionRequiredByRisk: schedule.requiresInspection ? risk.level : null,
         gates,
         reconciliation,
         previousReconciliation:

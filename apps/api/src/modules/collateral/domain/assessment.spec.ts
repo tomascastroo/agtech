@@ -50,6 +50,7 @@ function input(overrides: Partial<AssessmentInput> = {}): AssessmentInput {
     hasVerification: true,
     lastVerificationAt: daysAgo(1),
     lastInspection: null,
+    consecutiveNotDeterminable: 0,
     possibleDoubleGuarantee: false,
     previous: null,
     recentAlerts: 0,
@@ -200,6 +201,7 @@ describe('evaluación: compuertas y estado', () => {
     const second = assess(
       input({
         observation: null,
+        consecutiveNotDeterminable: 2,
         previous: {
           state: 'NO_DETERMINABLE',
           score: null,
@@ -494,27 +496,36 @@ describe('riesgo y agenda', () => {
     expect(s.nextVerificationAt.toISOString()).toBe('2026-10-26T12:00:00.000Z');
   });
 
-  it('riesgo crítico escala a inspección presencial', () => {
+  it('riesgo crítico escala a inspección presencial; NO_DETERMINABLE se mantiene con alerta', () => {
+    const critical = {
+      production: 'CRIA' as const,
+      policy: INITIAL_POLICIES.CRIA,
+      declared: 1500,
+      movements: [],
+      recentAlerts: 5,
+      documents: [
+        { type: 'RENSPA', label: 'RENSPA', analysis: 'INCONSISTENTE' as const, expired: false },
+      ],
+    };
     const a = assess(
       input({
-        production: 'CRIA',
-        policy: INITIAL_POLICIES.CRIA,
-        declared: 1500,
-        movements: [],
-        observation: null,
-        recentAlerts: 5,
-        documents: [{ type: 'RENSPA', label: 'RENSPA', analysis: 'INCONSISTENTE', expired: false }],
-        previous: {
-          state: 'NO_DETERMINABLE',
-          score: 90,
-          riskLevel: 'ALTO',
-          expected: 1500,
-          states: ['NO_DETERMINABLE'],
-        },
+        ...critical,
+        observation: { ...input().observation!, count: 1500 },
+        rfid: { identified: 3, ambiguous: 0, otherEstablishment: 2 },
       }),
     );
     expect(a.risk.level).toBe('CRITICO');
     expect(a.state).toBe('REQUIERE_INSPECCION');
     expect(a.schedule.recommendedMethod).toBe('INSPECCION');
+    const b = assess(
+      input({
+        ...critical,
+        observation: null,
+        rfid: null,
+      }),
+    );
+    expect(b.risk.level).toBe('CRITICO');
+    expect(b.state).toBe('NO_DETERMINABLE');
+    expect(b.alerts.map((x) => x.type)).toContain('BG_INSPECTION_REQUIRED');
   });
 });

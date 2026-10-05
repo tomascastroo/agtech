@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Query } from '@nestjs/common';
-import { ApiOperation, ApiProperty, ApiPropertyOptional, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiPropertyOptional, ApiTags } from '@nestjs/swagger';
 import {
   IsBoolean,
   IsIn,
@@ -8,6 +8,7 @@ import {
   IsString,
   IsUUID,
   MaxLength,
+  ValidateIf,
 } from 'class-validator';
 import type { AuthenticatedUser } from '../../../common/auth/authenticated-user.js';
 import {
@@ -18,17 +19,19 @@ import {
 } from '../../../common/auth/decorators.js';
 import { PERMISSIONS } from '../../../common/auth/permissions.js';
 import { PaginationQueryDto } from '../../../common/pagination/pagination.js';
-import { AlertsService } from '../application/alerts.service.js';
+import { AlertsService, type AlertTransition } from '../application/alerts.service.js';
 import type { AlertSeverity, AlertStatus } from '../domain/alert.types.js';
 import type { AlertRuleEntity } from '../infrastructure/alert-rule.entity.js';
 import type { AlertEntity } from '../infrastructure/alert.entity.js';
 
 const SEVERITIES = ['INFO', 'WARNING', 'CRITICAL'] as const;
+const STATUSES = ['OPEN', 'ACKNOWLEDGED', 'IN_REVIEW', 'RESOLVED', 'DISMISSED'] as const;
+const TRANSITIONS = ['ACKNOWLEDGED', 'IN_REVIEW', 'RESOLVED', 'DISMISSED'] as const;
 
 class AlertQueryDto extends PaginationQueryDto {
-  @ApiPropertyOptional({ enum: ['OPEN', 'ACKNOWLEDGED', 'RESOLVED', 'ACTIVE'] })
+  @ApiPropertyOptional({ enum: [...STATUSES, 'ACTIVE'] })
   @IsOptional()
-  @IsIn(['OPEN', 'ACKNOWLEDGED', 'RESOLVED', 'ACTIVE'])
+  @IsIn([...STATUSES, 'ACTIVE'])
   status?: AlertStatus | 'ACTIVE';
 
   @ApiPropertyOptional({ enum: SEVERITIES })
@@ -40,12 +43,24 @@ class AlertQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsUUID()
   assetId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsUUID()
+  bovineGuaranteeId?: string;
 }
 
 class UpdateAlertDto {
-  @ApiProperty({ enum: ['ACKNOWLEDGED', 'RESOLVED'] })
-  @IsIn(['ACKNOWLEDGED', 'RESOLVED'])
-  status: 'ACKNOWLEDGED' | 'RESOLVED';
+  @ApiPropertyOptional({ enum: TRANSITIONS })
+  @IsOptional()
+  @IsIn(TRANSITIONS)
+  status?: AlertTransition;
+
+  @ApiPropertyOptional({ nullable: true, description: 'Responsable asignado' })
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null)
+  @IsUUID()
+  ownerUserId?: string | null;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -87,6 +102,10 @@ export function presentAlert(alert: AlertEntity) {
     acknowledgedAt: alert.acknowledgedAt,
     resolvedAt: alert.resolvedAt,
     resolutionNote: alert.resolutionNote,
+    bovineGuaranteeId: alert.bovineGuaranteeId,
+    ownerUserId: alert.ownerUserId,
+    recommendedAction: alert.recommendedAction,
+    dismissedAt: alert.dismissedAt,
   };
 }
 
@@ -125,7 +144,10 @@ export class AlertsController {
 
   @Patch('alerts/:id')
   @RequirePermissions(PERMISSIONS.ALERTS_MANAGE)
-  @ApiOperation({ summary: 'Toma conocimiento o resuelve una alerta' })
+  @ApiOperation({
+    summary:
+      'Cambia el estado de una alerta (conocimiento, revisión, resuelta, descartada) o su responsable',
+  })
   async update(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id', ParseUUIDPipe) id: string,

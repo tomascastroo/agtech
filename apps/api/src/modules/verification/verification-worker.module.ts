@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AlertsModule } from '../alerts/alerts.module.js';
+import { CollateralCoreModule } from '../collateral/collateral-core.module.js';
 import { AssetsModule } from '../assets/assets.module.js';
 import { ComputerVisionModule } from '../computer-vision/computer-vision.module.js';
 import { DevicesModule } from '../devices/devices.module.js';
@@ -34,6 +35,7 @@ import { VerificationModule } from './verification.module.js';
     ExternalDataModule,
     EstablishmentsModule,
     OrganizationsModule,
+    CollateralCoreModule,
   ],
   providers: [
     VerificationPipeline,

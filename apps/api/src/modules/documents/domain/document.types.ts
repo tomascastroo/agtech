@@ -10,6 +10,11 @@ export const DOCUMENT_TYPES = [
   'BRAND_TITLE',
   'FEEDLOT_REGISTRATION',
   'FINANCIAL_STATEMENTS',
+  'DTE',
+  'TRAZA_REPORT',
+  'PLEDGE_CONTRACT',
+  'LIEN_REPORT',
+  'IMMOBILIZATION_CERTIFICATE',
   'OTHER',
 ] as const;
 export type DocumentType = (typeof DOCUMENT_TYPES)[number];
@@ -27,6 +32,11 @@ export const DOCUMENT_TYPE_NAMES: Record<DocumentType, string> = {
   BRAND_TITLE: 'Boleto de marca y señal',
   FEEDLOT_REGISTRATION: 'Registro de engorde a corral',
   FINANCIAL_STATEMENTS: 'Información financiera',
+  DTE: 'DT-e (Documento de Tránsito electrónico)',
+  TRAZA_REPORT: 'Constancia TRAZA',
+  PLEDGE_CONTRACT: 'Contrato de prenda / warrant',
+  LIEN_REPORT: 'Informe de gravámenes',
+  IMMOBILIZATION_CERTIFICATE: 'Constancia de inmovilización (SENASA)',
   OTHER: 'Documentación adicional',
 };
 

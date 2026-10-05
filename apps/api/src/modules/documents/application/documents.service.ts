@@ -44,6 +44,11 @@ const TYPE_TITLES: Record<DocumentType, string> = {
   BRAND_TITLE: 'Boleto de marca y señal',
   FEEDLOT_REGISTRATION: 'Inscripción engorde a corral',
   FINANCIAL_STATEMENTS: 'Información financiera',
+  DTE: 'DT-e (Documento de Tránsito electrónico)',
+  TRAZA_REPORT: 'Constancia TRAZA',
+  PLEDGE_CONTRACT: 'Contrato de prenda / warrant',
+  LIEN_REPORT: 'Informe de gravámenes',
+  IMMOBILIZATION_CERTIFICATE: 'Constancia de inmovilización (SENASA)',
   OTHER: 'Documentación adicional',
 };
 

@@ -106,8 +106,8 @@ export class AssetsRepository {
     const rows: { id: string; open_alerts: number; highest: string | null; guarantee: boolean }[] =
       await this.dataSource.query(
         `SELECT a.id,
-                (SELECT count(*) FROM alerts al WHERE al.asset_id = a.id AND al.status <> 'RESOLVED')::int AS open_alerts,
-                (SELECT al.severity FROM alerts al WHERE al.asset_id = a.id AND al.status <> 'RESOLVED'
+                (SELECT count(*) FROM alerts al WHERE al.asset_id = a.id AND al.status NOT IN ('RESOLVED','DISMISSED'))::int AS open_alerts,
+                (SELECT al.severity FROM alerts al WHERE al.asset_id = a.id AND al.status NOT IN ('RESOLVED','DISMISSED')
                   ORDER BY CASE al.severity WHEN 'CRITICAL' THEN 3 WHEN 'WARNING' THEN 2 ELSE 1 END DESC LIMIT 1) AS highest,
                 EXISTS (SELECT 1 FROM guarantees g WHERE g.asset_id = a.id AND g.status = 'ACTIVE') AS guarantee
            FROM assets a WHERE a.id = ANY($1::uuid[])`,

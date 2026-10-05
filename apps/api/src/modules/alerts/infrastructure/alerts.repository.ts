@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Not, Repository, type QueryDeepPartialEntity } from 'typeorm';
+import { In, Not, Repository, type QueryDeepPartialEntity } from 'typeorm';
 import {
   toSkip,
   type Paginated,
@@ -14,6 +14,7 @@ export interface AlertFilters extends PaginationQueryDto {
   status?: AlertStatus | 'ACTIVE';
   severity?: AlertSeverity;
   assetId?: string;
+  bovineGuaranteeId?: string;
 }
 
 @Injectable()
@@ -71,7 +72,7 @@ export class AlertsRepository {
   }
 
   openForAsset(assetId: string): Promise<AlertEntity[]> {
-    return this.alerts.find({ where: { assetId, status: Not('RESOLVED') } });
+    return this.alerts.find({ where: { assetId, status: Not(In(['RESOLVED', 'DISMISSED'])) } });
   }
 
   findById(organizationId: string, id: string): Promise<AlertEntity | null> {
@@ -88,7 +89,10 @@ export class AlertsRepository {
       .innerJoinAndSelect('asset.establishment', 'establishment')
       .innerJoinAndSelect('asset.assetType', 'type')
       .where('alert.organizationId = :organizationId', { organizationId })
-      .orderBy("CASE alert.status WHEN 'OPEN' THEN 0 WHEN 'ACKNOWLEDGED' THEN 1 ELSE 2 END", 'ASC')
+      .orderBy(
+        "CASE alert.status WHEN 'OPEN' THEN 0 WHEN 'ACKNOWLEDGED' THEN 1 WHEN 'IN_REVIEW' THEN 1 ELSE 2 END",
+        'ASC',
+      )
       .addOrderBy(
         "CASE alert.severity WHEN 'CRITICAL' THEN 0 WHEN 'WARNING' THEN 1 ELSE 2 END",
         'ASC',
@@ -97,10 +101,12 @@ export class AlertsRepository {
       // Relaciones many-to-one: no multiplican filas, por eso alcanza con OFFSET/LIMIT.
       .offset(toSkip(filters))
       .limit(filters.pageSize);
-    if (filters.status === 'ACTIVE') qb.andWhere("alert.status <> 'RESOLVED'");
+    if (filters.status === 'ACTIVE') qb.andWhere("alert.status NOT IN ('RESOLVED','DISMISSED')");
     else if (filters.status) qb.andWhere('alert.status = :status', { status: filters.status });
     if (filters.severity) qb.andWhere('alert.severity = :severity', { severity: filters.severity });
     if (filters.assetId) qb.andWhere('alert.assetId = :assetId', { assetId: filters.assetId });
+    if (filters.bovineGuaranteeId)
+      qb.andWhere('alert.bovineGuaranteeId = :bg', { bg: filters.bovineGuaranteeId });
     const [items, total] = await qb.getManyAndCount();
     return { items, total, page: filters.page, pageSize: filters.pageSize };
   }
@@ -116,6 +122,9 @@ export class AlertsRepository {
         | 'resolvedAt'
         | 'resolvedBy'
         | 'resolutionNote'
+        | 'ownerUserId'
+        | 'dismissedAt'
+        | 'dismissedBy'
       >
     >,
   ) {
@@ -128,7 +137,7 @@ export class AlertsRepository {
       .select('alert.severity', 'severity')
       .addSelect('count(*)::int', 'count')
       .where('alert.organizationId = :organizationId', { organizationId })
-      .andWhere("alert.status <> 'RESOLVED'")
+      .andWhere("alert.status NOT IN ('RESOLVED','DISMISSED')")
       .groupBy('alert.severity')
       .getRawMany<{ severity: AlertSeverity; count: number }>();
   }
