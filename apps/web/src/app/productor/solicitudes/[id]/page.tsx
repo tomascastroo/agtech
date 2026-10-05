@@ -2,7 +2,7 @@
 
 import { DemoBanner } from '@/components/domain/DataLayersPanel';
 import { useParams } from 'next/navigation';
-import { DeclarationVersions } from '@/components/producer/DeclarationVersions';
+import { ProducerMonitoring } from '@/components/producer/ProducerMonitoring';
 import { useEffect, useState } from 'react';
 import { ProgressBar, ProducerStatusBadge } from '@/components/producer/Cards';
 import { AssetStep, EstablishmentStep } from '@/components/producer/DeclarationForms';
@@ -81,6 +81,12 @@ export default function ProducerRequestPage() {
         />
       ))}
 
+      {submitted && r.guaranteeType.code === 'BOVINOS' ? (
+        <Section id="monitoreo" title="Monitoreo de tu garantía" done={false}>
+          <ProducerMonitoring requestId={r.id} />
+        </Section>
+      ) : null}
+
       <Section id="establecimiento" title="Establecimiento" done={Boolean(r.establishment)}>
         <EstablishmentStep request={r} base={base} onDone={refresh} disabled={submitted} />
       </Section>
@@ -146,12 +152,7 @@ export default function ProducerRequestPage() {
             done={submitted}
           >
             {submitted ? (
-              <>
-                <SubmittedCard request={r} />
-                {r.guaranteeType.code === 'BOVINOS' ? (
-                  <DeclarationVersions requestId={r.id} />
-                ) : null}
-              </>
+              <SubmittedCard request={r} />
             ) : (
               <SubmitCard request={r} base={base} onDone={refresh} />
             )}

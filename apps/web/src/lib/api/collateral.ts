@@ -387,3 +387,92 @@ export function useProducerCorrection(requestId: string) {
     onSuccess: () => client.invalidateQueries({ queryKey: collateralKeys.producer(requestId) }),
   });
 }
+
+// ---------------------------------------------------------------- productor
+export interface ProducerMonitoring {
+  code: string;
+  dataSource: 'REAL' | 'DEMO';
+  frozen: boolean;
+  status: { key: string; title: string; text: string };
+  nextVerification: {
+    at: string;
+    overdue: boolean;
+    daysLeft: number;
+    method: string | null;
+    methodLabel: string | null;
+    instructions: string | null;
+  } | null;
+  declarations: DeclarationVersion[];
+  movements: {
+    id: string;
+    direction: 'EGRESO' | 'INGRESO';
+    kind: string;
+    heads: number;
+    destination: string | null;
+    origin: string | null;
+    occurredAt: string;
+    sourceLevel: string;
+    dteNumber: string | null;
+    verificationState: 'PENDIENTE' | 'VERIFICADO' | 'RECHAZADO';
+    reportedBy: 'PRODUCTOR' | 'ENTIDAD';
+  }[];
+  inspections: {
+    id: string;
+    status: string;
+    dueAt: string | null;
+    requestedAt: string;
+    performedAt: string | null;
+  }[];
+}
+
+export const useProducerMonitoring = (requestId: string, enabled = true) =>
+  useQuery({
+    queryKey: ['producer-monitoring', requestId],
+    queryFn: () => api<ProducerMonitoring | null>(`/producer/me/requests/${requestId}/monitoring`),
+    enabled,
+  });
+
+export function useProducerMovement(requestId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (form: FormData) =>
+      api<ProducerMonitoring>(`/producer/me/requests/${requestId}/movements`, {
+        method: 'POST',
+        form,
+      }),
+    onSuccess: async () => {
+      await client.invalidateQueries({ queryKey: ['producer-monitoring', requestId] });
+      await client.invalidateQueries({ queryKey: ['producer'] });
+    },
+  });
+}
+
+// ---------------------------------------------------------------- inspector (link)
+export interface InspectorView {
+  guarantee: { code: string; productionType: string; demo: boolean };
+  requester: string | null;
+  producer: string;
+  establishment: {
+    name: string;
+    locality: string | null;
+    province: string | null;
+    renspa: string | null;
+    location: { latitude: number; longitude: number } | null;
+  } | null;
+  assetName: string | null;
+  reason: string | null;
+  dueAt: string | null;
+  expiresAt: string;
+  photos: number;
+  blindCount: boolean;
+}
+
+export const MOVEMENT_KIND_LABELS: Record<string, string> = {
+  VENTA: 'Venta',
+  TRASLADO: 'Traslado',
+  FAENA: 'Faena',
+  MUERTE: 'Muerte',
+  COMPRA: 'Compra',
+  NACIMIENTO: 'Nacimiento',
+  OTRO: 'Otro',
+};

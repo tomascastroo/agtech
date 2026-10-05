@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
-const PUBLIC_PATHS = ['/login', '/solicitud'];
+const PUBLIC_PATHS = ['/login', '/solicitud', '/inspeccion'];
 /** Cookie no-httpOnly emitida junto a la sesión; solo sirve como indicio para redirigir. */
 const SESSION_HINT_COOKIE = 'ag_csrf';
 

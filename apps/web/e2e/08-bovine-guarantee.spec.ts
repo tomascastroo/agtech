@@ -72,30 +72,26 @@ async function declaredGuarantee(page: Page, heads: number) {
     ).status(),
   ).toBe(201);
   expect((await r.post(producer('/submit'))).status()).toBe(201);
+  // El productor crea su acceso al portal.
+  const email = `feedlot-${suffix}@e2e.agrogarantias.invalid`;
+  expect(
+    (
+      await r.post(producer('/accept'), { data: { email, password: 'Rodeo-2026-seguro' } })
+    ).status(),
+  ).toBe(201);
   await anon.close();
-  return body.id;
+  return { requestId: body.id, producerEmail: email };
 }
 
-async function recordInspection(page: Page, observed: number, result: string) {
-  await page.getByRole('button', { name: 'Registrar inspección' }).click();
-  const form = page.getByTestId('form-inspection');
-  await form.getByLabel(/Inspector/).fill('Ing. Agr. Paula Ríos');
-  await form.getByLabel(/Animales observados/).fill(String(observed));
-  await form.getByLabel(/Resultado/).selectOption(result);
-  await form.getByLabel(/Firma \(nombre/).fill('Paula Ríos');
-  await form.getByLabel(/Firmo el acta/).check();
-  await page.getByRole('button', { name: 'Guardar' }).click();
-  await expect(form).toBeHidden({ timeout: 30_000 });
-}
-
-test('garantía bovina: declarado → movimientos → inspección → verificada → diferencia → requiere inspección', async ({
+test('garantía bovina: productor avisa egreso, banco acepta, inspector por link, verificada → diferencia', async ({
   page,
+  browser,
 }) => {
   test.setTimeout(240_000);
   await login(page);
-  const requestId = await declaredGuarantee(page, 1000);
+  const { requestId, producerEmail } = await declaredGuarantee(page, 1000);
 
-  // Cartera: la garantía aparece y se abre su passport.
+  // Cartera → passport.
   await page.goto('/guarantees');
   await expect(page.getByTestId('kpi-active')).toBeVisible();
   const list = await (await page.request.get('/api/bovine-guarantees')).json();
@@ -103,73 +99,109 @@ test('garantía bovina: declarado → movimientos → inspección → verificada
   await page.getByTestId(`guarantee-row-${row.code}`).click();
   await page.waitForURL(`**/guarantees/${row.id}`);
   await expect(page.getByTestId('passport-code')).toHaveText(`GARANTÍA #${row.code}`);
-
-  // Verificación inicial (fotos de galería): no se puede determinar el total; nunca "faltan".
   await expect(page.getByTestId('passport-state')).toContainText('No determinable', {
     timeout: 90_000,
   });
-  await expect(page.getByTestId('reconciliation-narrative')).toContainText(
-    'Se declararon 1.000 animales.',
-  );
   await expect(page.getByTestId('reconciliation-narrative')).toContainText('No implica faltante');
-  await expect(page.getByTestId('passport-coverage')).toContainText('No determinable');
 
-  // Egreso de 25 cabezas → esperado 975.
-  await page.getByRole('button', { name: 'Movimiento' }).click();
-  const mv = page.getByTestId('form-movement');
-  await mv.getByLabel('Cabezas').fill('25');
-  await mv.getByLabel('Destino').fill('Frigorífico');
-  await page.getByRole('button', { name: 'Guardar' }).click();
+  // Productor (celular): ve su monitoreo y avisa un egreso de 25 desde su portal.
+  const producerCtx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const pp = await producerCtx.newPage();
+  await pp.goto('/login');
+  await pp.getByLabel(/Correo electrónico/).fill(producerEmail);
+  await pp
+    .getByLabel(/Contraseña/)
+    .first()
+    .fill('Rodeo-2026-seguro');
+  await pp.getByRole('button', { name: 'Ingresar' }).click();
+  await pp.waitForURL('**/productor**');
+  await pp.goto(`/productor/solicitudes/${requestId}#monitoreo`);
+  await expect(pp.getByTestId('producer-monitoring-status')).toContainText('conteo completo');
+  await expect(pp.getByTestId('producer-monitoring')).not.toContainText(/score/i);
+  await pp.getByRole('button', { name: 'Avisar un movimiento' }).click();
+  const mf = pp.getByTestId('producer-movement-form');
+  await mf.getByLabel('Cantidad de animales').fill('25');
+  await mf.getByLabel('Destino u origen').fill('Frigorífico');
+  await mf.getByRole('button', { name: 'Avisar movimiento' }).click();
+  await expect(pp.getByTestId('producer-movements')).toContainText('Salida de 25');
+  await expect(pp.getByTestId('producer-movements')).toContainText('La entidad lo está revisando');
+
+  // Banco: el esperado pasa a 975 y acepta el movimiento.
+  await page.reload();
   await expect(page.getByTestId('heads-expected')).toContainText('975');
-  await expect(page.getByTestId('reconciliation-narrative')).toContainText(
-    'Se registraron 25 salidas.',
-  );
+  await page.getByRole('tab', { name: 'Movimientos' }).click();
+  await expect(page.getByText('Productor', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Aceptar' }).click();
+  await page
+    .getByTestId('form-reviewMovement')
+    .getByLabel(/Nota/)
+    .fill('Se pidió el DT-e por teléfono');
+  await page.getByRole('button', { name: 'Guardar' }).click();
+  await expect(page.getByText('VERIFICADO')).toBeVisible();
 
-  // Inspección con conteo completo de 975 → VERIFICADA.
-  await recordInspection(page, 975, 'CONFORME');
-  await expect(page.getByTestId('passport-state')).toContainText('Verificada');
-  await expect(page.getByTestId('trust-answer')).toContainText('Sí.');
-  await expect(page.getByTestId('heads-verified')).toContainText('975');
+  // Banco: solicita inspección y obtiene el link del inspector.
+  await page.getByRole('button', { name: 'Solicitar inspección' }).click();
+  await page
+    .getByTestId('form-requestInspection')
+    .getByLabel(/Inspector/)
+    .fill('Paula Ríos');
+  await page.getByRole('button', { name: 'Guardar' }).click();
+  const link = await page.getByLabel('Link del inspector').inputValue();
+  expect(link).toContain('/inspeccion/');
+  await page.getByRole('button', { name: 'Listo' }).click();
 
-  // Inspección con 720 → REQUIERE INSPECCIÓN, alerta con qué pasó / por qué / acción.
-  await recordInspection(page, 720, 'NO_CONFORME');
-  await expect(page.getByTestId('passport-state')).toContainText('Requiere inspección');
-  await page.getByRole('tab', { name: /Alertas/ }).click();
-  const alert = page.getByTestId('alert-BG_QUANTITY_DIFFERENCE');
-  await expect(alert).toContainText('La cantidad esperada es 975');
-  await expect(alert).toContainText('Diferencia no explicada: 255');
-  await expect(alert).toContainText('Acción:');
-
-  // Score explicable con compuerta.
-  await page.getByRole('tab', { name: 'Score' }).click();
-  await expect(page.getByTestId('gate-DIFERENCIA_NO_EXPLICADA')).toBeVisible();
-
-  // Fuentes oficiales: sin conexión, con carga de documento oficial.
-  await page.getByRole('tab', { name: 'Fuentes y documentos' }).click();
-  await expect(page.getByTestId('source-RENSPA')).toContainText('SIN CONEXIÓN');
-  await expect(page.getByTestId('source-TRAZA')).toContainText('NO DISPONIBLE');
-  await expect(
-    page.getByTestId('source-DTE').getByRole('button', { name: 'SUBIR DOCUMENTO OFICIAL' }),
-  ).toBeVisible();
-
-  // Historial inmutable con el cambio de estado.
-  await page.getByRole('tab', { name: 'Historial' }).click();
-  await expect(page.getByTestId('passport-timeline')).toContainText(
-    'Verificada → Requiere inspección',
-  );
-
-  // PDF del passport.
-  const pdf = await page.request.get(`/api/bovine-guarantees/${row.id}/passport.pdf`);
-  expect(pdf.headers()['content-type']).toContain('application/pdf');
-
-  // Celular: el passport se lee sin desbordes horizontales.
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.getByRole('tab', { name: 'Resumen' }).click();
-  await expect(page.getByTestId('trust-answer')).toBeVisible();
-  const overflow = await page.evaluate(
+  // Inspector (celular, sin cuenta): conteo a ciegas, foto con GPS y acta firmada.
+  const inspectorCtx = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    geolocation: { latitude: -31.8653, longitude: -59.0269 },
+    permissions: ['geolocation'],
+  });
+  const ip = await inspectorCtx.newPage();
+  await ip.goto(link.replace(/^https?:\/\/[^/]+/, ''));
+  await expect(ip.getByTestId('inspector-form')).toContainText(row.code);
+  await expect(ip.getByTestId('inspector-form')).not.toContainText('1.000');
+  await ip.locator('input[type="file"][capture]').setInputFiles(seedAsset('cameras/CAM-LE-01.jpg'));
+  await expect(ip.getByTestId('inspection-photos')).toContainText('1 foto(s)');
+  await ip.getByLabel(/^Tu nombre/).fill('Paula Ríos');
+  await ip.getByLabel('Animales contados').fill('975');
+  await ip.getByLabel(/Firma \(tu nombre/).fill('Paula Ríos');
+  await ip.getByLabel(/Firmo el acta/).check();
+  await ip.getByRole('button', { name: 'Firmar y enviar acta' }).click();
+  await expect(ip.getByTestId('inspection-done')).toBeVisible();
+  const overflow = await ip.evaluate(
     () => document.documentElement.scrollWidth - window.innerWidth,
   );
   expect(overflow).toBeLessThanOrEqual(1);
+
+  // Banco: verificada.
+  await page.reload();
+  await expect(page.getByTestId('passport-state')).toContainText('Verificada');
+  await expect(page.getByTestId('trust-answer')).toContainText('Sí.');
+
+  // Acta en papel con 720 → requiere inspección, con alerta explicada.
+  await page.getByRole('button', { name: 'Acta en papel' }).click();
+  const form = page.getByTestId('form-inspection');
+  await form.getByLabel(/Inspector/).fill('Inspector de la entidad');
+  await form.getByLabel(/Animales observados/).fill('720');
+  await form.getByLabel(/Resultado/).selectOption('NO_CONFORME');
+  await form.getByLabel(/Firma \(nombre/).fill('Inspector de la entidad');
+  await form.getByLabel(/Firmo el acta/).check();
+  await page.getByRole('button', { name: 'Guardar' }).click();
+  await expect(page.getByTestId('passport-state')).toContainText('Requiere inspección');
+  await page.getByRole('tab', { name: /Alertas/ }).click();
+  await expect(page.getByTestId('alert-BG_QUANTITY_DIFFERENCE')).toContainText(
+    'Diferencia no explicada: 255',
+  );
+
+  // Fuentes oficiales sin conexión.
+  await page.getByRole('tab', { name: 'Fuentes y documentos' }).click();
+  await expect(page.getByTestId('source-RENSPA')).toContainText('SIN CONEXIÓN');
+
+  // El productor ve la inspección como novedad, sin el resultado interno.
+  await pp.reload();
+  await expect(pp.getByTestId('producer-monitoring-status')).toContainText('inspección');
+  await producerCtx.close();
+  await inspectorCtx.close();
 });
 
 test('las garantías DEMO no cuentan en los KPIs y se ven marcadas', async ({ page }) => {

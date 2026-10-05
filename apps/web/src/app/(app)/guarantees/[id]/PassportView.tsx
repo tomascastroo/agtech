@@ -31,6 +31,14 @@ import { PassportForm, type FormKind } from './PassportForms';
 type Row = Record<string, unknown>;
 const s = (v: unknown) => (v === null || v === undefined || v === '' ? '—' : String(v as string));
 
+type FormState = {
+  kind: FormKind;
+  inspectionId?: string;
+  documentType?: string;
+  movementId?: string;
+  movementState?: 'VERIFICADO' | 'RECHAZADO';
+};
+
 const TABS = [
   { id: 'resumen', label: 'Resumen' },
   { id: 'identidad', label: 'Identidad y garantía' },
@@ -60,11 +68,7 @@ const TRUST_TONE: Record<string, 'success' | 'warning' | 'critical' | 'info' | '
 export function PassportView({ id }: { id: string }) {
   const query = usePassport(id);
   const [tab, setTab] = useState('resumen');
-  const [form, setForm] = useState<{
-    kind: FormKind;
-    inspectionId?: string;
-    documentType?: string;
-  } | null>(null);
+  const [form, setForm] = useState<FormState | null>(null);
   const recalc = useGuaranteeAction<{ state: string }>(id);
   const can = useCan();
   const manage = can('monitoring:manage');
@@ -162,52 +166,62 @@ export function PassportView({ id }: { id: string }) {
           />
         </StatRow>
         {active ? (
-          <div className={styles.inline} data-testid="passport-actions">
-            {manage && declared ? (
-              <Button icon="plus" onClick={() => setForm({ kind: 'movement' })}>
-                Movimiento
-              </Button>
-            ) : null}
-            {run && declared ? (
-              <Button icon="camera" onClick={() => setForm({ kind: 'evidence' })}>
-                Evidencia
-              </Button>
-            ) : null}
-            {manage && declared ? (
-              <Button icon="upload" onClick={() => setForm({ kind: 'document' })}>
-                Documento oficial
-              </Button>
-            ) : null}
-            {manage && declared ? (
-              <Button icon="user" onClick={() => setForm({ kind: 'requestInspection' })}>
-                Solicitar inspección
-              </Button>
-            ) : null}
-            {run && declared ? (
-              <Button icon="shield" onClick={() => setForm({ kind: 'inspection' })}>
-                Registrar inspección
-              </Button>
-            ) : null}
-            {manage ? (
-              <Button icon="file" onClick={() => setForm({ kind: 'legal' })}>
-                Datos legales
-              </Button>
-            ) : null}
-            {manage ? (
-              <Button icon="scale" onClick={() => setForm({ kind: 'valuation' })}>
-                Valuación
-              </Button>
-            ) : null}
-            {manage && declared ? (
-              <Button variant="ghost" onClick={() => setForm({ kind: 'correction' })}>
-                Corregir declaración
-              </Button>
-            ) : null}
-            {manage ? (
-              <Button variant="ghost" onClick={() => setForm({ kind: 'finalize' })}>
-                Finalizar
-              </Button>
-            ) : null}
+          <div className={styles.stackTight} data-testid="passport-actions">
+            <div className={styles.inline}>
+              {manage && declared && h.requestId ? (
+                <Button icon="camera" onClick={() => setForm({ kind: 'askEvidence' })}>
+                  Pedir evidencia al productor
+                </Button>
+              ) : null}
+              {manage && declared ? (
+                <Button icon="user" onClick={() => setForm({ kind: 'requestInspection' })}>
+                  Solicitar inspección
+                </Button>
+              ) : null}
+              {manage ? (
+                <Button icon="file" onClick={() => setForm({ kind: 'legal' })}>
+                  Datos legales
+                </Button>
+              ) : null}
+              {manage ? (
+                <Button icon="scale" onClick={() => setForm({ kind: 'valuation' })}>
+                  Valuación
+                </Button>
+              ) : null}
+            </div>
+            <div className={styles.inline}>
+              <span className={styles.small}>Carga por la entidad:</span>
+              {manage && declared ? (
+                <Button size="sm" variant="ghost" onClick={() => setForm({ kind: 'movement' })}>
+                  Movimiento
+                </Button>
+              ) : null}
+              {manage && declared ? (
+                <Button size="sm" variant="ghost" onClick={() => setForm({ kind: 'document' })}>
+                  Documento oficial
+                </Button>
+              ) : null}
+              {run && declared ? (
+                <Button size="sm" variant="ghost" onClick={() => setForm({ kind: 'evidence' })}>
+                  Evidencia
+                </Button>
+              ) : null}
+              {run && declared ? (
+                <Button size="sm" variant="ghost" onClick={() => setForm({ kind: 'inspection' })}>
+                  Acta en papel
+                </Button>
+              ) : null}
+              {manage && declared ? (
+                <Button size="sm" variant="ghost" onClick={() => setForm({ kind: 'correction' })}>
+                  Corregir declaración
+                </Button>
+              ) : null}
+              {manage ? (
+                <Button size="sm" variant="ghost" onClick={() => setForm({ kind: 'finalize' })}>
+                  Finalizar
+                </Button>
+              ) : null}
+            </div>
           </div>
         ) : null}
         {recalc.isError ? (
@@ -226,7 +240,7 @@ export function PassportView({ id }: { id: string }) {
           active={tab}
           onChange={setTab}
         />
-        <Section tab={tab} p={p} onForm={setForm} canRecord={run} />
+        <Section tab={tab} p={p} onForm={setForm} canRecord={run} canManage={manage} />
       </div>
       {form ? (
         <PassportForm
@@ -234,6 +248,8 @@ export function PassportView({ id }: { id: string }) {
           passport={p}
           inspectionId={form.inspectionId}
           documentType={form.documentType}
+          movementId={form.movementId}
+          movementState={form.movementState}
           onClose={() => setForm(null)}
         />
       ) : null}
@@ -246,11 +262,13 @@ function Section({
   p,
   onForm,
   canRecord,
+  canManage,
 }: {
   tab: string;
   p: Passport;
-  onForm: (f: { kind: FormKind; inspectionId?: string; documentType?: string }) => void;
+  onForm: (f: FormState) => void;
   canRecord: boolean;
+  canManage: boolean;
 }) {
   const b = p.bovines;
   switch (tab) {
@@ -563,7 +581,47 @@ function Section({
                 ),
               },
               { key: 'doc', header: 'Respaldo', render: (r) => s(r.sourceLabel) },
-              { key: 'v', header: 'Verificación', render: (r) => s(r.verificationState) },
+              {
+                key: 'by',
+                header: 'Informó',
+                render: (r) => (r.reportedBy === 'PRODUCTOR' ? 'Productor' : 'Entidad'),
+              },
+              {
+                key: 'v',
+                header: 'Revisión',
+                render: (r) =>
+                  r.verificationState === 'PENDIENTE' && canManage ? (
+                    <span className={styles.inline}>
+                      <Button
+                        size="sm"
+                        onClick={() =>
+                          onForm({
+                            kind: 'reviewMovement',
+                            movementId: String(r.id),
+                            movementState: 'VERIFICADO',
+                          })
+                        }
+                      >
+                        Aceptar
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() =>
+                          onForm({
+                            kind: 'reviewMovement',
+                            movementId: String(r.id),
+                            movementState: 'RECHAZADO',
+                          })
+                        }
+                      >
+                        Rechazar
+                      </Button>
+                    </span>
+                  ) : (
+                    s(r.verificationState)
+                  ),
+              },
             ]}
           />
         </Panel>
@@ -923,13 +981,28 @@ function Section({
                 key: 'ac',
                 header: '',
                 render: (r) =>
-                  r.status === 'SOLICITADA' && canRecord ? (
-                    <Button
-                      size="sm"
-                      onClick={() => onForm({ kind: 'inspection', inspectionId: String(r.id) })}
-                    >
-                      Registrar resultado
-                    </Button>
+                  r.status === 'SOLICITADA' ? (
+                    <span className={styles.inline}>
+                      {canManage ? (
+                        <Button
+                          size="sm"
+                          onClick={() =>
+                            onForm({ kind: 'inspectorLink', inspectionId: String(r.id) })
+                          }
+                        >
+                          Link para el inspector
+                        </Button>
+                      ) : null}
+                      {canRecord ? (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => onForm({ kind: 'inspection', inspectionId: String(r.id) })}
+                        >
+                          Acta en papel
+                        </Button>
+                      ) : null}
+                    </span>
                   ) : null,
               },
             ]}

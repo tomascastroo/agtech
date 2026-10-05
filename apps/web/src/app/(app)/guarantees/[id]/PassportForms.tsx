@@ -5,13 +5,16 @@ import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Feedback';
 import { Checkbox, Field, FormRow, Input, Select, Textarea } from '@/components/ui/Field';
 import { Modal } from '@/components/ui/Modal';
-import { ApiError } from '@/lib/api/client';
+import { api, ApiError } from '@/lib/api/client';
 import { useGuaranteeAction, type Passport } from '@/lib/api/collateral';
 
 export type FormKind =
   | 'movement'
   | 'inspection'
   | 'requestInspection'
+  | 'inspectorLink'
+  | 'askEvidence'
+  | 'reviewMovement'
   | 'legal'
   | 'valuation'
   | 'correction'
@@ -23,6 +26,9 @@ const TITLES: Record<FormKind, string> = {
   movement: 'Registrar movimiento',
   inspection: 'Registrar inspección presencial',
   requestInspection: 'Solicitar inspección presencial',
+  inspectorLink: 'Link para el inspector',
+  askEvidence: 'Pedir evidencia al productor',
+  reviewMovement: 'Revisar movimiento',
   legal: 'Datos legales de la garantía',
   valuation: 'Valuación (peso, precio, factor)',
   correction: 'Corregir declaración',
@@ -48,16 +54,23 @@ export function PassportForm({
   passport,
   inspectionId,
   documentType,
+  movementId,
+  movementState,
   onClose,
 }: {
   kind: FormKind;
   passport: Passport;
   inspectionId?: string | null;
   documentType?: string;
+  movementId?: string;
+  movementState?: 'VERIFICADO' | 'RECHAZADO';
   onClose: () => void;
 }) {
   const action = useGuaranteeAction(passport.header.id);
   const [error, setError] = useState<string | null>(null);
+  /** Link del inspector recién generado (se muestra una sola vez). */
+  const [link, setLink] = useState<{ url: string; expiresAt: string } | null>(null);
+  const [copied, setCopied] = useState(false);
   const [position, setPosition] = useState<{
     latitude: number;
     longitude: number;
@@ -116,7 +129,11 @@ export function PassportForm({
             path: inspectionId ? `/inspection/${inspectionId}` : '/inspection/record',
             body: {
               inspectorName: str(f, 'inspectorName'),
-              performedAt: new Date(str(f, 'performedAt') ?? Date.now()).toISOString(),
+              // Si no se cambió la hora sugerida (redondeada al minuto), se usa la hora exacta.
+              performedAt:
+                !str(f, 'performedAt') || str(f, 'performedAt') === nowLocal
+                  ? new Date().toISOString()
+                  : new Date(str(f, 'performedAt')!).toISOString(),
               ...(position ? { latitude: position.latitude, longitude: position.longitude } : {}),
               observedHeads: num(f, 'observedHeads'),
               fullCount: f.get('fullCount') === 'on',
@@ -131,15 +148,41 @@ export function PassportForm({
             },
           });
           break;
-        case 'requestInspection':
-          await action.mutateAsync({
+        case 'requestInspection': {
+          const created = (await action.mutateAsync({
             path: '/inspection',
             body: {
               reason: str(f, 'reason'),
+              inspectorContact: str(f, 'inspectorContact'),
               dueAt: str(f, 'dueAt')
                 ? new Date(`${str(f, 'dueAt')}T12:00:00`).toISOString()
                 : undefined,
             },
+          })) as { inspectorLink: { url: string; expiresAt: string } };
+          setLink(created.inspectorLink);
+          return;
+        }
+        case 'inspectorLink': {
+          const created = (await action.mutateAsync({
+            path: `/inspection/${inspectionId}/link`,
+          })) as { url: string; expiresAt: string };
+          setLink(created);
+          return;
+        }
+        case 'askEvidence':
+          if (!g.header.requestId)
+            throw new ApiError(422, 'VALIDATION', 'La garantía no tiene solicitud');
+          await api(`/guarantee-requests/${g.header.requestId}/information-requests`, {
+            method: 'POST',
+            body: { kind: 'EVIDENCE', message: str(f, 'message') },
+          });
+          await action.mutateAsync({ path: '/recalculate' }).catch(() => undefined);
+          break;
+        case 'reviewMovement':
+          await action.mutateAsync({
+            path: `/movements/${movementId}`,
+            method: 'PATCH',
+            body: { state: movementState, note: str(f, 'note') ?? '' },
           });
           break;
         case 'legal':
@@ -403,8 +446,49 @@ export function PassportForm({
               />
             )}
           </Field>
+          <Field label="Inspector (nombre o contacto)">
+            {(p) => <Input {...p} name="inspectorContact" />}
+          </Field>
           <Field label="Fecha límite">
             {(p) => <Input {...p} name="dueAt" type="date" min={today} />}
+          </Field>
+        </>
+      );
+      break;
+    case 'inspectorLink':
+      body = <p>Se genera un link nuevo; el anterior deja de servir.</p>;
+      break;
+    case 'askEvidence':
+      body = (
+        <>
+          <Callout tone="info">
+            El productor ve el pedido como tarea en su portal y responde con fotos o el escáner
+            desde la app. Al responder, AgroGarantías vuelve a verificar.
+          </Callout>
+          <Field label="Qué necesitás" required>
+            {(p) => (
+              <Textarea
+                {...p}
+                name="message"
+                rows={3}
+                required
+                defaultValue={`Necesitamos un conteo completo del rodeo con el escáner de paso o en la manga. ${g.header.stateReason ?? ''}`.trim()}
+              />
+            )}
+          </Field>
+        </>
+      );
+      break;
+    case 'reviewMovement':
+      body = (
+        <>
+          <Callout tone={movementState === 'RECHAZADO' ? 'warning' : 'info'}>
+            {movementState === 'RECHAZADO'
+              ? 'Un movimiento rechazado no explica diferencias de stock.'
+              : 'Aceptar confirma que revisaste el respaldo (DT-e) del movimiento.'}
+          </Callout>
+          <Field label="Nota de la revisión" required>
+            {(p) => <Textarea {...p} name="note" rows={2} required />}
           </Field>
         </>
       );
@@ -750,6 +834,46 @@ export function PassportForm({
       );
       break;
   }
+
+  if (link)
+    return (
+      <Modal
+        open
+        title="Link para el inspector"
+        onClose={onClose}
+        footer={
+          <Button variant="primary" onClick={onClose}>
+            Listo
+          </Button>
+        }
+      >
+        <div style={{ display: 'grid', gap: 12 }} data-testid="inspector-link">
+          <p>
+            Mandale este link al inspector (WhatsApp o mail). Lo abre en el celular, cuenta los
+            animales sin ver lo declarado, saca fotos con GPS y firma el acta. Vence el{' '}
+            {new Date(link.expiresAt).toLocaleDateString('es-AR')}.
+          </p>
+          <Input
+            readOnly
+            value={link.url}
+            aria-label="Link del inspector"
+            onFocus={(e) => e.target.select()}
+          />
+          <Button
+            icon="check"
+            onClick={() => {
+              void navigator.clipboard?.writeText(link.url).then(() => setCopied(true));
+            }}
+          >
+            {copied ? 'Copiado' : 'Copiar link'}
+          </Button>
+          <Callout tone="neutral">
+            El link se muestra una sola vez. Si se pierde, generá uno nuevo desde la pestaña
+            Inspecciones.
+          </Callout>
+        </div>
+      </Modal>
+    );
 
   return (
     <Modal open title={TITLES[kind]} onClose={onClose} footer={footer}>

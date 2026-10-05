@@ -558,7 +558,7 @@ export class CollateralQueryService {
       `SELECT m.id, m.direction, m.kind, m.heads, m.category, m.animal_refs AS "animalRefs", m.origin,
               m.destination, m.occurred_at AS "occurredAt", m.source_level AS "sourceLevel",
               m.source_label AS "sourceLabel", m.document_id AS "documentId", m.dte_number AS "dteNumber",
-              m.verification_state AS "verificationState", m.notes, u.full_name AS "recordedBy", m.created_at AS "createdAt"
+              m.verification_state AS "verificationState", m.reported_by_role AS "reportedBy", m.notes, u.full_name AS "recordedBy", m.created_at AS "createdAt"
          FROM collateral_movements m LEFT JOIN users u ON u.id = m.recorded_by
         WHERE m.guarantee_id = $1 AND m.organization_id = $2 ORDER BY m.occurred_at DESC`,
       [id, organizationId],
