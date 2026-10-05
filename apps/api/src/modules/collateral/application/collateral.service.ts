@@ -262,7 +262,10 @@ export class CollateralService {
       `SELECT g.id FROM bovine_guarantees g
          LEFT JOIN collateral_score_snapshots s ON s.id = g.last_snapshot_id
         WHERE g.finalized_at IS NULL AND g.current_declaration_version IS NOT NULL
-          AND (g.last_snapshot_id IS NULL OR g.next_verification_at <= $1
+          -- Sin evaluación; recién vencida en agenda (una vez); o evaluación de más de un día
+          -- (la evidencia envejece). Una garantía ya vencida no se reevalúa en cada ciclo.
+          AND (g.last_snapshot_id IS NULL
+               OR (g.next_verification_at <= $1 AND s.evaluated_at < g.next_verification_at)
                OR s.evaluated_at < $1::timestamptz - interval '1 day')
         ORDER BY g.next_verification_at NULLS FIRST
         LIMIT 500`,
@@ -416,22 +419,25 @@ export class CollateralService {
       const actorLabel = actor.kind === 'user' ? actor.user.fullName : SISTEMA;
       const source: EventSource = actor.kind === 'user' ? (actor.source ?? 'ENTIDAD') : 'SISTEMA';
       const changed = g.state !== assessment.state;
-      await this.event(manager, g, {
-        type: changed ? 'ESTADO_CAMBIADO' : 'EVALUACION',
-        source,
-        actorId: actor.kind === 'user' ? actor.user.userId : null,
-        actorLabel,
-        method: inputs.chosen?.method ?? null,
-        evidence: inputs.evidenceIds.map((id) => ({ kind: 'evidence', id })),
-        result: `Score ${assessment.score.finalScore ?? '—'} · riesgo ${assessment.risk.level}`,
-        previousState: g.state,
-        newState: assessment.state,
-        summary: (changed
-          ? `${STATE_LABELS[g.state]} → ${STATE_LABELS[assessment.state]}: ${assessment.stateReason}`
-          : `Evaluación (${trigger.toLowerCase()}): ${STATE_LABELS[assessment.state]}. ${assessment.stateReason}`
-        ).slice(0, 600),
-        payload: { snapshotId: snapshot.id, trigger },
-      });
+      // El barrido programado solo deja huella en el historial si cambió el estado (el snapshot
+      // se guarda igual): evita llenar la línea de tiempo de evaluaciones sin novedad.
+      if (changed || trigger !== 'PROGRAMADO')
+        await this.event(manager, g, {
+          type: changed ? 'ESTADO_CAMBIADO' : 'EVALUACION',
+          source,
+          actorId: actor.kind === 'user' ? actor.user.userId : null,
+          actorLabel,
+          method: inputs.chosen?.method ?? null,
+          evidence: inputs.evidenceIds.map((id) => ({ kind: 'evidence', id })),
+          result: `Score ${assessment.score.finalScore ?? '—'} · riesgo ${assessment.risk.level}`,
+          previousState: g.state,
+          newState: assessment.state,
+          summary: (changed
+            ? `${STATE_LABELS[g.state]} → ${STATE_LABELS[assessment.state]}: ${assessment.stateReason}`
+            : `Evaluación (${trigger.toLowerCase()}): ${STATE_LABELS[assessment.state]}. ${assessment.stateReason}`
+          ).slice(0, 600),
+          payload: { snapshotId: snapshot.id, trigger },
+        });
       await this.audit.record(
         {
           actor:

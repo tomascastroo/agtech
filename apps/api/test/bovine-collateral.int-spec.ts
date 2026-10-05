@@ -386,5 +386,15 @@ describe('Garantía bovina: verificación continua (Asset Passport)', () => {
     expect(evaluated).toBeGreaterThanOrEqual(2);
     const p = await passport(a.id);
     expect(p.score.history.length).toBeGreaterThan(3);
+    // Un segundo barrido no reevalúa garantías ya vencidas en agenda ni ensucia el historial.
+    const events = async () =>
+      (
+        (await ctx.dataSource.query(`SELECT count(*)::int AS n FROM collateral_events`)) as {
+          n: number;
+        }[]
+      )[0]!.n;
+    const before = await events();
+    expect(await ctx.app.get(CollateralService).sweep(new Date())).toBe(0);
+    expect(await events()).toBe(before);
   });
 });
