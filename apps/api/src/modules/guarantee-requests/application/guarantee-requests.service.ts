@@ -1109,6 +1109,54 @@ export class GuaranteeRequestsService {
       }
     }
 
+    // Garantía bovina en monitoreo: lo que el productor tiene que hacer después de enviar.
+    if (submitted && request.assetTypeCode === 'BOVINOS') {
+      const [g] = (await this.dataSource.query(
+        `SELECT g.state, g.next_verification_at AS "next", s.recommended_method AS "method",
+                (SELECT count(*)::int FROM collateral_inspections i
+                  WHERE i.guarantee_id = g.id AND i.status = 'SOLICITADA') AS "inspections"
+           FROM bovine_guarantees g LEFT JOIN monitoring_schedules s ON s.guarantee_id = g.id
+          WHERE g.guarantee_request_id = $1 AND g.finalized_at IS NULL`,
+        [request.id],
+      )) as { state: string; next: Date | null; method: string | null; inspections: number }[];
+      if (g) {
+        const how: Record<string, string> = {
+          ESCANER_FIJO: 'Contá los animales con el escáner de paso (manga o tranquera).',
+          MANGA_RFID: 'Usá Manga + RFID en el próximo trabajo de manga.',
+          VIDEO: 'Hacé un barrido o un escaneo de corral con la app.',
+          FOTO: 'Sacá fotos con la cámara desde la app.',
+          INSPECCION: 'La entidad va a coordinar una inspección.',
+        };
+        const days = g.next
+          ? Math.ceil((new Date(g.next).getTime() - Date.now()) / 86_400_000)
+          : null;
+        if (g.state === 'REQUIERE_EVIDENCIA' || g.state === 'NO_DETERMINABLE')
+          tasks.push({
+            kind: 'MONITORING_EVIDENCE',
+            title:
+              g.state === 'NO_DETERMINABLE'
+                ? `Hace falta un conteo completo de ${assetName}`
+                : `Enviá evidencia nueva de ${assetName}`,
+            description: how[g.method ?? ''] ?? 'Contá los animales con el escáner de la app.',
+          });
+        else if (days !== null && days <= 7)
+          tasks.push({
+            kind: 'MONITORING_DUE',
+            title:
+              days < 0
+                ? `Verificación de ${assetName} vencida`
+                : `Verificación de ${assetName} en ${days === 0 ? 'hoy' : `${days} día${days === 1 ? '' : 's'}`}`,
+            description: how[g.method ?? ''] ?? 'Contá los animales con el escáner de la app.',
+          });
+        if (g.inspections > 0)
+          tasks.push({
+            kind: 'MONITORING_INSPECTION',
+            title: 'Inspección programada',
+            description: 'Un inspector va a visitar el establecimiento para contar los animales.',
+          });
+      }
+    }
+
     return {
       id: request.id,
       status: request.status,

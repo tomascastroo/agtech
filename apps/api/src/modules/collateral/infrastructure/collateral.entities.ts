@@ -115,6 +115,7 @@ export class CollateralMovementEntity extends TimestampedEntity {
   @Column({ type: 'varchar', length: 12 }) verificationState: MovementVerificationState;
   @Column({ type: 'varchar', length: 500, nullable: true }) notes: string | null;
   @Column({ type: 'uuid', nullable: true }) recordedBy: string | null;
+  @Column({ type: 'varchar', length: 12 }) reportedByRole: 'PRODUCTOR' | 'ENTIDAD';
 }
 
 /** Evaluación del motor (inmutable). */
@@ -228,6 +229,12 @@ export class CollateralInspectionEntity extends TimestampedEntity {
   @Column({ type: 'char', length: 64, nullable: true }) signatureHash: string | null;
   @Column({ type: 'timestamptz', nullable: true }) signedAt: Date | null;
   @Column({ type: 'uuid', nullable: true }) recordedBy: string | null;
+  /** SHA-256 del token del link del inspector (el token en claro solo se muestra al crearlo). */
+  @Column({ type: 'char', length: 64, nullable: true, select: false }) inviteTokenHash:
+    | string
+    | null;
+  @Column({ type: 'timestamptz', nullable: true }) inviteExpiresAt: Date | null;
+  @Column({ type: 'varchar', length: 160, nullable: true }) inspectorContact: string | null;
 }
 
 @Entity('collateral_monitoring_policies')

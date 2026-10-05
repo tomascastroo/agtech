@@ -25,6 +25,79 @@ export interface ListFilters {
   includeDemo?: boolean;
 }
 
+/** Estado en el idioma del productor (sin score ni alertas internas de la entidad). */
+const PRODUCER_STATUS: Record<CollateralState, { key: string; title: string; text: string }> = {
+  VERIFICADA: {
+    key: 'AL_DIA',
+    title: 'Tu garantía está al día',
+    text: 'No tenés que hacer nada hasta la próxima verificación.',
+  },
+  EN_MONITOREO: {
+    key: 'AL_DIA',
+    title: 'Tu garantía está al día',
+    text: 'Se acerca la próxima verificación: preparate para hacerla.',
+  },
+  REQUIERE_EVIDENCIA: {
+    key: 'ENVIAR_EVIDENCIA',
+    title: 'Tenés que enviar evidencia nueva',
+    text: 'La última evidencia ya venció. Hacé el conteo con la app.',
+  },
+  NO_DETERMINABLE: {
+    key: 'ENVIAR_EVIDENCIA',
+    title: 'Hace falta un conteo completo',
+    text: 'Con lo enviado no se pudo contar todo el rodeo. Pasá los animales por la manga o un paso controlado con el escáner.',
+  },
+  REQUIERE_REVISION: {
+    key: 'EN_REVISION',
+    title: 'La entidad está revisando un dato',
+    text: 'Puede que te pida información. Si hubo ventas, muertes o traslados, avisalos con su DT-e.',
+  },
+  REQUIERE_INSPECCION: {
+    key: 'INSPECCION',
+    title: 'Se va a coordinar una inspección',
+    text: 'Un inspector va a visitar el establecimiento para contar los animales.',
+  },
+  PENDIENTE_DECLARACION: {
+    key: 'DECLARAR',
+    title: 'Completá tu declaración',
+    text: 'Declará el establecimiento, el rodeo y enviá.',
+  },
+  PENDIENTE_VERIFICACION: {
+    key: 'EN_VERIFICACION',
+    title: 'Estamos verificando tu declaración',
+    text: 'Te avisamos si hace falta algo más.',
+  },
+  VENCIDA: { key: 'FINALIZADA', title: 'La garantía venció', text: 'No hay acciones pendientes.' },
+  FINALIZADA: {
+    key: 'FINALIZADA',
+    title: 'La garantía finalizó',
+    text: 'No hay acciones pendientes.',
+  },
+};
+
+/** Cómo hacer cada método, explicado al productor. */
+const METHOD_FOR_PRODUCER: Record<string, { label: string; howTo: string }> = {
+  ESCANER_FIJO: {
+    label: 'Escáner de paso',
+    howTo:
+      'Abrí el escáner, apoyá el celular fijo y hacé pasar los animales de a uno por la manga o una tranquera.',
+  },
+  MANGA_RFID: {
+    label: 'Manga + RFID',
+    howTo:
+      'En el próximo trabajo de manga, usá el modo Manga + RFID: cada animal se cuenta y se lee su caravana.',
+  },
+  VIDEO: {
+    label: 'Barrido o corral',
+    howTo: 'Con el escáner, recorré el potrero o el corral desde un punto alto.',
+  },
+  FOTO: { label: 'Fotos', howTo: 'Sacá fotos desde la app con la cámara (no de la galería).' },
+  INSPECCION: {
+    label: 'Inspección presencial',
+    howTo: 'La entidad va a coordinar la visita de un inspector.',
+  },
+};
+
 /** Respuesta a "¿Puedo confiar hoy en esta garantía?" según el estado. */
 const TRUST: Record<CollateralState, { verdict: string; text: string }> = {
   VERIFICADA: {
@@ -608,6 +681,74 @@ export class CollateralQueryService {
         ORDER BY d.created_at DESC`,
       [assetId, establishmentId],
     );
+  }
+
+  /**
+   * Monitoreo visto por el PRODUCTOR: qué tiene que hacer y cuándo, en su idioma. No ve el score,
+   * el riesgo, la cobertura ni las alertas internas de la entidad.
+   */
+  async producerMonitoring(userId: string, requestId: string) {
+    const [g] = await this.q(
+      `SELECT g.id, g.code, g.state, g.next_verification_at AS "nextVerificationAt",
+              g.last_verification_at AS "lastVerificationAt", g.production_type AS "productionType",
+              g.data_source AS "dataSource", s.recommended_method AS "recommendedMethod",
+              s.max_evidence_age_days AS "maxEvidenceAgeDays"
+         FROM bovine_guarantees g
+         JOIN guarantee_requests r ON r.id = g.guarantee_request_id
+         LEFT JOIN monitoring_schedules s ON s.guarantee_id = g.id
+        WHERE r.id = $1 AND r.producer_user_id = $2`,
+      [requestId, userId],
+    );
+    if (!g) return null;
+    const state = g.state as CollateralState;
+    const status = PRODUCER_STATUS[state];
+    const method = (g.recommendedMethod as string | null) ?? null;
+    const next = g.nextVerificationAt ? new Date(g.nextVerificationAt as string) : null;
+    const now = Date.now();
+    const [declarations, movements, inspections] = await Promise.all([
+      this.q(
+        `SELECT version, heads, source, declared_by_label AS "declaredBy", declared_at AS "declaredAt", reason
+           FROM collateral_declarations WHERE guarantee_id = $1 ORDER BY version DESC`,
+        [g.id],
+      ),
+      this.q(
+        `SELECT id, direction, kind, heads, category, destination, origin, occurred_at AS "occurredAt",
+                source_level AS "sourceLevel", dte_number AS "dteNumber",
+                verification_state AS "verificationState", reported_by_role AS "reportedBy"
+           FROM collateral_movements WHERE guarantee_id = $1 ORDER BY occurred_at DESC`,
+        [g.id],
+      ),
+      this.q(
+        `SELECT id, status, due_at AS "dueAt", requested_at AS "requestedAt", performed_at AS "performedAt"
+           FROM collateral_inspections WHERE guarantee_id = $1 ORDER BY requested_at DESC`,
+        [g.id],
+      ),
+    ]);
+    return {
+      code: g.code,
+      dataSource: g.dataSource,
+      frozen: declarations.length > 0,
+      status: { key: status.key, title: status.title, text: status.text },
+      nextVerification: next
+        ? {
+            at: next,
+            overdue: next.getTime() < now,
+            daysLeft: Math.ceil((next.getTime() - now) / 86_400_000),
+            method,
+            methodLabel: method ? (METHOD_FOR_PRODUCER[method]?.label ?? method) : null,
+            instructions: method ? (METHOD_FOR_PRODUCER[method]?.howTo ?? null) : null,
+          }
+        : null,
+      declarations,
+      movements,
+      inspections: inspections.map((i) => ({
+        id: i.id,
+        status: i.status,
+        dueAt: i.dueAt,
+        requestedAt: i.requestedAt,
+        performedAt: i.performedAt,
+      })),
+    };
   }
 
   /** Vista del productor: estado de su declaración (sin score ni datos de la entidad). */

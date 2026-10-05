@@ -15,6 +15,9 @@ const TASK_TARGET: Record<ProducerTask['kind'], { section: string; icon: IconNam
   DOCUMENTS: { section: 'documentacion', icon: 'document' },
   INFO_DOCUMENT: { section: 'documentacion', icon: 'document' },
   SUBMIT: { section: 'enviar', icon: 'check' },
+  MONITORING_EVIDENCE: { section: 'escaner', icon: 'camera' },
+  MONITORING_DUE: { section: 'monitoreo', icon: 'clock' },
+  MONITORING_INSPECTION: { section: 'monitoreo', icon: 'user' },
 };
 
 export const ProducerStatusBadge = ({ status }: { status: GuaranteeRequest['producerStatus'] }) => {
@@ -36,7 +39,10 @@ export function TaskCard({
   context?: string;
 }) {
   const target = TASK_TARGET[task.kind];
-  const info = task.kind === 'INFO_EVIDENCE' || task.kind === 'INFO_DOCUMENT';
+  const info =
+    task.kind === 'INFO_EVIDENCE' ||
+    task.kind === 'INFO_DOCUMENT' ||
+    task.kind === 'MONITORING_EVIDENCE';
   return (
     <Link
       href={`/productor/solicitudes/${requestId}#${target.section}`}

@@ -43,6 +43,7 @@ import {
 import type { AuthenticatedUser } from '../../../common/auth/authenticated-user.js';
 import {
   CurrentUser,
+  Public,
   ReqContext,
   RequirePermissions,
   type RequestContext,
@@ -213,6 +214,25 @@ class MovementDto {
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(500) notes?: string;
 }
 
+/** Movimiento informado por el productor (multipart: los números llegan como texto). */
+class ProducerMovementDto {
+  @ApiProperty({ enum: MOVEMENT_DIRECTIONS })
+  @IsIn(MOVEMENT_DIRECTIONS)
+  direction: MovementDirection;
+  @ApiProperty({ enum: MOVEMENT_KINDS }) @IsIn(MOVEMENT_KINDS) kind: MovementKind;
+  @ApiProperty() @Type(() => Number) @IsInt() @Min(1) @Max(100_000) heads: number;
+  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(40) category?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(160) origin?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(160) destination?: string;
+  @ApiProperty() @IsISO8601() occurredAt: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(40) dteNumber?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(500) notes?: string;
+}
+
+class InspectorEvidenceDto extends UploadEvidenceDto {
+  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(160) inspectorName?: string;
+}
+
 class ReviewMovementDto {
   @ApiProperty({ enum: ['VERIFICADO', 'RECHAZADO'] }) @IsIn(['VERIFICADO', 'RECHAZADO']) state:
     | 'VERIFICADO'
@@ -222,6 +242,11 @@ class ReviewMovementDto {
 
 class InspectionRequestDto {
   @ApiProperty() @IsString() @MaxLength(500) reason: string;
+  @ApiPropertyOptional({ description: 'Nombre o contacto del inspector' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(160)
+  inspectorContact?: string;
   @ApiPropertyOptional() @IsOptional() @IsISO8601() dueAt?: string;
 }
 
@@ -528,6 +553,18 @@ export class CollateralController {
     return this.commands.recordInspection(user, id, null, dto, context);
   }
 
+  @Post(':id/inspection/:inspectionId/link')
+  @RequirePermissions(PERMISSIONS.MONITORING_MANAGE)
+  @ApiOperation({ summary: 'Genera un link nuevo para el inspector (el anterior deja de servir)' })
+  inspectionLink(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('inspectionId', ParseUUIDPipe) inspectionId: string,
+    @ReqContext() context: RequestContext,
+  ) {
+    return this.commands.inspectionLink(user, id, inspectionId, context);
+  }
+
   @Post(':id/inspection/:inspectionId')
   @RequirePermissions(PERMISSIONS.VERIFICATIONS_RUN)
   @ApiOperation({ summary: 'Registra el resultado de una inspección solicitada (acta firmada)' })
@@ -584,5 +621,72 @@ export class ProducerDeclarationController {
   ) {
     await this.commands.correctDeclaration(user, id, dto, context, true);
     return this.query.producerView(user.userId, id);
+  }
+}
+
+/** Productor: monitoreo de su garantía y aviso de movimientos (con DT-e). */
+@ApiTags('Portal del productor')
+@Controller('producer/me/requests/:id')
+export class ProducerMonitoringController {
+  constructor(
+    private readonly query: CollateralQueryService,
+    private readonly commands: CollateralCommandsService,
+  ) {}
+
+  @Get('monitoring')
+  @ApiOperation({
+    summary: 'Estado de la garantía, próxima verificación, movimientos e inspecciones',
+  })
+  monitoring(@CurrentUser() user: AuthenticatedUser, @Param('id', ParseUUIDPipe) id: string) {
+    return this.query.producerMonitoring(user.userId, id);
+  }
+
+  @Post('movements')
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Avisar una venta, muerte, traslado o compra (DT-e opcional)' })
+  @UseInterceptors(FileInterceptor('file', uploadOptions(15 * 1_048_576)))
+  async movement(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @UploadedFile() file: UploadedFileType | undefined,
+    @Body() dto: ProducerMovementDto,
+    @ReqContext() context: RequestContext,
+  ) {
+    await this.commands.producerMovement(user, id, dto, file, context);
+    return this.query.producerMonitoring(user.userId, id);
+  }
+}
+
+/** Inspector: acceso por link (sin cuenta). Conteo a ciegas, fotos con GPS y acta firmada. */
+@ApiTags('Inspección por link')
+@Public()
+@Controller('inspections/:token')
+export class InspectorController {
+  constructor(private readonly commands: CollateralCommandsService) {}
+
+  @Get()
+  view(@Param('token') token: string) {
+    return this.commands.inspectorView(token);
+  }
+
+  @Post('evidence')
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FileInterceptor('file', uploadOptions(20 * 1_048_576)))
+  evidence(
+    @Param('token') token: string,
+    @UploadedFile() file: UploadedFileType | undefined,
+    @Body() dto: InspectorEvidenceDto,
+    @ReqContext() context: RequestContext,
+  ) {
+    return this.commands.inspectorEvidence(token, file, dto, context);
+  }
+
+  @Post('record')
+  record(
+    @Param('token') token: string,
+    @Body() dto: InspectionRecordDto,
+    @ReqContext() context: RequestContext,
+  ) {
+    return this.commands.inspectorRecord(token, dto, context);
   }
 }

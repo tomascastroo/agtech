@@ -8,7 +8,9 @@ import { CollateralQueryService } from './application/collateral-query.service.j
 import { CollateralCoreModule } from './collateral-core.module.js';
 import {
   CollateralController,
+  InspectorController,
   ProducerDeclarationController,
+  ProducerMonitoringController,
 } from './presentation/collateral.controller.js';
 
 /** API HTTP de la garantía bovina (Asset Passport, dashboard, comandos). */
@@ -20,7 +22,12 @@ import {
     VerificationModule,
     ExternalDataModule,
   ],
-  controllers: [CollateralController, ProducerDeclarationController],
+  controllers: [
+    CollateralController,
+    ProducerDeclarationController,
+    ProducerMonitoringController,
+    InspectorController,
+  ],
   providers: [CollateralCommandsService, CollateralQueryService],
   exports: [CollateralCommandsService],
 })

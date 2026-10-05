@@ -14,6 +14,11 @@ import {
 
 const CAMERA = join(import.meta.dirname, '../../../infra/seed-assets/cameras/CAM-LE-01.jpg');
 const DAY = 86_400_000;
+/** PDF mínimo válido (la API valida la firma del archivo). */
+const minimalPdf = Buffer.from(
+  '%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n' +
+    '3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 200 200]>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n',
+);
 // Dentro del establecimiento declarado (mismo punto que su ubicación).
 const FIELD = { latitude: -31.8653, longitude: -59.0269 };
 
@@ -416,5 +421,111 @@ describe('Garantía bovina: verificación continua (Asset Passport)', () => {
     expect(diff.header.state).toBe('REQUIERE_INSPECCION');
     expect(diff.bovines.unexplainedDifference).toBe(-255);
     expect(diff.alerts.map((a: { type: string }) => a.type)).toContain('BG_QUANTITY_DIFFERENCE');
+  });
+
+  it('productor: ve su monitoreo (sin score), avisa un movimiento con DT-e y el banco lo revisa', async () => {
+    const c = await declared({
+      name: 'Invernada Este S.A.',
+      cuit: '30-71549896-7',
+      heads: 400,
+      system: 'Invernada',
+    });
+    await ctx
+      .http()
+      .post(`/api/producer/requests/${c.token}/accept`)
+      .send({ email: 'invernada@este.com.ar', password: 'Rodeo-2026-seguro' })
+      .expect(201);
+    const producer = await login(ctx, 'invernada@este.com.ar', 'Rodeo-2026-seguro');
+    const view = await as(ctx, producer)
+      .get(`/api/producer/me/requests/${c.requestId}/monitoring`)
+      .expect(200);
+    expect(view.body.status).toMatchObject({ key: expect.any(String), title: expect.any(String) });
+    expect(JSON.stringify(view.body)).not.toMatch(/score|riskLevel|coverage/i);
+
+    const mv = await as(ctx, producer)
+      .post(`/api/producer/me/requests/${c.requestId}/movements`)
+      .field('direction', 'EGRESO')
+      .field('kind', 'VENTA')
+      .field('heads', '30')
+      .field('occurredAt', new Date().toISOString())
+      .field('dteNumber', '123456789')
+      .attach('file', minimalPdf, { filename: 'dte.pdf', contentType: 'application/pdf' })
+      .expect(201);
+    expect(mv.body.movements[0]).toMatchObject({
+      heads: 30,
+      sourceLevel: 'DOCUMENTADO',
+      reportedBy: 'PRODUCTOR',
+      verificationState: 'PENDIENTE',
+    });
+    let p = await passport(c.id);
+    expect(p.bovines.expected).toBe(370);
+    expect(p.history.find((e: { type: string }) => e.type === 'MOVIMIENTO_REGISTRADO').source).toBe(
+      'PRODUCTOR',
+    );
+    // El banco acepta el movimiento.
+    await as(ctx, maria)
+      .patch(`/api/bovine-guarantees/${c.id}/movements/${p.movements[0].id}`)
+      .send({ state: 'VERIFICADO', note: 'DT-e revisado' })
+      .expect(200);
+    p = await passport(c.id);
+    expect(p.movements[0].verificationState).toBe('VERIFICADO');
+    // Otro productor no puede avisar movimientos de esta garantía.
+    const otherProducer = await login(ctx, 'cabana@sur.com.ar', 'Rodeo-2026-seguro');
+    await as(ctx, otherProducer)
+      .post(`/api/producer/me/requests/${c.requestId}/movements`)
+      .field('direction', 'EGRESO')
+      .field('kind', 'MUERTE')
+      .field('heads', '1')
+      .field('occurredAt', new Date().toISOString())
+      .expect(403);
+  });
+
+  it('inspector por link: conteo a ciegas, foto con GPS, acta firmada; el link deja de servir', async () => {
+    const req = await as(ctx, maria)
+      .post(`/api/bovine-guarantees/${a.id}/inspection`)
+      .send({ reason: 'Diferencia de 255 cabezas', inspectorContact: 'Juan Inspector' })
+      .expect(201);
+    const url = String(req.body.inspectorLink.url);
+    expect(url).toContain('/inspeccion/');
+    const token = url.split('/inspeccion/')[1]!;
+    const anon = () => ctx.http();
+    const view = await anon().get(`/api/inspections/${token}`).expect(200);
+    expect(view.body.guarantee.code).toBe(a.code);
+    expect(view.body.blindCount).toBe(true);
+    expect(JSON.stringify(view.body)).not.toMatch(/975|1000|declared|expected/i);
+    const photo = await anon()
+      .post(`/api/inspections/${token}/evidence`)
+      .attach('file', await readFile(CAMERA), 'manga.jpg')
+      .field('latitude', String(FIELD.latitude))
+      .field('longitude', String(FIELD.longitude))
+      .field('locationSource', 'DEVICE_GPS')
+      .field('captureOrigin', 'CAMERA')
+      .expect(201);
+    expect(photo.body.location).toBe('DEVICE_GPS');
+    await anon()
+      .post(`/api/inspections/${token}/record`)
+      .send({
+        inspectorName: 'Juan Inspector',
+        performedAt: new Date().toISOString(),
+        ...FIELD,
+        observedHeads: 975,
+        fullCount: true,
+        result: 'CONFORME',
+        signatureName: 'Juan Inspector',
+        signatureAccepted: true,
+      })
+      .expect(201);
+    await anon().get(`/api/inspections/${token}`).expect(409);
+    await anon().get('/api/inspections/token-invalido-0000000000000000000').expect(404);
+    const p = await passport(a.id);
+    const done = p.inspections.find((i: { id: string }) => i.id === req.body.id);
+    expect(done).toMatchObject({
+      status: 'REALIZADA',
+      inspectorName: 'Juan Inspector',
+      evidenceIds: [photo.body.evidenceId],
+    });
+    expect(p.history.find((e: { type: string }) => e.type === 'INSPECCION_REALIZADA').actor).toBe(
+      'Juan Inspector',
+    );
   });
 });

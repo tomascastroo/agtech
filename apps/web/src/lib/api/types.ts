@@ -823,7 +823,10 @@ export interface ProducerTask {
     | 'DOCUMENTS'
     | 'SUBMIT'
     | 'INFO_EVIDENCE'
-    | 'INFO_DOCUMENT';
+    | 'INFO_DOCUMENT'
+    | 'MONITORING_EVIDENCE'
+    | 'MONITORING_DUE'
+    | 'MONITORING_INSPECTION';
   title: string;
   description: string;
   informationRequestId?: string;

@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import type { AuthenticatedUser } from '../../../common/auth/authenticated-user.js';
 import type { RequestContext } from '../../../common/auth/decorators.js';
-import { canonicalJson, sha256Hex } from '../../../common/crypto/hashing.js';
+import { canonicalJson, randomToken, sha256Hex } from '../../../common/crypto/hashing.js';
 import {
   ForbiddenActionError,
   InvalidStateError,
@@ -10,7 +10,13 @@ import {
   ValidationFailedError,
 } from '../../../common/domain/errors.js';
 import { point } from '../../../common/geo/geojson.js';
-import { AuditService } from '../../audit/application/audit.service.js';
+import { AppConfig } from '../../../config/app-config.js';
+import { readExifGps } from '../../../common/files/exif-gps.js';
+import { EVIDENCE_UPLOAD_POLICY } from '../../../common/files/file-signature.js';
+import { AuditService, type AuditEntry } from '../../audit/application/audit.service.js';
+import { EvidenceRecorder } from '../../evidence/application/evidence-recorder.js';
+import { resolveCaptureLocation } from '../../evidence/domain/capture-location.js';
+import { EVIDENCE_SOURCE_CODES } from '../../evidence/domain/evidence.types.js';
 import { AUDIT_ACTIONS } from '../../audit/application/audit.types.js';
 import {
   DocumentsService,
@@ -149,6 +155,9 @@ const FIELD_LABELS: Record<string, string> = {
   qualityFactor: 'factor de calidad',
 };
 
+/** Vigencia del link del inspector. */
+const INSPECTOR_LINK_DAYS = 14;
+
 /** Tipos de documento que respaldan un movimiento (DT-e) o una fuente oficial. */
 const MOVEMENT_DOCUMENT_TYPES = new Set(['DTE', 'TRAZA_REPORT', 'STOCK_CERTIFICATE', 'OTHER']);
 
@@ -157,6 +166,8 @@ const MOVEMENT_DOCUMENT_TYPES = new Set(['DTE', 'TRAZA_REPORT', 'STOCK_CERTIFICA
 export class CollateralCommandsService {
   constructor(
     private readonly core: CollateralService,
+    private readonly config: AppConfig,
+    private readonly recorder: EvidenceRecorder,
     private readonly dataSource: DataSource,
     private readonly audit: AuditService,
     private readonly evidence: EvidenceService,
@@ -313,6 +324,7 @@ export class CollateralCommandsService {
     id: string,
     command: MovementCommand,
     context: RequestContext,
+    role: 'ENTIDAD' | 'PRODUCTOR' = 'ENTIDAD',
   ) {
     const g = await this.core.findForOrganization(user.organizationId, id);
     this.core.assertActive(g);
@@ -322,7 +334,7 @@ export class CollateralCommandsService {
     if (Number.isNaN(occurredAt.getTime()) || occurredAt.getTime() > Date.now() + 3_600_000)
       throw new ValidationFailedError('Fecha del movimiento inválida');
     let sourceLevel: 'DOCUMENTADO' | 'DECLARADO' = 'DECLARADO';
-    let sourceLabel = `Informado por ${user.fullName} (sin documento)`;
+    let sourceLabel = `Informado por ${role === 'PRODUCTOR' ? 'el productor' : 'la entidad'} (${user.fullName}), sin documento`;
     if (command.documentId) {
       const [doc] = (await this.dataSource.query(
         `SELECT id, type, title FROM documents WHERE id = $1 AND organization_id = $2 AND deleted_at IS NULL
@@ -357,11 +369,12 @@ export class CollateralCommandsService {
           verificationState: 'PENDIENTE',
           notes: command.notes?.trim() || null,
           recordedBy: user.userId,
+          reportedByRole: role,
         }),
       );
       await this.core.event(manager, g, {
         type: 'MOVIMIENTO_REGISTRADO',
-        source: sourceLevel === 'DOCUMENTADO' ? 'DOCUMENTO' : 'ENTIDAD',
+        source: role,
         actorId: user.userId,
         actorLabel: user.fullName,
         method: sourceLevel,
@@ -389,7 +402,7 @@ export class CollateralCommandsService {
       );
       return saved;
     });
-    await this.reassess(user, g.id, 'MOVIMIENTO');
+    await this.reassess(user, g.id, 'MOVIMIENTO', role);
     return movement;
   }
 
@@ -448,14 +461,14 @@ export class CollateralCommandsService {
   async requestInspection(
     user: AuthenticatedUser,
     id: string,
-    command: { reason: string; dueAt?: string },
+    command: { reason: string; dueAt?: string; inspectorContact?: string },
     context: RequestContext,
   ) {
     const g = await this.core.findForOrganization(user.organizationId, id);
     this.core.assertActive(g);
     if (!command.reason?.trim())
       throw new ValidationFailedError('Indicá el motivo de la inspección');
-    return this.dataSource.transaction(async (manager) => {
+    const created = await this.dataSource.transaction(async (manager) => {
       const inspection = await manager.save(
         manager.create(CollateralInspectionEntity, {
           organizationId: g.organizationId,
@@ -465,6 +478,7 @@ export class CollateralCommandsService {
           requestedBy: user.userId,
           requestedAt: new Date(),
           dueAt: command.dueAt ? new Date(command.dueAt) : null,
+          inspectorContact: command.inspectorContact?.trim() || null,
           evidenceIds: [],
           discrepancies: [],
         }),
@@ -491,6 +505,16 @@ export class CollateralCommandsService {
       );
       return inspection;
     });
+    // Link para el inspector (se muestra una sola vez; se puede regenerar).
+    const inspectorLink = await this.inspectionLink(user, g.id, created.id, context);
+    return {
+      id: created.id,
+      status: created.status,
+      reason: created.reason,
+      dueAt: created.dueAt,
+      requestedAt: created.requestedAt,
+      inspectorLink,
+    };
   }
 
   /**
@@ -506,6 +530,28 @@ export class CollateralCommandsService {
     context: RequestContext,
   ) {
     const g = await this.core.findForOrganization(user.organizationId, id);
+    return this.recordInspectionFor(
+      g,
+      inspectionId,
+      command,
+      { userId: user.userId, label: user.fullName, audit: { kind: 'user', user }, user },
+      context,
+    );
+  }
+
+  /** Registra el acta: la carga la entidad (acta en papel) o el inspector desde su link. */
+  private async recordInspectionFor(
+    g: BovineGuaranteeEntity,
+    inspectionId: string | null,
+    command: InspectionRecordCommand,
+    actor: {
+      userId: string | null;
+      label: string;
+      audit: AuditEntry['actor'];
+      user?: AuthenticatedUser;
+    },
+    context: RequestContext,
+  ) {
     this.core.assertActive(g);
     if (!command.signatureAccepted || !command.signatureName?.trim())
       throw new ValidationFailedError('El acta requiere la firma del inspector');
@@ -545,7 +591,7 @@ export class CollateralCommandsService {
     const fields = {
       status: 'REALIZADA' as const,
       inspectorName: act.inspector,
-      inspectorUserId: user.userId,
+      inspectorUserId: actor.userId,
       performedAt,
       location: hasLocation ? point(command.longitude!, command.latitude!) : null,
       observedHeads: command.observedHeads,
@@ -558,7 +604,7 @@ export class CollateralCommandsService {
       signatureName: act.signatureName,
       signatureHash,
       signedAt,
-      recordedBy: user.userId,
+      recordedBy: actor.userId,
     };
     const saved = await this.dataSource.transaction(async (manager) => {
       let inspection: CollateralInspectionEntity;
@@ -578,7 +624,7 @@ export class CollateralCommandsService {
             organizationId: g.organizationId,
             guaranteeId: g.id,
             reason: 'Inspección registrada sin solicitud previa',
-            requestedBy: user.userId,
+            requestedBy: actor.userId,
             requestedAt: performedAt,
             ...fields,
           }),
@@ -587,7 +633,7 @@ export class CollateralCommandsService {
       await this.core.event(manager, g, {
         type: 'INSPECCION_REALIZADA',
         source: 'INSPECTOR',
-        actorId: user.userId,
+        actorId: actor.userId,
         actorLabel: act.inspector,
         method: 'INSPECCION',
         evidence: evidenceIds.map((e) => ({ kind: 'evidence', id: e })),
@@ -598,7 +644,7 @@ export class CollateralCommandsService {
       });
       await this.audit.record(
         {
-          actor: { kind: 'user', user },
+          actor: actor.audit,
           action: AUDIT_ACTIONS.BOVINE_INSPECTION_RECORDED,
           resourceType: 'bovine_guarantee',
           resourceId: g.id,
@@ -609,8 +655,208 @@ export class CollateralCommandsService {
       );
       return inspection;
     });
-    await this.reassess(user, g.id, 'INSPECCION', 'INSPECTOR');
+    const fresh = await this.dataSource
+      .getRepository(BovineGuaranteeEntity)
+      .findOneByOrFail({ id: g.id });
+    await this.core.reassess(
+      fresh,
+      'INSPECCION',
+      actor.user
+        ? { kind: 'user', user: actor.user, source: 'INSPECTOR' }
+        : { kind: 'system', organizationId: g.organizationId, process: 'inspector-link' },
+    );
     return saved;
+  }
+
+  /**
+   * El productor avisa un movimiento desde su portal. Con el DT-e adjunto queda DOCUMENTADO; sin
+   * él, DECLARADO. La entidad lo acepta o lo rechaza; hasta entonces cuenta como PENDIENTE.
+   */
+  async producerMovement(
+    user: AuthenticatedUser,
+    requestId: string,
+    command: MovementCommand,
+    file: UploadedFile | undefined,
+    context: RequestContext,
+  ) {
+    const g = await this.producerGuarantee(user, requestId);
+    this.core.assertActive(g);
+    if (g.currentDeclarationVersion === null || !g.assetId)
+      throw new InvalidStateError('Primero enviá tu declaración');
+    let documentId: string | undefined;
+    if (file) {
+      const doc = await this.documents.uploadForAsset(
+        user,
+        g.assetId,
+        file,
+        { type: 'DTE', title: `DT-e ${command.dteNumber ?? ''}`.trim() },
+        context,
+      );
+      documentId = doc.id;
+    }
+    return this.recordMovement(user, g.id, { ...command, documentId }, context, 'PRODUCTOR');
+  }
+
+  /** Genera (o regenera) el link del inspector de una inspección solicitada. */
+  async inspectionLink(
+    user: AuthenticatedUser,
+    id: string,
+    inspectionId: string,
+    context: RequestContext,
+  ) {
+    const g = await this.core.findForOrganization(user.organizationId, id);
+    this.core.assertActive(g);
+    const repo = this.dataSource.getRepository(CollateralInspectionEntity);
+    const inspection = await repo.findOneBy({ id: inspectionId, guaranteeId: g.id });
+    if (!inspection) throw new NotFoundError('Inspección', inspectionId);
+    if (inspection.status !== 'SOLICITADA')
+      throw new InvalidStateError('La inspección ya fue realizada o cancelada');
+    const token = randomToken();
+    const expiresAt = new Date(Date.now() + INSPECTOR_LINK_DAYS * 86_400_000);
+    await repo.update(
+      { id: inspection.id },
+      { inviteTokenHash: sha256Hex(token), inviteExpiresAt: expiresAt },
+    );
+    await this.audit.record({
+      actor: { kind: 'user', user },
+      action: AUDIT_ACTIONS.BOVINE_INSPECTION_REQUESTED,
+      resourceType: 'bovine_guarantee',
+      resourceId: g.id,
+      metadata: { inspectionId: inspection.id, link: 'GENERATED', expiresAt },
+      context,
+    });
+    const base = this.config.env.WEB_ORIGIN.replace(/\/$/, '');
+    return { url: `${base}/inspeccion/${token}`, expiresAt };
+  }
+
+  /** Inspección del link: el token tiene que ser válido, vigente y de una inspección pendiente. */
+  private async inspectionByToken(token: string) {
+    const inspection = await this.dataSource
+      .getRepository(CollateralInspectionEntity)
+      .createQueryBuilder('i')
+      .where('i.invite_token_hash = :hash', { hash: sha256Hex(token) })
+      .getOne();
+    if (!inspection) throw new NotFoundError('Link de inspección', 'inválido');
+    if (inspection.status !== 'SOLICITADA')
+      throw new InvalidStateError('Esta inspección ya fue registrada: el link dejó de servir');
+    if (!inspection.inviteExpiresAt || inspection.inviteExpiresAt < new Date())
+      throw new ForbiddenActionError('El link venció: pedile uno nuevo a la entidad');
+    const g = await this.dataSource
+      .getRepository(BovineGuaranteeEntity)
+      .findOneByOrFail({ id: inspection.guaranteeId });
+    return { inspection, g };
+  }
+
+  /**
+   * Lo que ve el inspector. Conteo a ciegas: no se le muestran las cabezas declaradas ni las
+   * esperadas, para que su conteo sea independiente.
+   */
+  async inspectorView(token: string) {
+    const { inspection, g } = await this.inspectionByToken(token);
+    const [row] = (await this.dataSource.query(
+      `SELECT o.name AS "organizationName", e.name AS establishment, e.locality, e.province, e.renspa,
+              ST_Y(l.point) AS latitude, ST_X(l.point) AS longitude, a.name AS "assetName"
+         FROM bovine_guarantees g
+         JOIN organizations o ON o.id = g.organization_id
+         LEFT JOIN establishments e ON e.id = g.establishment_id
+         LEFT JOIN establishment_locations l ON l.establishment_id = e.id AND l.kind = 'MAIN'
+         LEFT JOIN assets a ON a.id = g.asset_id
+        WHERE g.id = $1`,
+      [g.id],
+    )) as Record<string, string | number | null>[];
+    return {
+      guarantee: { code: g.code, productionType: g.productionType, demo: g.dataSource === 'DEMO' },
+      requester: row?.organizationName ?? null,
+      producer: g.producerName,
+      establishment: row
+        ? {
+            name: row.establishment,
+            locality: row.locality,
+            province: row.province,
+            renspa: row.renspa,
+            location:
+              row.latitude !== null ? { latitude: row.latitude, longitude: row.longitude } : null,
+          }
+        : null,
+      assetName: row?.assetName ?? null,
+      reason: inspection.reason,
+      dueAt: inspection.dueAt,
+      expiresAt: inspection.inviteExpiresAt,
+      photos: inspection.evidenceIds.length,
+      blindCount: true,
+    };
+  }
+
+  /** Foto del inspector (con GPS): queda como evidencia de la inspección. */
+  async inspectorEvidence(
+    token: string,
+    file: UploadedFile | undefined,
+    command: UploadEvidenceCommand & { inspectorName?: string },
+    context: RequestContext,
+  ) {
+    const { inspection, g } = await this.inspectionByToken(token);
+    if (!g.assetId || !g.establishmentId)
+      throw new InvalidStateError('La garantía no tiene rodeo declarado');
+    if (!file) throw new ValidationFailedError('Adjuntá una foto');
+    const check = EVIDENCE_UPLOAD_POLICY.validate(file);
+    if (!check.ok) throw new ValidationFailedError(check.reason);
+    const location = resolveCaptureLocation(command, readExifGps(file.buffer));
+    const capturedAt = command.capturedAt ? new Date(command.capturedAt) : new Date();
+    if (Number.isNaN(capturedAt.getTime()) || capturedAt.getTime() > Date.now() + 300_000)
+      throw new ValidationFailedError('Fecha de captura inválida');
+    const evidence = await this.recorder.record({
+      organizationId: g.organizationId,
+      assetId: g.assetId,
+      establishmentId: g.establishmentId,
+      sourceCode: EVIDENCE_SOURCE_CODES.MANUAL_UPLOAD,
+      type: 'IMAGE',
+      capturedAt,
+      location: location.capture
+        ? point(location.capture.longitude, location.capture.latitude)
+        : null,
+      file: { bytes: file.buffer, mimeType: check.kind.mime },
+      uploadedBy: null,
+      metadata: {
+        originalFileName: file.originalname.slice(0, 200),
+        locationSource: location.source,
+        locationAccuracyM: location.accuracyM,
+        captureOrigin: command.captureOrigin === 'FILE' ? 'ARCHIVO_CARGADO' : 'CAPTURA_EN_CAMPO',
+        inspectionId: inspection.id,
+        inspectorName: command.inspectorName?.slice(0, 160) ?? null,
+        description: 'Foto de la inspección presencial',
+      },
+    });
+    await this.dataSource
+      .getRepository(CollateralInspectionEntity)
+      .update({ id: inspection.id }, { evidenceIds: [...inspection.evidenceIds, evidence.id] });
+    await this.audit.record({
+      actor: { kind: 'anonymous', organizationId: g.organizationId },
+      action: AUDIT_ACTIONS.EVIDENCE_UPLOADED,
+      resourceType: 'evidence',
+      resourceId: evidence.id,
+      metadata: { inspectionId: inspection.id, via: 'inspector-link', sha256: evidence.sha256 },
+      context,
+    });
+    return { evidenceId: evidence.id, sha256: evidence.sha256, location: location.source };
+  }
+
+  /** El inspector firma el acta desde el link (después el link deja de servir). */
+  async inspectorRecord(token: string, command: InspectionRecordCommand, context: RequestContext) {
+    const { inspection, g } = await this.inspectionByToken(token);
+    return this.recordInspectionFor(
+      g,
+      inspection.id,
+      {
+        ...command,
+        evidenceIds: [...new Set([...inspection.evidenceIds, ...(command.evidenceIds ?? [])])],
+      },
+      {
+        userId: null,
+        label: command.inspectorName,
+        audit: { kind: 'anonymous', organizationId: g.organizationId },
+      },
+      context,
+    );
   }
 
   /** Pide una verificación nueva con el pipeline existente (evidencia cargada del activo). */
