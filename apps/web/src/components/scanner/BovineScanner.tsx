@@ -77,7 +77,7 @@ export const MODES: { mode: ScanMode; title: string; text: string; result: strin
   },
   {
     mode: 'CHUTE',
-    title: 'Manga + RFID (ESCANEO INDIVIDUAL)',
+    title: 'Manga + RFID (escaneo individual)',
     text: 'Un bovino por vez en la manga, quieto frente a la cámara. Leé su caravana electrónica: si hay un único bovino estable, la lectura queda asociada con imágenes de respaldo. Después, registrá el siguiente.',
     result:
       'Bovinos identificados por caravana. La identidad la da el RFID; la cámara no reconoce animales por su aspecto.',
@@ -298,7 +298,7 @@ export function BovineScanner({
         </Link>
         <strong>Escáner de bovinos · {assetName}</strong>
         <span className={`${styles.chip} ${chipClass}`} data-testid="scanner-status">
-          {status ? status.label : online ? 'EN LÍNEA' : 'OFFLINE'}
+          {status ? status.label : online ? 'En línea' : 'Sin señal'}
         </span>
       </div>
 
@@ -691,7 +691,7 @@ function ChuteSummary({
                 {v.official
                   ? `${v.official.bestFrames} imágenes de evidencia (de ${c.frameIndices.length} cuadros)`
                   : `${c.frameIndices.length} cuadros guardados`}{' '}
-                · {v.official ? 'OFICIAL' : 'PRELIMINAR'}
+                · {v.official ? 'oficial' : 'preliminar'}
                 {c.rfidSource === 'SIMULATED' ? ' · SIMULADO' : ''}
               </span>
             </li>

@@ -12,13 +12,16 @@ export function Tabs({
   items,
   active,
   onChange,
+  variant = 'underline',
 }: {
   items: TabItem[];
   active: string;
   onChange: (id: string) => void;
+  /** `pills`: para muchas secciones; se acomodan en varias filas en vez de desplazarse. */
+  variant?: 'underline' | 'pills';
 }) {
   return (
-    <div className={styles.tabs} role="tablist">
+    <div className={`${styles.tabs} ${variant === 'pills' ? styles.pills : ''}`} role="tablist">
       {items.map((item) => (
         <button
           key={item.id}

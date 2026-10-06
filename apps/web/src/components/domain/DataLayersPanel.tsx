@@ -70,7 +70,7 @@ export function DataLayersPanel({ layers }: { layers: DataLayers }) {
                   <td>
                     <span className={styles.unavailable}>
                       {f.official.status === 'NOT_CONNECTED'
-                        ? 'NO CONECTADA'
+                        ? 'No conectada'
                         : (f.official.value ?? '—')}
                     </span>
                   </td>

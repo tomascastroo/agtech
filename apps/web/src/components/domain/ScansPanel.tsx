@@ -19,9 +19,9 @@ const STATUS = {
 
 /** Estado de la evidencia: una evidencia parcial nunca es un rechazo. */
 export const EVIDENCE_STATUS = {
-  VALIDATED: { label: 'VALIDADO', tone: 'success' },
-  INCONCLUSIVE: { label: 'NO CONCLUYENTE', tone: 'warning' },
-  INSUFFICIENT: { label: 'EVIDENCIA INSUFICIENTE', tone: 'critical' },
+  VALIDATED: { label: 'Validado', tone: 'success' },
+  INCONCLUSIVE: { label: 'No concluyente', tone: 'warning' },
+  INSUFFICIENT: { label: 'Evidencia insuficiente', tone: 'critical' },
 } as const;
 
 const OFFICIAL_TEXT: Record<ScanDetail['mode'], string> = {

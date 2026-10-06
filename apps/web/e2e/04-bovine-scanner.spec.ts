@@ -116,18 +116,18 @@ test('escáner fijo: detección en vivo, sin señal, sincronización y conteo of
   // Mitad del escaneo: se corta la señal; el escaneo continúa localmente.
   await page.waitForTimeout(8_000);
   await producer.setOffline(true);
-  await expect(page.getByTestId('scanner-status')).toHaveText('OFFLINE');
+  await expect(page.getByTestId('scanner-status')).toHaveText('Sin señal');
   await page.waitForTimeout(12_000);
   const deviceCount = Number(await page.getByTestId('scanner-count').innerText());
   await page.screenshot({ path: 'test-results/scanner-live.png' });
   await page.getByRole('button', { name: 'FINALIZAR' }).click();
   await expect(page.getByTestId('scanner-summary')).toBeVisible();
-  await expect(page.getByTestId('scanner-sync-detail')).toContainText('OFFLINE');
+  await expect(page.getByTestId('scanner-sync-detail')).toContainText('Sin señal');
 
   // Vuelve la señal: se sincroniza solo y el servidor calcula el conteo oficial.
   await producer.setOffline(false);
   await page.evaluate(() => window.dispatchEvent(new Event('online')));
-  await expect(page.getByTestId('scanner-sync-detail')).toContainText('VERIFICADO EN SERVIDOR', {
+  await expect(page.getByTestId('scanner-sync-detail')).toContainText('Verificado en servidor', {
     timeout: 180_000,
   });
   const detail = await page.getByTestId('scanner-sync-detail').innerText();
@@ -203,7 +203,7 @@ test('escaneo cortado (la página se cierra a mitad): se recupera, se sube y la 
   // Queda en RECORDING hasta que pasa el umbral y la sincronización lo recupera.
   await page.goto(`/productor/solicitudes/${created.id}`);
   const row = page.getByTestId('scan-row').first();
-  await expect(row.getByTestId('scan-status')).toContainText('VERIFICADO', { timeout: 240_000 });
+  await expect(row.getByTestId('scan-status')).toContainText('Verificado', { timeout: 240_000 });
   const scans = await (await page.request.get(`/api${base}/scans`)).json();
   const list = (Array.isArray(scans) ? scans : scans.items) as { warnings: string[] }[];
   expect(list[0]!.warnings.join(' ')).toContain('interrumpido');

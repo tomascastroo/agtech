@@ -55,9 +55,41 @@
   background: var(--color-primary-soft);
   color: var(--color-primary);
 }
-/* Insinúa que hay más pestañas cuando no entran (se desplazan horizontalmente). */
-@media (max-width: 1600px) {
+/* Muchas secciones (passport): chips que se acomodan en varias filas en escritorio. */
+.pills {
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  padding: var(--space-2);
+  border: var(--border-width) solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+.pills .tab {
+  padding: 7px 14px;
+  border-radius: var(--radius-pill);
+  font-size: var(--text-sm);
+  transition:
+    color 140ms ease,
+    background-color 140ms ease;
+}
+.pills .tab:hover {
+  background: var(--color-surface-muted);
+}
+.pills .active,
+.pills .active:hover {
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+.pills .active::after {
+  display: none;
+}
+/* En el celular se desplazan de costado; el fundido indica que hay más. */
+@media (max-width: 960px) {
   .tabs {
     mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent);
+  }
+  .pills {
+    flex-wrap: nowrap;
   }
 }

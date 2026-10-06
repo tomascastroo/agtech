@@ -107,7 +107,7 @@ test('manga + RFID: dos bovinos seguidos, identificados por caravana y confirmad
   const { bankPage, page, requestId } = await chuteRequest(browser);
   await page.goto(`/escaner/${requestId}`);
   const mode = page.getByRole('button', { name: /Manga \+ RFID/ });
-  await expect(mode).toContainText('ESCANEO INDIVIDUAL');
+  await expect(mode).toContainText('escaneo individual');
   await mode.click();
   await page.getByRole('button', { name: 'Iniciar sesión de manga' }).click();
   await expect(page.getByTestId('chute-panel')).toBeVisible({ timeout: 60_000 });
@@ -132,13 +132,13 @@ test('manga + RFID: dos bovinos seguidos, identificados por caravana y confirmad
   await page.getByTestId('chute-next').click();
 
   await page.getByRole('button', { name: 'FINALIZAR' }).click();
-  await expect(page.getByTestId('scanner-sync-detail')).toContainText('VERIFICADO EN SERVIDOR', {
+  await expect(page.getByTestId('scanner-sync-detail')).toContainText('Verificado en servidor', {
     timeout: 240_000,
   });
   await expect(page.getByTestId('scanner-sync-detail')).toContainText('SIMULADO');
   const captures = page.getByTestId('chute-captures').locator('li');
   await expect(captures).toHaveCount(2);
-  await expect(captures.first()).toContainText('OFICIAL');
+  await expect(captures.first()).toContainText('oficial');
   await page.screenshot({ path: 'test-results/manga-resumen.png' });
   const official = await page.getByTestId('scanner-sync-detail').innerText();
 

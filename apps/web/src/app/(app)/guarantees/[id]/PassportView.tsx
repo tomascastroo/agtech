@@ -249,6 +249,7 @@ export function PassportView({ id }: { id: string }) {
           </Callout>
         ) : null}
         <Tabs
+          variant="pills"
           items={TABS.map((t) => ({
             ...t,
             count:

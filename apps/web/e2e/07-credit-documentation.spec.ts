@@ -39,7 +39,7 @@ test('demo con documentación faltante: OCR, pedido al productor, carga y result
   await expect(page.getByTestId('requirement-RENSPA')).toContainText('Pendiente');
   await expect(page.getByTestId('requirement-RENSPA')).toContainText('Solicitado al productor');
   // Fuente oficial: no conectada (nada figura como verificado por SENASA).
-  await expect(page.getByTestId('data-layers')).toContainText('NO CONECTADA');
+  await expect(page.getByTestId('data-layers')).toContainText('No conectada');
 
   // 9. La entidad pide además la tenencia del campo.
   const tenure = page.getByTestId('requirement-LAND_TENURE');

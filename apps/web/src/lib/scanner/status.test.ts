@@ -3,9 +3,9 @@ import { scanStatus } from './status';
 const base = { uploaded: 0, frameCount: 100, keyFrameCount: 4, official: null, error: null };
 
 describe('estado visible del escaneo', () => {
-  it('sin señal muestra OFFLINE y con señal pendiente de sincronizar', () => {
-    expect(scanStatus({ ...base, state: 'PENDING_SYNC' }, false).label).toBe('OFFLINE');
-    expect(scanStatus({ ...base, state: 'PENDING_SYNC' }, true).label).toBe('PENDIENTE');
+  it('sin señal muestra «Sin señal» y con señal pendiente de sincronizar', () => {
+    expect(scanStatus({ ...base, state: 'PENDING_SYNC' }, false).label).toBe('Sin señal');
+    expect(scanStatus({ ...base, state: 'PENDING_SYNC' }, true).label).toBe('Pendiente');
   });
 
   it('muestra el avance de la subida y el conteo oficial con su alcance', () => {
@@ -20,7 +20,7 @@ describe('estado visible del escaneo', () => {
       },
       true,
     );
-    expect(done.label).toBe('VERIFICADO EN SERVIDOR');
+    expect(done.label).toBe('Verificado en servidor');
     expect(done.detail).toBe('Conteo oficial: 37 (cota inferior)');
   });
 });

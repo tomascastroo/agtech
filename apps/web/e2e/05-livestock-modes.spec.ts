@@ -110,7 +110,7 @@ test('escáner de corral: animales quietos únicos, recomendado para feedlot, co
   const observed = Number(await page.getByTestId('scanner-count').innerText());
   await page.screenshot({ path: 'test-results/corral-live.png' });
   await page.getByRole('button', { name: 'FINALIZAR' }).click();
-  await expect(page.getByTestId('scanner-sync-detail')).toContainText('VERIFICADO EN SERVIDOR', {
+  await expect(page.getByTestId('scanner-sync-detail')).toContainText('Verificado en servidor', {
     timeout: 180_000,
   });
   const detail = await page.getByTestId('scanner-sync-detail').innerText();
@@ -147,7 +147,7 @@ test('analizar foto: dos fotos con cajas y conteo, sincronizadas y procesadas en
   await page.screenshot({ path: 'test-results/foto-live.png' });
   await page.getByRole('button', { name: 'FINALIZAR' }).click();
   await expect(page.getByTestId('scanner-summary')).toContainText('Fotos: 2');
-  await expect(page.getByTestId('scanner-sync-detail')).toContainText('VERIFICADO EN SERVIDOR', {
+  await expect(page.getByTestId('scanner-sync-detail')).toContainText('Verificado en servidor', {
     timeout: 180_000,
   });
 

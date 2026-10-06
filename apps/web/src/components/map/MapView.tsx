@@ -2,7 +2,8 @@
 
 import { COLORS } from '@/lib/design/tokens';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import type { GeoJSONSource, Map as MapLibreMap, StyleSpecification } from 'maplibre-gl';
 import type { GeoMultiPolygon } from '@/lib/api/types';
 import styles from './map.module.css';
@@ -129,6 +130,9 @@ export function MapView({
   const mapRef = useRef<MapLibreMap | null>(null);
   const lastBounds = useRef<string | null>(null);
   const handlers = useRef({ onSelect, onMapClick });
+  // Si las imágenes del mapa base no cargan (sin internet o proveedor caído) se avisa:
+  // los puntos y polígonos se siguen dibujando sobre un fondo liso.
+  const [baseUnavailable, setBaseUnavailable] = useState(false);
   const data = useRef({ points, polygons, maxZoom });
   useEffect(() => {
     handlers.current = { onSelect, onMapClick };
@@ -151,7 +155,16 @@ export function MapView({
       });
       map = instance;
       instance.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
-      instance.on('load', () => {
+      instance.on('error', (event) => {
+        const sourceId = (event as { sourceId?: string }).sourceId;
+        if (sourceId && sourceId !== 'polygons' && sourceId !== 'points') setBaseUnavailable(true);
+      });
+      // Se dibuja apenas está el estilo ('style.load'), sin esperar las imágenes del mapa base:
+      // si el proveedor de teselas no responde, 'load' puede no llegar nunca.
+      let ready = false;
+      const setup = () => {
+        if (ready || cancelled) return;
+        ready = true;
         const map = instance;
         map.addSource('polygons', {
           type: 'geojson',
@@ -217,7 +230,10 @@ export function MapView({
         mapRef.current = map;
         lastBounds.current = JSON.stringify(boundsOf(data.current.points, data.current.polygons));
         renderData(map, data.current.points, data.current.polygons, true, data.current.maxZoom);
-      });
+      };
+      instance.on('style.load', setup);
+      instance.on('load', setup);
+      if (instance.isStyleLoaded()) setup();
     });
     return () => {
       cancelled = true;
@@ -241,6 +257,12 @@ export function MapView({
   return (
     <div className={styles.map} style={{ height }} role="region" aria-label={label}>
       <div ref={container} style={{ position: 'absolute', inset: 0 }} />
+      {baseUnavailable ? (
+        <div className={styles.baseUnavailable} role="status">
+          <Icon name="info" size="xs" />
+          Mapa base sin conexión: las ubicaciones se muestran igual.
+        </div>
+      ) : null}
       {children}
     </div>
   );

@@ -19,9 +19,9 @@ export const MODE_LABELS: Record<LocalScan['mode'], string> = {
 };
 
 const EVIDENCE_LABELS: Record<EvidenceStatusCode, string> = {
-  VALIDATED: 'Evidencia VALIDADA',
-  INCONCLUSIVE: 'Evidencia NO CONCLUYENTE (cuenta como mínimo)',
-  INSUFFICIENT: 'EVIDENCIA INSUFICIENTE (no se usa)',
+  VALIDATED: 'Evidencia validada',
+  INCONCLUSIVE: 'Evidencia no concluyente (cuenta como mínimo)',
+  INSUFFICIENT: 'Evidencia insuficiente (no se usa)',
 };
 
 interface ServerScan {

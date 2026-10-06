@@ -3,8 +3,8 @@ import type { LocalScan } from './store';
 export type ScanStatusTone = 'offline' | 'syncing' | 'processing' | 'done' | 'error' | 'recording';
 
 /**
- * Estado visible de un escaneo: OFFLINE (guardado en el teléfono, sin señal) → SINCRONIZANDO →
- * PROCESANDO EN SERVIDOR → VERIFICADO EN SERVIDOR (conteo oficial) / ERROR.
+ * Estado visible de un escaneo: Sin señal (guardado en el teléfono) → Sincronizando →
+ * Procesando → Verificado en servidor (conteo oficial) / Error.
  */
 export function scanStatus(
   scan: Pick<
@@ -16,30 +16,30 @@ export function scanStatus(
   const total = scan.frameCount + scan.keyFrameCount;
   switch (scan.state) {
     case 'RECORDING':
-      return { label: 'ESCANEANDO', tone: 'recording', detail: 'Escaneo en curso' };
+      return { label: 'Escaneando', tone: 'recording', detail: 'Escaneo en curso' };
     case 'PENDING_SYNC':
       return online
-        ? { label: 'PENDIENTE', tone: 'syncing', detail: 'Se sincroniza automáticamente' }
+        ? { label: 'Pendiente', tone: 'syncing', detail: 'Se sincroniza automáticamente' }
         : {
-            label: 'OFFLINE',
+            label: 'Sin señal',
             tone: 'offline',
             detail: 'Guardado en el teléfono; se sube al volver la señal',
           };
     case 'SYNCING':
       return {
-        label: 'SINCRONIZANDO',
+        label: 'Sincronizando',
         tone: 'syncing',
         detail: `Subiendo cuadros ${Math.min(scan.uploaded, total)}/${total}`,
       };
     case 'PROCESSING':
       return {
-        label: 'PROCESANDO',
+        label: 'Procesando',
         tone: 'processing',
         detail: 'El servidor calcula el conteo oficial',
       };
     case 'COMPLETED':
       return {
-        label: 'VERIFICADO EN SERVIDOR',
+        label: 'Verificado en servidor',
         tone: 'done',
         detail: scan.official?.chute
           ? `Bovinos identificados (oficial): ${scan.official.count ?? 0}${scan.official.chute.ambiguous + scan.official.chute.insufficient ? ` · sin asociar: ${scan.official.chute.ambiguous + scan.official.chute.insufficient}` : ''}${scan.official.simulated ? ' · SIMULADO' : ''}`
@@ -49,7 +49,7 @@ export function scanStatus(
       };
     case 'FAILED':
       return {
-        label: 'ERROR',
+        label: 'Error',
         tone: 'error',
         detail: scan.error ?? 'Falló el procesamiento oficial',
       };
