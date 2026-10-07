@@ -33,4 +33,9 @@ describe('Configuración', () => {
       }),
     ).toThrow(/JWT_ACCESS_SECRET[\s\S]*COOKIE_SECURE[\s\S]*CV_PROVIDER/);
   });
+
+  it('trata SEED_DEMO_PASSWORD vacío como "sin datos demo"', () => {
+    expect(parseEnv({ ...base, SEED_DEMO_PASSWORD: '' }).SEED_DEMO_PASSWORD).toBeUndefined();
+    expect(() => parseEnv({ ...base, SEED_DEMO_PASSWORD: 'corta' })).toThrow(/SEED_DEMO_PASSWORD/);
+  });
 });

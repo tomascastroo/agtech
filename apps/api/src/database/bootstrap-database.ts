@@ -10,6 +10,7 @@ import {
 } from '../common/queues/queues.js';
 import { loadAppConfig } from '../config/app-config.js';
 import { S3ObjectStorage } from '../modules/storage/s3-object-storage.js';
+import { ensureCatalog } from './seed/catalog-seeder.js';
 import { DemoSeeder } from './seed/seeder.js';
 import { typeOrmOptions } from './typeorm-options.js';
 
@@ -28,8 +29,8 @@ async function retry<T>(label: string, fn: () => Promise<T>, attempts = 20): Pro
 }
 
 /**
- * Arranque del entorno: aplica migraciones, asegura el bucket y, si la base está vacía,
- * carga el catálogo y la cartera demo. Es idempotente: puede ejecutarse en cada despliegue.
+ * Arranque del entorno: aplica migraciones, asegura el bucket y, si la base está vacía, carga
+ * el catálogo base y, solo si SEED_DEMO_PASSWORD está definido, la cartera demo. Es idempotente: puede ejecutarse en cada despliegue.
  */
 export async function bootstrapDatabase(): Promise<void> {
   const config = loadAppConfig();
@@ -47,7 +48,13 @@ export async function bootstrapDatabase(): Promise<void> {
   if (count > 0 && process.env.SEED_FORCE !== 'true') {
     logger.info('La base ya contiene datos: se omite el seed');
   } else if (!config.env.SEED_DEMO_PASSWORD) {
-    logger.warn('SEED_DEMO_PASSWORD no definido: se omite la carga de datos demo');
+    // Instalación real: solo el catálogo base, sin organizaciones ni datos de demostración.
+    const catalog = await dataSource.transaction((m) => ensureCatalog(m));
+    logger.info(
+      { created: catalog.created },
+      'Sin SEED_DEMO_PASSWORD: catálogo base listo, sin datos demo. Creá la organización con ' +
+        '`node dist/database/admin-cli.js create-organization` (ver docs/deploy-produccion.md)',
+    );
   } else {
     const assetsDir =
       config.env.SEED_ASSETS_DIR ??

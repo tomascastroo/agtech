@@ -2,7 +2,6 @@ import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { DataSource, EntityManager } from 'typeorm';
-import { PERMISSION_DESCRIPTIONS, ROLE_DEFINITIONS } from '../../common/auth/permissions.js';
 import { canonicalJson, sha256Hex } from '../../common/crypto/hashing.js';
 import type { GeoMultiPolygon, GeoPolygon, Position } from '../../common/geo/geojson.js';
 import {
@@ -27,8 +26,6 @@ import { AssetEntity } from '../../modules/assets/infrastructure/asset.entity.js
 import { GuaranteeEntity } from '../../modules/assets/infrastructure/guarantee.entity.js';
 import { AuditLogEntity } from '../../modules/audit/infrastructure/audit-log.entity.js';
 import { PasswordHasher } from '../../modules/auth/application/password-hasher.js';
-import { AiModelVersionEntity } from '../../modules/computer-vision/infrastructure/ai-model-version.entity.js';
-import { AiModelEntity } from '../../modules/computer-vision/infrastructure/ai-model.entity.js';
 import { DeviceInstallationEntity } from '../../modules/devices/infrastructure/device-installation.entity.js';
 import { DeviceEntity } from '../../modules/devices/infrastructure/device.entity.js';
 import { DocumentEntity } from '../../modules/documents/infrastructure/document.entity.js';
@@ -63,7 +60,6 @@ import type {
 } from '../../modules/scoring/domain/scoring.types.js';
 import type { ObjectStorage } from '../../modules/storage/object-storage.js';
 import { storageKeys } from '../../modules/storage/storage-keys.js';
-import { PermissionEntity } from '../../modules/users/infrastructure/permission.entity.js';
 import { RoleEntity } from '../../modules/users/infrastructure/role.entity.js';
 import { UserEntity } from '../../modules/users/infrastructure/user.entity.js';
 import {
@@ -79,8 +75,7 @@ import { VerificationEvidenceEntity } from '../../modules/verification/infrastru
 import { VerificationMetricEntity } from '../../modules/verification/infrastructure/verification-metric.entity.js';
 import { VerificationResultEntity } from '../../modules/verification/infrastructure/verification-result.entity.js';
 import { VerificationRunEntity } from '../../modules/verification/infrastructure/verification-run.entity.js';
-import { EVIDENCE_GUIDANCE } from '../../modules/assets/domain/evidence-guidance.js';
-import { AI_MODELS, ALERT_RULES, ASSET_TYPES, EVIDENCE_SOURCES } from './catalog.js';
+import { ensureCatalog } from './catalog-seeder.js';
 import { demoDocumentPdf } from './demo-documents.js';
 import {
   ASSETS,
@@ -243,6 +238,8 @@ export class DemoSeeder {
   private fixtures = new Map<string, SatelliteFixture>();
   private fixturePlans = new Map<string, FixtureRun[]>();
   private seededObservations = new Map<string, SeededObservation>();
+  /** Escenas simuladas ya guardadas: dos verificaciones cercanas pueden tocar la misma escena. */
+  private simulatedScenes = new Map<string, SatelliteImageEntity>();
   private raisedAlerts = new Set<string>();
 
   constructor(
@@ -349,61 +346,10 @@ export class DemoSeeder {
 
   // ------------------------------------------------------------------ catálogo
   private async seedCatalog(m: EntityManager) {
-    const permissions = new Map<string, PermissionEntity>();
-    for (const [code, description] of Object.entries(PERMISSION_DESCRIPTIONS)) {
-      permissions.set(code, await m.save(m.create(PermissionEntity, { code, description })));
-    }
-    for (const [code, def] of Object.entries(ROLE_DEFINITIONS)) {
-      await m.save(
-        m.create(RoleEntity, {
-          code,
-          name: def.name,
-          description: def.description,
-          permissions: def.permissions.map((p) => permissions.get(p)!),
-        }),
-      );
-    }
-    for (const [index, type] of ASSET_TYPES.entries()) {
-      this.types.set(
-        type.code,
-        await m.save(
-          m.create(AssetTypeEntity, {
-            ...type,
-            evidenceGuidance: EVIDENCE_GUIDANCE[type.code] ?? null,
-            sortOrder: index,
-            isActive: true,
-          }),
-        ),
-      );
-    }
-    for (const source of EVIDENCE_SOURCES) {
-      this.sources.set(source.code, await m.save(m.create(EvidenceSourceEntity, source)));
-    }
-    for (const model of AI_MODELS) {
-      const entity = await m.save(
-        m.create(AiModelEntity, {
-          code: model.code,
-          name: model.name,
-          task: model.task,
-          provider: model.provider,
-          description: model.description,
-        }),
-      );
-      const version = await m.save(
-        m.create(AiModelVersionEntity, {
-          modelId: entity.id,
-          version: model.version,
-          isSimulated: model.isSimulated,
-          status: 'ACTIVE',
-          metrics: model.metrics,
-          releasedAt: this.at(120),
-        }),
-      );
-      this.models.set(`${model.code}@${model.version}`, version.id);
-    }
-    for (const rule of ALERT_RULES) {
-      await m.save(m.create(AlertRuleEntity, { ...rule, organizationId: null, enabled: true }));
-    }
+    const catalog = await ensureCatalog(m, this.at(120));
+    this.types = catalog.types;
+    this.sources = catalog.sources;
+    this.models = catalog.models;
   }
 
   private async seedOrganizations(m: EntityManager) {
@@ -940,8 +886,8 @@ export class DemoSeeder {
       const primary = spec.primary
         ? this.seededObservations.get(`${asset.id}:${spec.primary}`)
         : null;
-      const excluded = (spec.excluded ?? []).map(
-        (id) => this.seededObservations.get(`${asset.id}:${id}`)!,
+      const excluded = (spec.excluded ?? []).map((id) =>
+        this.seededObservations.get(`${asset.id}:${id}`)!,
       );
       const seriesStart = completedAt.getTime() - SATELLITE_SERIES_DAYS * DAY_MS;
       const usable = [...this.seededObservations.values()].filter(
@@ -1057,22 +1003,25 @@ export class DemoSeeder {
         `${scene!.sceneId}_${asset.id}`,
       );
       await this.storage.putObject({ key: previewKey, body: preview, contentType: 'image/jpeg' });
-      const image = await m.save(
-        m.create(SatelliteImageEntity, {
-          organizationId: this.organizationId,
-          provider: scene!.provider,
-          collection: scene!.collection,
-          sceneId: scene!.sceneId,
-          acquiredAt: scene!.acquiredAt,
-          cloudCoverPct: scene!.cloudCoverPct,
-          resolutionM: scene!.resolutionM,
-          footprint: scene!.footprint,
-          bands: scene!.bands,
-          previewStorageKey: previewKey,
-          isSimulated: true,
-          metadata: {},
-        }),
-      );
+      const image =
+        this.simulatedScenes.get(scene!.sceneId) ??
+        (await m.save(
+          m.create(SatelliteImageEntity, {
+            organizationId: this.organizationId,
+            provider: scene!.provider,
+            collection: scene!.collection,
+            sceneId: scene!.sceneId,
+            acquiredAt: scene!.acquiredAt,
+            cloudCoverPct: scene!.cloudCoverPct,
+            resolutionM: scene!.resolutionM,
+            footprint: scene!.footprint,
+            bands: scene!.bands,
+            previewStorageKey: previewKey,
+            isSimulated: true,
+            metadata: {},
+          }),
+        ));
+      this.simulatedScenes.set(scene!.sceneId, image);
       detected = spec.detected!;
       confidence = sceneConfidence(scene!.cloudCoverPct ?? 0);
       locationVerified = true;

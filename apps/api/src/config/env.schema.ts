@@ -70,7 +70,11 @@ export const envSchema = z
     MONITORING_TICK_SECONDS: z.coerce.number().int().min(30).max(86400).default(300),
     VERIFICATION_JOB_ATTEMPTS: z.coerce.number().int().min(1).max(10).default(3),
 
-    SEED_DEMO_PASSWORD: z.string().min(8).optional(),
+    // Vacío = sin datos demo (instalación real). docker compose pasa "" cuando se desactiva.
+    SEED_DEMO_PASSWORD: z.preprocess(
+      (v) => (v === '' ? undefined : v),
+      z.string().min(8).optional(),
+    ),
     /** "Simular solicitud": crea solicitudes con datos ficticios marcados DEMO. */
     DEMO_MODE: z.enum(['enabled', 'disabled']).default('enabled'),
     SEED_ASSETS_DIR: z.string().optional(),

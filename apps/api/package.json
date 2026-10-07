@@ -21,7 +21,9 @@
     "migration:show": "node --env-file-if-exists=../../.env node_modules/typeorm/cli.js migration:show -d dist/database/data-source.js",
     "seed": "node --env-file-if-exists=../../.env dist/database/seed/run-seed.js",
     "db:bootstrap": "node --env-file-if-exists=../../.env dist/database/bootstrap.js",
-    "db:reset": "node --env-file-if-exists=../../.env dist/database/reset-demo.js --yes"
+    "db:reset": "node --env-file-if-exists=../../.env dist/database/reset-demo.js --yes",
+    "admin": "node --env-file-if-exists=../../.env dist/database/admin-cli.js",
+    "pilot:accuracy": "node --env-file-if-exists=../../.env dist/tools/pilot-accuracy-cli.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1144.0",

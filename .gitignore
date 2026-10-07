@@ -27,3 +27,5 @@ apps/web/public/models/
 # Generados por `next dev`
 apps/web/AGENTS.md
 apps/web/CLAUDE.md
+infra/prod/.env.secrets
+backups/

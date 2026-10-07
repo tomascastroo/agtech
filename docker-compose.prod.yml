@@ -1,0 +1,81 @@
+# AgroGarantías — despliegue en un servidor (piloto con una entidad real).
+#
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file infra/prod/.env up -d --build
+#
+# Diferencias con el entorno local:
+# - HTTPS automático con Caddy (certificados de Let's Encrypt) en APP_DOMAIN y FILES_DOMAIN.
+# - Solo Caddy publica puertos (80/443). API, MinIO, PostgreSQL, Redis y visión quedan en la red
+#   interna de Docker.
+# - NODE_ENV=production: la API no arranca con secretos de desarrollo ni cookies inseguras.
+# - Sin datos demo: el arranque carga solo el catálogo base. La organización y sus usuarios se
+#   crean con la herramienta de administración (ver docs/deploy-produccion.md).
+# - "Simular solicitud" desactivado y sin credenciales demo en el login.
+
+x-prod-api-env: &prod-api-env
+  NODE_ENV: production
+  LOG_FORMAT: json
+  COOKIE_SECURE: "true"
+  DEMO_MODE: disabled
+  SEED_DEMO_PASSWORD: ""
+  WEB_ORIGIN: https://${APP_DOMAIN:?Definí APP_DOMAIN}
+  S3_PUBLIC_ENDPOINT: https://${FILES_DOMAIN:?Definí FILES_DOMAIN}
+  # Caddy + el BFF de Next.js delante de la API.
+  TRUST_PROXY_HOPS: "2"
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN}
+      FILES_DOMAIN: ${FILES_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL:?Definí ACME_EMAIL (aviso de vencimiento de certificados)}
+    volumes:
+      - ./infra/prod/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      web:
+        condition: service_healthy
+
+  postgres:
+    restart: unless-stopped
+
+  redis:
+    restart: unless-stopped
+
+  minio:
+    restart: unless-stopped
+    ports: !reset []
+
+  migrate:
+    environment:
+      <<: *prod-api-env
+
+  api:
+    environment:
+      <<: *prod-api-env
+    ports: !reset []
+
+  worker:
+    environment:
+      <<: *prod-api-env
+
+  ai-service:
+    environment:
+      AI_SERVICE_ENVIRONMENT: production
+
+  web:
+    environment:
+      ASSET_ORIGINS: https://${FILES_DOMAIN}
+      SHOW_DEMO_CREDENTIALS: "false"
+      SEED_DEMO_PASSWORD: ""
+      DEMO_LOGIN_EMAIL: ""
+    ports: !reset []
+
+volumes:
+  caddy-data:
+  caddy-config:

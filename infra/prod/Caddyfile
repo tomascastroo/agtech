@@ -1,0 +1,21 @@
+# HTTPS automático (Let's Encrypt). Los dominios vienen de infra/prod/.env.
+{
+	email {$ACME_EMAIL}
+}
+
+# Aplicación web (banco, productor e inspector). La web reenvía /api a la API interna.
+{$APP_DOMAIN} {
+	encode zstd gzip
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+	reverse_proxy web:3000
+}
+
+# Archivos (fotos, documentos, informes) servidos con URLs firmadas que vencen a los minutos.
+# Caddy conserva el Host original, que es parte de la firma.
+{$FILES_DOMAIN} {
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+	request_body {
+		max_size 120MB
+	}
+	reverse_proxy minio:9000
+}
